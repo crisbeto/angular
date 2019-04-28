@@ -19,7 +19,7 @@ import {attachLContainerDebug, attachLViewDebug} from '../debug';
 import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} from '../di';
 import {throwMultipleComponentError} from '../errors';
 import {executeHooks, executePreOrderHooks, registerPreOrderHooks} from '../hooks';
-import {ACTIVE_INDEX, LContainer, VIEWS} from '../interfaces/container';
+import {ACTIVE_INDEX, CONTAINER_HEADER_OFFSET, LContainer} from '../interfaces/container';
 import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, PipeDefListOrFactory, RenderFlags, ViewQueriesFunction} from '../interfaces/definition';
 import {INJECTOR_BLOOM_PARENT_SIZE, NodeInjectorFactory} from '../interfaces/injector';
 import {AttributeMarker, InitialInputData, InitialInputs, LocalRefExtractor, PropertyAliasValue, PropertyAliases, TAttributes, TContainerNode, TElementContainerNode, TElementNode, TIcuContainerNode, TNode, TNodeFlags, TNodeProviderIndexes, TNodeType, TProjectionNode, TViewNode} from '../interfaces/node';
@@ -1436,7 +1436,6 @@ export function createLContainer(
     null,                            // queries
     tNode,                           // t_host
     native,                          // native
-    [],                              // views
   ];
   ngDevMode && attachLContainerDebug(lContainer);
   return lContainer;
@@ -1454,8 +1453,9 @@ function refreshDynamicEmbeddedViews(lView: LView) {
     // header.
     if (current.length < HEADER_OFFSET && current[ACTIVE_INDEX] === -1) {
       const container = current as LContainer;
-      for (let i = 0; i < container[VIEWS].length; i++) {
-        const dynamicViewData = container[VIEWS][i];
+      const views = container.slice(CONTAINER_HEADER_OFFSET);
+      for (let i = 0; i < views.length; i++) {
+        const dynamicViewData = views[i];
         // The directives and pipes are not needed here as an existing view is only being refreshed.
         ngDevMode && assertDefined(dynamicViewData[TVIEW], 'TView must be allocated');
         renderEmbeddedTemplate(dynamicViewData, dynamicViewData[TVIEW], dynamicViewData[CONTEXT] !);

@@ -9,7 +9,7 @@ import {assertEqual} from '../../util/assert';
 import {assertHasParent} from '../assert';
 import {attachPatchData} from '../context_discovery';
 import {executePreOrderHooks, registerPostOrderHooks} from '../hooks';
-import {ACTIVE_INDEX, VIEWS} from '../interfaces/container';
+import {ACTIVE_INDEX, CONTAINER_HEADER_OFFSET, LContainer} from '../interfaces/container';
 import {ComponentTemplate} from '../interfaces/definition';
 import {LocalRefExtractor, TAttributes, TContainerNode, TNode, TNodeType} from '../interfaces/node';
 import {BINDING_INDEX, HEADER_OFFSET, LView, QUERIES, RENDERER, TVIEW} from '../interfaces/view';
@@ -127,7 +127,7 @@ export function ɵɵcontainerRefreshEnd(): void {
   const nextIndex = lContainer[ACTIVE_INDEX];
 
   // remove extra views at the end of the container
-  while (nextIndex < lContainer[VIEWS].length) {
+  while (nextIndex < lContainer.slice(CONTAINER_HEADER_OFFSET).length) {
     removeView(lContainer, nextIndex);
   }
 }
