@@ -13,12 +13,14 @@ import * as ts from 'typescript';
  * `Renderer`, as well as calls to the `Renderer` methods.
  */
 export function findRendererReferences(sourceFile: ts.SourceFile, typeChecker: ts.TypeChecker) {
-  const typedNodes = new Set<ts.ParameterDeclaration|ts.PropertyDeclaration>();
+  const typedNodes = new Set<ts.ParameterDeclaration|ts.PropertyDeclaration|ts.AsExpression>();
   const methodCalls = new Set<ts.CallExpression>();
 
   ts.forEachChild(sourceFile, function visitNode(node: ts.Node) {
     if ((ts.isParameter(node) || ts.isPropertyDeclaration(node)) &&
         isRendererReference(typeChecker, node.name)) {
+      typedNodes.add(node);
+    } else if (isAsRenderer(typeChecker, node)) {
       typedNodes.add(node);
     } else if (
         ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
@@ -62,6 +64,11 @@ export function findImportSpecifier(
     const {name, propertyName} = element;
     return propertyName ? propertyName.text === importName : name.text === importName;
   });
+}
+
+/** Checks whether a node is something being cast to `Renderer` (e.g. `thing as Renderer`). */
+export function isAsRenderer(typeChecker: ts.TypeChecker, node: ts.Node): node is ts.AsExpression {
+  return ts.isAsExpression(node) && isRendererReference(typeChecker, node.type);
 }
 
 /** Checks whether a node is referring to the `Renderer`. */

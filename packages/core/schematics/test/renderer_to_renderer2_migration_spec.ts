@@ -161,6 +161,47 @@ describe('Renderer to Renderer2 migration', () => {
       expect(tree.readContent('/index.ts'))
           .toContain('constructor(element: ElementRef, private _renderer: Renderer2)');
     });
+
+    it('should change the type of something that was cast to Renderer', async() => {
+      writeFile('/index.ts', `
+        import { Renderer, Component, ElementRef } from '@angular/core';
+
+        @Component({template: ''})
+        export class MyComp {
+          setColor(maybeRenderer: any, element: ElementRef) {
+            const renderer = maybeRenderer as Renderer;
+            renderer.setElementStyle(element.nativeElement, 'color', 'red');
+          }
+        }
+      `);
+
+      await runMigration();
+
+      const content = tree.readContent('/index.ts');
+
+      expect(content).toContain(`const renderer = maybeRenderer as Renderer2;`);
+      expect(content).toContain(`renderer.setStyle(element.nativeElement, 'color', 'red');`);
+    });
+
+    it('should change the type of something that was cast to Renderer inside a method call',
+       async() => {
+         writeFile('/index.ts', `
+        import { Renderer, Component, ElementRef } from '@angular/core';
+
+        @Component({template: ''})
+        export class MyComp {
+          setColor(maybeRenderer: any, element: ElementRef) {
+            (maybeRenderer as Renderer).setElementStyle(element.nativeElement, 'color', 'red');
+          }
+        }
+      `);
+
+         await runMigration();
+
+         expect(tree.readContent('/index.ts'))
+             .toContain(
+                 `(maybeRenderer as Renderer2).setStyle(element.nativeElement, 'color', 'red');`);
+       });
   });
 
   describe('helper insertion', () => {

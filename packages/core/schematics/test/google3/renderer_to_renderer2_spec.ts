@@ -101,6 +101,60 @@ describe('Google3 Renderer to Renderer2 TSLint rule', () => {
     expect(content).toContain('(renderer: Renderer2)');
   });
 
+  it('should flag something that was cast to Renderer', () => {
+    writeFile('/index.ts', `
+        import { Renderer, Component, ElementRef } from '@angular/core';
+
+        @Component({template: ''})
+        export class MyComp {
+          setColor(maybeRenderer: any, element: ElementRef) {
+            const renderer = maybeRenderer as Renderer;
+            renderer.setElementStyle(element.nativeElement, 'color', 'red');
+          }
+
+          setBackground(maybeRenderer: any, element: ElementRef) {
+            (maybeRenderer as Renderer).setElementStyle(element.nativeElement, 'background', 'purple');
+          }
+        }
+      `);
+
+    const linter = runTSLint(false);
+    const failures = linter.getResult().failures.map(failure => failure.getFailure());
+
+    expect(failures.length).toBe(5);
+    expect(failures[0]).toMatch(/Imports of Renderer are not allowed/);
+    expect(failures[1]).toMatch(/References to Renderer are not allowed/);
+    expect(failures[2]).toMatch(/References to Renderer are not allowed/);
+    expect(failures[3]).toMatch(/Calls to Renderer methods are not allowed/);
+    expect(failures[4]).toMatch(/Calls to Renderer methods are not allowed/);
+  });
+
+  it('should change the type of something that was cast to Renderer', () => {
+    writeFile('/index.ts', `
+        import { Renderer, Component, ElementRef } from '@angular/core';
+
+        @Component({template: ''})
+        export class MyComp {
+          setColor(maybeRenderer: any, element: ElementRef) {
+            const renderer = maybeRenderer as Renderer;
+            renderer.setElementStyle(element.nativeElement, 'color', 'red');
+          }
+
+          setBackground(maybeRenderer: any, element: ElementRef) {
+            (maybeRenderer as Renderer).setElementStyle(element.nativeElement, 'background', 'purple');
+          }
+        }
+      `);
+
+    runTSLint(true);
+    const content = getFile('index.ts');
+
+    expect(content).toContain(`const renderer = maybeRenderer as Renderer2;`);
+    expect(content).toContain(`renderer.setStyle(element.nativeElement, 'color', 'red');`);
+    expect(content).toContain(
+        `(maybeRenderer as Renderer2).setStyle(element.nativeElement, 'background', 'purple');`);
+  });
+
   it('should be able to insert helper functions', () => {
     writeFile('/index.ts', `
         import { Renderer, Component, ElementRef } from '@angular/core';

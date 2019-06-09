@@ -32,7 +32,8 @@ export class Rule extends Rules.TypedRule {
     typedNodes.forEach(node => failures.push(this._getTypedNodeFailure(node, sourceFile)));
 
     methodCalls.forEach(call => {
-      const {failure, requiredHelpers} = this._getMethodCallFailure(call, sourceFile, printer);
+      const {failure, requiredHelpers} =
+          this._getMethodCallFailure(call, sourceFile, typeChecker, printer);
 
       failures.push(failure);
 
@@ -65,7 +66,7 @@ export class Rule extends Rules.TypedRule {
 
   /** Gets a failure for a typed node (e.g. function parameter or property). */
   private _getTypedNodeFailure(
-      node: ts.ParameterDeclaration|ts.PropertyDeclaration,
+      node: ts.ParameterDeclaration|ts.PropertyDeclaration|ts.AsExpression,
       sourceFile: ts.SourceFile): RuleFailure {
     const type = node.type !;
 
@@ -76,9 +77,9 @@ export class Rule extends Rules.TypedRule {
 
   /** Gets a failure for a Renderer method call. */
   private _getMethodCallFailure(
-      call: ts.CallExpression, sourceFile: ts.SourceFile,
+      call: ts.CallExpression, sourceFile: ts.SourceFile, typeChecker: ts.TypeChecker,
       printer: ts.Printer): {failure: RuleFailure, requiredHelpers?: HelperFunction[]} {
-    const {node, requiredHelpers} = migrateExpression(call);
+    const {node, requiredHelpers} = migrateExpression(call, typeChecker);
     let fix: Replacement|undefined;
 
     if (node) {

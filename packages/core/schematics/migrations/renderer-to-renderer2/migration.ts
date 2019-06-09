@@ -9,9 +9,7 @@
 import * as ts from 'typescript';
 
 import {HelperFunction} from './helpers';
-import {findImportSpecifier} from './util';
-
-// TODO: should handle `something as Renderer` or `<Renderer>something`?
+import {findImportSpecifier, isAsRenderer} from './util';
 
 /** Replaces an import inside an import statement with a different one. */
 export function replaceImport(node: ts.NamedImports, oldImport: string, newImport: string) {
@@ -40,22 +38,22 @@ export function replaceImport(node: ts.NamedImports, oldImport: string, newImpor
  * Migrates a function call expression from `Renderer` to `Renderer2`.
  * Returns null if the expression should be dropped.
  */
-export function migrateExpression(node: ts.CallExpression):
+export function migrateExpression(node: ts.CallExpression, typeChecker: ts.TypeChecker):
     {node: ts.Node | null, requiredHelpers?: HelperFunction[]} {
   if (ts.isPropertyAccessExpression(node.expression)) {
     switch (node.expression.name.getText()) {
       case 'setElementProperty':
-        return {node: renameMethodCall(node, 'setProperty')};
+        return {node: renameMethodCall(node, 'setProperty', typeChecker)};
       case 'setText':
-        return {node: renameMethodCall(node, 'setValue')};
+        return {node: renameMethodCall(node, 'setValue', typeChecker)};
       case 'listenGlobal':
-        return {node: renameMethodCall(node, 'listen')};
+        return {node: renameMethodCall(node, 'listen', typeChecker)};
       case 'selectRootElement':
-        return {node: migrateSelectRootElement(node)};
+        return {node: migrateSelectRootElement(node, typeChecker)};
       case 'setElementClass':
-        return {node: migrateSetElementClass(node)};
+        return {node: migrateSetElementClass(node, typeChecker)};
       case 'setElementStyle':
-        return {node: migrateSetElementStyle(node)};
+        return {node: migrateSetElementStyle(node, typeChecker)};
       case 'invokeElementMethod':
         return {node: migrateInvokeElementMethod(node)};
       case 'setBindingDebugInfo':
@@ -121,8 +119,10 @@ function assertPropertyAccessExpression(node: ts.Node): node is ts.PropertyAcces
 }
 
 /** Renames a method call while keeping all of the parameters in place. */
-function renameMethodCall(node: ts.CallExpression, newName: string): ts.CallExpression {
+function renameMethodCall(
+    node: ts.CallExpression, newName: string, typeChecker: ts.TypeChecker): ts.CallExpression {
   if (assertPropertyAccessExpression(node.expression)) {
+    renamePropertyAccessCast(node.expression, typeChecker);
     const newExpression = ts.updatePropertyAccess(
         node.expression, node.expression.expression, ts.createIdentifier(newName));
 
@@ -133,12 +133,31 @@ function renameMethodCall(node: ts.CallExpression, newName: string): ts.CallExpr
 }
 
 /**
+ * Looks for something that is cast to `Renderer` inside
+ * a property access and renames it to `Renderer2`.
+ */
+function renamePropertyAccessCast(rootNode: ts.Node, typeChecker: ts.TypeChecker) {
+  if (assertPropertyAccessExpression(rootNode)) {
+    let currentNode = rootNode.expression;
+
+    while (currentNode) {
+      if (isAsRenderer(typeChecker, currentNode)) {
+        currentNode.type = ts.createTypeReferenceNode('Renderer2', []);
+      }
+
+      currentNode = (currentNode as any).expression;
+    }
+  }
+}
+
+/**
  * Migrates a `selectRootElement` call by removing the last argument which is no longer supported.
  */
-function migrateSelectRootElement(node: ts.CallExpression): ts.Node {
+function migrateSelectRootElement(node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node {
   // The only thing we need to do is to drop the last argument
   // (`debugInfo`), if the consumer was passing it in.
   if (node.arguments.length > 1) {
+    renamePropertyAccessCast(node.expression, typeChecker);
     return ts.updateCall(node, node.expression, node.typeArguments, [node.arguments[0]]);
   }
 
@@ -149,8 +168,9 @@ function migrateSelectRootElement(node: ts.CallExpression): ts.Node {
  * Migrates a call to `setElementClass` either to a call to `addClass` or `removeClass`, or
  * to an expression like `isAdd ? addClass(el, className) : removeClass(el, className)`.
  */
-function migrateSetElementClass(node: ts.CallExpression): ts.Node {
+function migrateSetElementClass(node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node {
   assertPropertyAccessExpression(node.expression);
+  renamePropertyAccessCast(node.expression, typeChecker);
 
   // Clone so we don't mutate by accident. Note that we assume that
   // the user's code is providing all three required arguments.
@@ -179,7 +199,7 @@ function migrateSetElementClass(node: ts.CallExpression): ts.Node {
  * `setStyle` or `removeStyle`. or to an expression like
  * `value == null ? removeStyle(el, key) : setStyle(el, key, value)`.
  */
-function migrateSetElementStyle(node: ts.CallExpression): ts.Node {
+function migrateSetElementStyle(node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node {
   const args = node.arguments;
   const addMethodName = 'setStyle';
   const removeMethodName = 'removeStyle';
@@ -190,6 +210,7 @@ function migrateSetElementStyle(node: ts.CallExpression): ts.Node {
                                                 args[2].getText() === 'undefined'))) {
     // If we've got a call with two arguments, or one with three arguments where the last one is
     // `undefined` or `null`, we can safely switch to a `removeStyle` call.
+    renamePropertyAccessCast(node.expression, typeChecker);
     const innerExpression = (node.expression as ts.PropertyAccessExpression).expression;
     const topExpression = ts.createPropertyAccess(innerExpression, removeMethodName);
     return ts.createCall(topExpression, [], args.slice(0, 2));
@@ -198,14 +219,15 @@ function migrateSetElementStyle(node: ts.CallExpression): ts.Node {
          ts.isNumericLiteral(args[2]))) {
       // If we've got three arguments and the last one is a string literal or a number, we
       // can safely rename to `setStyle`.
-      return renameMethodCall(node, addMethodName);
+      return renameMethodCall(node, addMethodName, typeChecker);
     } else {
       // Otherwise migrate to a ternary that looks like:
       // `value == null ? removeStyle(el, key) : setStyle(el, key, value)`
       const condition = ts.createBinary(args[2], ts.SyntaxKind.EqualsEqualsToken, ts.createNull());
-      const whenNullCall =
-          renameMethodCall(ts.createCall(node.expression, [], args.slice(0, 2)), removeMethodName);
-      return ts.createConditional(condition, whenNullCall, renameMethodCall(node, addMethodName));
+      const whenNullCall = renameMethodCall(
+          ts.createCall(node.expression, [], args.slice(0, 2)), removeMethodName, typeChecker);
+      return ts.createConditional(
+          condition, whenNullCall, renameMethodCall(node, addMethodName, typeChecker));
     }
   }
 

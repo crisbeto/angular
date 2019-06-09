@@ -78,8 +78,8 @@ function runRendererToRenderer2Migration(tree: Tree, tsconfigPath: string, baseP
             sourceFile));
 
     // Change the method parameter and property types to `Renderer2`.
-    typedNodes.forEach(parameter => {
-      const type = parameter.type;
+    typedNodes.forEach(node => {
+      const type = node.type;
 
       if (type) {
         update.remove(type.getStart(), type.getWidth());
@@ -89,7 +89,7 @@ function runRendererToRenderer2Migration(tree: Tree, tsconfigPath: string, baseP
 
     // Migrate all of the method calls.
     methodCalls.forEach(call => {
-      const {node, requiredHelpers} = migrateExpression(call);
+      const {node, requiredHelpers} = migrateExpression(call, typeChecker);
 
       if (node) {
         // If we migrated the node to a new expression, replace only the call expression.
