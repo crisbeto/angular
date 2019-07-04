@@ -71,9 +71,14 @@ export class JitEvaluator {
       // We don't want to hard code this fact, so we auto detect it via an empty function first.
       const emptyFn = new Function(...fnArgNames.concat('return null;')).toString();
       const headerLines = emptyFn.slice(0, emptyFn.indexOf('return null;')).split('\n').length - 1;
-      fnBody += `\n${ctx.toSourceMapGenerator(sourceUrl, headerLines).toJsComment()}`;
+      // fnBody += `\n${ctx.toSourceMapGenerator(sourceUrl, headerLines).toJsComment()}`;
     }
     const fn = new Function(...fnArgNames.concat(fnBody));
+    const str = fn.toString();
+
+    // (str.indexOf('App') > -1 || str.indexOf('SomeComp') > -1 || str.indexOf('TestPipe') > -1) &&
+    //     console.log(str);
+
     return this.executeFunction(fn, fnArgValues);
   }
 

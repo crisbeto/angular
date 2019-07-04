@@ -32,6 +32,8 @@ export function ɵɵpipe(index: number, pipeName: string): any {
   let pipeDef: PipeDef<any>;
   const adjustedIndex = index + HEADER_OFFSET;
 
+  debugger;
+
   if (tView.firstTemplatePass) {
     pipeDef = getPipeDef(pipeName, tView.pipeRegistry);
     tView.data[adjustedIndex] = pipeDef;

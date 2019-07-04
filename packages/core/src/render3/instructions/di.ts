@@ -42,6 +42,9 @@ export function ɵɵdirectiveInject<T>(
     token: Type<T>| InjectionToken<T>, flags = InjectFlags.Default): T|null {
   token = resolveForwardRef(token);
   const lView = getLView();
+
+  debugger;
+
   // Fall back to inject() if view hasn't been created. This situation can happen in tests
   // if inject utilities are used before bootstrapping.
   if (lView == null) return ɵɵinject(token, flags);
