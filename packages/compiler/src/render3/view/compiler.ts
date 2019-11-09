@@ -560,6 +560,7 @@ function createHostBindingsFunction(
         return originalVarsCount;
       };
       valueConverter = new ValueConverter(
+          // Note: deal breaker. we can't use the `consts` inside host binding instructions.
           constantPool,
           () => error('Unexpected node'),  // new nodes are illegal here
           hostVarsCountFn,

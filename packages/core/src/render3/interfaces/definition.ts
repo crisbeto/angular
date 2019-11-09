@@ -10,7 +10,7 @@ import {SchemaMetadata, ViewEncapsulation} from '../../core';
 import {ProcessProvidersFunction} from '../../di/interface/provider';
 import {Type} from '../../interface/type';
 
-import {TConstants} from './node';
+import {TAttributes} from './node';
 import {CssSelectorList} from './projection';
 import {TView} from './view';
 
@@ -419,6 +419,30 @@ export type PipeTypesOrFactory = (() => PipeTypeList) | PipeTypeList;
 
 export type PipeTypeList =
     (PipeType<any>| Type<any>/* Type as workaround for: Microsoft/TypeScript/issues/4881 */)[];
+
+
+export type PureFunction0 = () => any;
+export type PureFunction1 = (v: any) => any;
+export type PureFunction2 = (v1: any, v2: any) => any;
+export type PureFunction3 = (v1: any, v2: any, v3: any) => any;
+export type PureFunction4 = (v1: any, v2: any, v3: any, v4: any) => any;
+export type PureFunction5 = (v1: any, v2: any, v3: any, v4: any, v5: any) => any;
+export type PureFunction6 = (v1: any, v2: any, v3: any, v4: any, v5: any, v6: any) => any;
+export type PureFunction7 = (v1: any, v2: any, v3: any, v4: any, v5: any, v6: any, v7: any) => any;
+export type PureFunction8 =
+    (v1: any, v2: any, v3: any, v4: any, v5: any, v6: any, v7: any, v8: any) => any;
+export type PureFunctionV = (...v: any[]) => any;
+
+export type PureFunction = PureFunction0 | PureFunction1 | PureFunction2 | PureFunction3 |
+    PureFunction4 | PureFunction5 | PureFunction6 | PureFunction7 | PureFunction8 | PureFunctionV;
+
+/**
+ * Constants that are associated with a view. Includes:
+ * - Attribute arrays.
+ * - Local definition arrays.
+ * - Pure functions.
+ */
+export type TConstants = (TAttributes | string | PureFunction)[];
 
 
 // Note: This hack is necessary so we don't erroneously get a circular dependency

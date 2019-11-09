@@ -17,8 +17,7 @@ import {stringify} from '../util/stringify';
 
 import {EMPTY_ARRAY, EMPTY_OBJ} from './empty';
 import {NG_COMP_DEF, NG_DIR_DEF, NG_FACTORY_DEF, NG_LOC_ID_DEF, NG_MOD_DEF, NG_PIPE_DEF} from './fields';
-import {ComponentDef, ComponentDefFeature, ComponentTemplate, ComponentType, ContentQueriesFunction, DirectiveDef, DirectiveDefFeature, DirectiveTypesOrFactory, FactoryFn, HostBindingsFunction, PipeDef, PipeType, PipeTypesOrFactory, ViewQueriesFunction} from './interfaces/definition';
-import {TConstants} from './interfaces/node';
+import {ComponentDef, ComponentDefFeature, ComponentTemplate, ComponentType, ContentQueriesFunction, DirectiveDef, DirectiveDefFeature, DirectiveTypesOrFactory, FactoryFn, HostBindingsFunction, PipeDef, PipeType, PipeTypesOrFactory, TConstants, ViewQueriesFunction} from './interfaces/definition';
 // while SelectorFlags is unused here, it's required so that types don't get resolved lazily
 // see: https://github.com/Microsoft/web-build-tools/issues/1050
 import {CssSelectorList, SelectorFlags} from './interfaces/projection';

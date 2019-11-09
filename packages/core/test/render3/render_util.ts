@@ -13,7 +13,7 @@ import {TemplateRef} from '@angular/core/src/linker/template_ref';
 import {ViewContainerRef} from '@angular/core/src/linker/view_container_ref';
 import {Renderer2} from '@angular/core/src/render/api';
 import {createLView, createTView, getOrCreateTComponentView, getOrCreateTNode, renderComponentOrTemplate} from '@angular/core/src/render3/instructions/shared';
-import {TConstants, TNodeType} from '@angular/core/src/render3/interfaces/node';
+import {TNodeType} from '@angular/core/src/render3/interfaces/node';
 import {enterView, getLView} from '@angular/core/src/render3/state';
 import {stringifyElement} from '@angular/platform-browser/testing/src/browser_util';
 
@@ -29,7 +29,7 @@ import {getDirectivesAtNodeIndex, getLContext, isComponentInstance} from '../../
 import {extractDirectiveDef, extractPipeDef} from '../../src/render3/definition';
 import {NG_ELEMENT_ID} from '../../src/render3/fields';
 import {ComponentDef, ComponentTemplate, ComponentType, DirectiveDef, DirectiveType, RenderFlags, renderComponent as _renderComponent, tick, ɵɵProvidersFeature, ɵɵdefineComponent, ɵɵdefineDirective} from '../../src/render3/index';
-import {DirectiveDefList, DirectiveDefListOrFactory, DirectiveTypesOrFactory, HostBindingsFunction, PipeDef, PipeDefList, PipeDefListOrFactory, PipeTypesOrFactory} from '../../src/render3/interfaces/definition';
+import {DirectiveDefList, DirectiveDefListOrFactory, DirectiveTypesOrFactory, HostBindingsFunction, PipeDef, PipeDefList, PipeDefListOrFactory, PipeTypesOrFactory, TConstants} from '../../src/render3/interfaces/definition';
 import {PlayerHandler} from '../../src/render3/interfaces/player';
 import {ProceduralRenderer3, RComment, RElement, RNode, RText, Renderer3, RendererFactory3, RendererStyleFlags3, domRendererFactory3} from '../../src/render3/interfaces/renderer';
 import {HEADER_OFFSET, LView, LViewFlags, TViewType, T_HOST} from '../../src/render3/interfaces/view';

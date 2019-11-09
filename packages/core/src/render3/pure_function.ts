@@ -6,9 +6,15 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import {assertDefined} from '../util/assert';
+
 import {bindingUpdated, bindingUpdated2, bindingUpdated3, bindingUpdated4, getBinding, updateBinding} from './bindings';
+import {pureFunction1Internal, pureFunction2Internal, pureFunction3Internal, pureFunction4Internal, pureFunctionVInternal} from './instructions/shared';
+import {PureFunction0, PureFunction1, PureFunction2, PureFunction3, PureFunction4, PureFunction5, PureFunction6, PureFunction7, PureFunction8, PureFunctionV} from './interfaces/definition';
+import {TVIEW} from './interfaces/view';
 import {getBindingRoot, getLView} from './state';
-import {isCreationMode} from './util/view_utils';
+import {NO_CHANGE} from './tokens';
+import {getConstant} from './util/view_utils';
 
 
 /**
@@ -34,17 +40,18 @@ import {isCreationMode} from './util/view_utils';
  * value. If it has been saved, returns the saved value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn Function that returns a value
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param thisArg Optional calling context of pureFn
  * @returns value
  *
  * @codeGenApi
  */
-export function ɵɵpureFunction0<T>(slotOffset: number, pureFn: () => T, thisArg?: any): T {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
+export function ɵɵpureFunction0(slotOffset: number, pureFnIndex: number, thisArg?: any): any {
   const bindingIndex = getBindingRoot() + slotOffset;
   const lView = getLView();
-  return isCreationMode(lView) ?
+  const pureFn = getConstant<PureFunction0>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
+  return lView[bindingIndex] === NO_CHANGE ?
       updateBinding(lView, bindingIndex, thisArg ? pureFn.call(thisArg) : pureFn()) :
       getBinding(lView, bindingIndex);
 }
@@ -62,13 +69,11 @@ export function ɵɵpureFunction0<T>(slotOffset: number, pureFn: () => T, thisAr
  * @codeGenApi
  */
 export function ɵɵpureFunction1(
-    slotOffset: number, pureFn: (v: any) => any, exp: any, thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
+    slotOffset: number, pureFnIndex: number, exp: any, thisArg?: any): any {
   const lView = getLView();
-  const bindingIndex = getBindingRoot() + slotOffset;
-  return bindingUpdated(lView, bindingIndex, exp) ?
-      updateBinding(lView, bindingIndex + 1, thisArg ? pureFn.call(thisArg, exp) : pureFn(exp)) :
-      getBinding(lView, bindingIndex + 1);
+  const pureFn = getConstant<PureFunction1>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
+  return pureFunction1Internal(lView, getBindingRoot(), slotOffset, pureFn, exp, thisArg);
 }
 
 /**
@@ -76,7 +81,7 @@ export function ɵɵpureFunction1(
  * an updated value. Or if no values have changed, returns cached value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param exp1
  * @param exp2
  * @param thisArg Optional calling context of pureFn
@@ -85,16 +90,11 @@ export function ɵɵpureFunction1(
  * @codeGenApi
  */
 export function ɵɵpureFunction2(
-    slotOffset: number, pureFn: (v1: any, v2: any) => any, exp1: any, exp2: any,
-    thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
-  const bindingIndex = getBindingRoot() + slotOffset;
+    slotOffset: number, pureFnIndex: number, exp1: any, exp2: any, thisArg?: any): any {
   const lView = getLView();
-  return bindingUpdated2(lView, bindingIndex, exp1, exp2) ?
-      updateBinding(
-          lView, bindingIndex + 2,
-          thisArg ? pureFn.call(thisArg, exp1, exp2) : pureFn(exp1, exp2)) :
-      getBinding(lView, bindingIndex + 2);
+  const pureFn = getConstant<PureFunction2>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
+  return pureFunction2Internal(lView, getBindingRoot(), slotOffset, pureFn, exp1, exp2, thisArg);
 }
 
 /**
@@ -102,7 +102,7 @@ export function ɵɵpureFunction2(
  * an updated value. Or if no values have changed, returns cached value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param exp1
  * @param exp2
  * @param exp3
@@ -112,16 +112,12 @@ export function ɵɵpureFunction2(
  * @codeGenApi
  */
 export function ɵɵpureFunction3(
-    slotOffset: number, pureFn: (v1: any, v2: any, v3: any) => any, exp1: any, exp2: any, exp3: any,
-    thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
-  const bindingIndex = getBindingRoot() + slotOffset;
+    slotOffset: number, pureFnIndex: number, exp1: any, exp2: any, exp3: any, thisArg?: any): any {
   const lView = getLView();
-  return bindingUpdated3(lView, bindingIndex, exp1, exp2, exp3) ?
-      updateBinding(
-          lView, bindingIndex + 3,
-          thisArg ? pureFn.call(thisArg, exp1, exp2, exp3) : pureFn(exp1, exp2, exp3)) :
-      getBinding(lView, bindingIndex + 3);
+  const pureFn = getConstant<PureFunction3>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
+  return pureFunction3Internal(
+      lView, getBindingRoot(), slotOffset, pureFn, exp1, exp2, exp3, thisArg);
 }
 
 /**
@@ -129,7 +125,7 @@ export function ɵɵpureFunction3(
  * an updated value. Or if no values have changed, returns cached value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param exp1
  * @param exp2
  * @param exp3
@@ -140,16 +136,13 @@ export function ɵɵpureFunction3(
  * @codeGenApi
  */
 export function ɵɵpureFunction4(
-    slotOffset: number, pureFn: (v1: any, v2: any, v3: any, v4: any) => any, exp1: any, exp2: any,
-    exp3: any, exp4: any, thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
-  const bindingIndex = getBindingRoot() + slotOffset;
+    slotOffset: number, pureFnIndex: number, exp1: any, exp2: any, exp3: any, exp4: any,
+    thisArg?: any): any {
   const lView = getLView();
-  return bindingUpdated4(lView, bindingIndex, exp1, exp2, exp3, exp4) ?
-      updateBinding(
-          lView, bindingIndex + 4,
-          thisArg ? pureFn.call(thisArg, exp1, exp2, exp3, exp4) : pureFn(exp1, exp2, exp3, exp4)) :
-      getBinding(lView, bindingIndex + 4);
+  const pureFn = getConstant<PureFunction4>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
+  return pureFunction4Internal(
+      lView, getBindingRoot(), slotOffset, pureFn, exp1, exp2, exp3, exp4, thisArg);
 }
 
 /**
@@ -157,7 +150,7 @@ export function ɵɵpureFunction4(
  * an updated value. Or if no values have changed, returns cached value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param exp1
  * @param exp2
  * @param exp3
@@ -169,12 +162,13 @@ export function ɵɵpureFunction4(
  * @codeGenApi
  */
 export function ɵɵpureFunction5(
-    slotOffset: number, pureFn: (v1: any, v2: any, v3: any, v4: any, v5: any) => any, exp1: any,
-    exp2: any, exp3: any, exp4: any, exp5: any, thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
+    slotOffset: number, pureFnIndex: number, exp1: any, exp2: any, exp3: any, exp4: any, exp5: any,
+    thisArg?: any): any {
   const bindingIndex = getBindingRoot() + slotOffset;
   const lView = getLView();
   const different = bindingUpdated4(lView, bindingIndex, exp1, exp2, exp3, exp4);
+  const pureFn = getConstant<PureFunction5>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
   return bindingUpdated(lView, bindingIndex + 4, exp5) || different ?
       updateBinding(
           lView, bindingIndex + 5, thisArg ? pureFn.call(thisArg, exp1, exp2, exp3, exp4, exp5) :
@@ -187,7 +181,7 @@ export function ɵɵpureFunction5(
  * an updated value. Or if no values have changed, returns cached value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param exp1
  * @param exp2
  * @param exp3
@@ -200,12 +194,13 @@ export function ɵɵpureFunction5(
  * @codeGenApi
  */
 export function ɵɵpureFunction6(
-    slotOffset: number, pureFn: (v1: any, v2: any, v3: any, v4: any, v5: any, v6: any) => any,
-    exp1: any, exp2: any, exp3: any, exp4: any, exp5: any, exp6: any, thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
+    slotOffset: number, pureFnIndex: number, exp1: any, exp2: any, exp3: any, exp4: any, exp5: any,
+    exp6: any, thisArg?: any): any {
   const bindingIndex = getBindingRoot() + slotOffset;
   const lView = getLView();
   const different = bindingUpdated4(lView, bindingIndex, exp1, exp2, exp3, exp4);
+  const pureFn = getConstant<PureFunction6>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
   return bindingUpdated2(lView, bindingIndex + 4, exp5, exp6) || different ?
       updateBinding(
           lView, bindingIndex + 6, thisArg ?
@@ -219,7 +214,7 @@ export function ɵɵpureFunction6(
  * an updated value. Or if no values have changed, returns cached value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param exp1
  * @param exp2
  * @param exp3
@@ -233,13 +228,13 @@ export function ɵɵpureFunction6(
  * @codeGenApi
  */
 export function ɵɵpureFunction7(
-    slotOffset: number,
-    pureFn: (v1: any, v2: any, v3: any, v4: any, v5: any, v6: any, v7: any) => any, exp1: any,
-    exp2: any, exp3: any, exp4: any, exp5: any, exp6: any, exp7: any, thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
+    slotOffset: number, pureFnIndex: number, exp1: any, exp2: any, exp3: any, exp4: any, exp5: any,
+    exp6: any, exp7: any, thisArg?: any): any {
   const bindingIndex = getBindingRoot() + slotOffset;
   const lView = getLView();
   let different = bindingUpdated4(lView, bindingIndex, exp1, exp2, exp3, exp4);
+  const pureFn = getConstant<PureFunction7>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
   return bindingUpdated3(lView, bindingIndex + 4, exp5, exp6, exp7) || different ?
       updateBinding(
           lView, bindingIndex + 7, thisArg ?
@@ -253,7 +248,7 @@ export function ɵɵpureFunction7(
  * an updated value. Or if no values have changed, returns cached value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param exp1
  * @param exp2
  * @param exp3
@@ -268,14 +263,13 @@ export function ɵɵpureFunction7(
  * @codeGenApi
  */
 export function ɵɵpureFunction8(
-    slotOffset: number,
-    pureFn: (v1: any, v2: any, v3: any, v4: any, v5: any, v6: any, v7: any, v8: any) => any,
-    exp1: any, exp2: any, exp3: any, exp4: any, exp5: any, exp6: any, exp7: any, exp8: any,
-    thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
+    slotOffset: number, pureFnIndex: number, exp1: any, exp2: any, exp3: any, exp4: any, exp5: any,
+    exp6: any, exp7: any, exp8: any, thisArg?: any): any {
   const bindingIndex = getBindingRoot() + slotOffset;
   const lView = getLView();
   const different = bindingUpdated4(lView, bindingIndex, exp1, exp2, exp3, exp4);
+  const pureFn = getConstant<PureFunction8>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
   return bindingUpdated4(lView, bindingIndex + 4, exp5, exp6, exp7, exp8) || different ?
       updateBinding(
           lView, bindingIndex + 8, thisArg ?
@@ -291,8 +285,7 @@ export function ɵɵpureFunction8(
  * an updated value. Or if no values have changed, returns cached value.
  *
  * @param slotOffset the offset from binding root to the reserved slot
- * @param pureFn A pure function that takes binding values and builds an object or array
- * containing those values.
+ * @param pureFnIndex Index of the pure function inside the constants array
  * @param exps An array of binding values
  * @param thisArg Optional calling context of pureFn
  * @returns Updated or cached value
@@ -300,14 +293,9 @@ export function ɵɵpureFunction8(
  * @codeGenApi
  */
 export function ɵɵpureFunctionV(
-    slotOffset: number, pureFn: (...v: any[]) => any, exps: any[], thisArg?: any): any {
-  // TODO(kara): use bindingRoot instead of bindingStartIndex when implementing host bindings
-  let bindingIndex = getBindingRoot() + slotOffset;
-  let different = false;
+    slotOffset: number, pureFnIndex: number, exps: any[], thisArg?: any): any {
   const lView = getLView();
-  for (let i = 0; i < exps.length; i++) {
-    bindingUpdated(lView, bindingIndex++, exps[i]) && (different = true);
-  }
-  return different ? updateBinding(lView, bindingIndex, pureFn.apply(thisArg, exps)) :
-                     getBinding(lView, bindingIndex);
+  const pureFn = getConstant<PureFunctionV>(lView[TVIEW].consts, pureFnIndex) !;
+  ngDevMode && assertDefined(pureFn, `Expected pure function at index ${pureFnIndex}`);
+  return pureFunctionVInternal(lView, getBindingRoot(), slotOffset, pureFn, exps, thisArg);
 }

@@ -174,7 +174,7 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
     this.fileBasedI18nSuffix = relativeContextFilePath.replace(/[^A-Za-z0-9]/g, '_') + '_';
 
     this._valueConverter = new ValueConverter(
-        constantPool, () => this.allocateDataSlot(),
+        (value) => this.addToConsts(value), () => this.allocateDataSlot(),
         (numSlots: number) => this.allocatePureFunctionSlots(numSlots),
         (name, localName, slot, value: o.Expression) => {
           const pipeType = pipeTypeByName.get(name);
@@ -1358,7 +1358,8 @@ export class ValueConverter extends AstMemoryEfficientTransformer {
   private _pipeBindExprs: FunctionCall[] = [];
 
   constructor(
-      private constantPool: ConstantPool, private allocateSlot: () => number,
+      private addConstant: (value: o.Expression) => o.LiteralExpr,
+      private allocateSlot: () => number,
       private allocatePureFunctionSlots: (numSlots: number) => number,
       private definePipe:
           (name: string, localName: string, slot: number, value: o.Expression) => void) {
@@ -1406,9 +1407,9 @@ export class ValueConverter extends AstMemoryEfficientTransformer {
           // calls to literal factories that compose the literal and will cache intermediate
           // values. Otherwise, just return an literal array that contains the values.
           const literal = o.literalArr(values);
-          return values.every(a => a.isConstant()) ?
-              this.constantPool.getConstLiteral(literal, true) :
-              getLiteralFactory(this.constantPool, literal, this.allocatePureFunctionSlots);
+          // return getLiteralFactory(this.constantPool, literal, this.allocatePureFunctionSlots);
+          const factory = getLiteralFactoryAlt(literal, this.allocatePureFunctionSlots);
+          return this.addConstant(factory);
         });
   }
 
@@ -1419,9 +1420,9 @@ export class ValueConverter extends AstMemoryEfficientTransformer {
       // values. Otherwise, just return an literal array that contains the values.
       const literal = o.literalMap(values.map(
           (value, index) => ({key: map.keys[index].key, value, quoted: map.keys[index].quoted})));
-      return values.every(a => a.isConstant()) ?
-          this.constantPool.getConstLiteral(literal, true) :
-          getLiteralFactory(this.constantPool, literal, this.allocatePureFunctionSlots);
+      // return getLiteralFactory(this.constantPool, literal, this.allocatePureFunctionSlots);
+      const factory = getLiteralFactoryAlt(literal, this.allocatePureFunctionSlots);
+      return this.addConstant(factory);
     });
   }
 }
@@ -1468,15 +1469,11 @@ function getLiteralFactory(
   const {literalFactory, literalFactoryArguments} = constantPool.getLiteralFactory(literal);
   // Allocate 1 slot for the result plus 1 per argument
   const startSlot = allocateSlots(1 + literalFactoryArguments.length);
-  literalFactoryArguments.length > 0 || error(`Expected arguments to a literal factory function`);
   const {identifier, isVarLength} = pureFunctionCallInfo(literalFactoryArguments);
 
   // Literal factories are pure functions that only need to be re-invoked when the parameters
   // change.
-  const args = [
-    o.literal(startSlot),
-    literalFactory,
-  ];
+  const args = [o.literal(startSlot), literalFactory];
 
   if (isVarLength) {
     args.push(o.literalArr(literalFactoryArguments));
@@ -1485,6 +1482,55 @@ function getLiteralFactory(
   }
 
   return o.importExpr(identifier).callFn(args);
+}
+
+function getLiteralFactoryAlt(
+    literal: o.LiteralArrayExpr | o.LiteralMapExpr,
+    allocateSlots: (numSlots: number) => number): o.Expression {
+  const {literalFactory, literalFactoryArguments} = _getLiteralFactory(literal);
+  // Allocate 1 slot for the result plus 1 per argument
+  const startSlot = allocateSlots(1 + literalFactoryArguments.length);
+  const {identifier, isVarLength} = pureFunctionCallInfo(literalFactoryArguments);
+
+  // Literal factories are pure functions that only need to be re-invoked when the parameters
+  // change.
+  const args: o.Expression[] = [o.literal(startSlot), literalFactory];
+
+  if (isVarLength) {
+    args.push(o.literalArr(literalFactoryArguments));
+  } else {
+    args.push(...literalFactoryArguments);
+  }
+
+  return o.importExpr(identifier).callFn(args);
+}
+
+function _getLiteralFactory(literal: o.LiteralArrayExpr | o.LiteralMapExpr) {
+  // Create a pure function that builds an array of a mix of constant and variable expressions
+  if (literal instanceof o.LiteralArrayExpr) {
+    return __getLiteralFactory(literal.entries, entries => o.literalArr(entries));
+  } else {
+    return __getLiteralFactory(
+        literal.entries.map(e => e.value),
+        entries => o.literalMap(entries.map(
+            (value, index) => (
+                {key: literal.entries[index].key, value, quoted: literal.entries[index].quoted}))));
+  }
+}
+
+function __getLiteralFactory(
+    values: o.Expression[], resultMap: (parameters: o.Expression[]) => o.Expression) {
+  const literalFactoryArguments = values.filter((e => !e.isConstant()));
+  const resultExpressions = values.map((_, index) => o.variable(`a${index}`));
+  const parameters =
+      resultExpressions.filter(isVariable).map(e => new o.FnParam(e.name !, o.DYNAMIC_TYPE));
+  const literalFactory =
+      o.fn(parameters, [new o.ReturnStatement(resultMap(resultExpressions))], o.INFERRED_TYPE);
+  return {literalFactory, literalFactoryArguments};
+}
+
+function isVariable(e: o.Expression): e is o.ReadVarExpr {
+  return e instanceof o.ReadVarExpr;
 }
 
 /**

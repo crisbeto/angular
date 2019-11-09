@@ -10,7 +10,8 @@ import {assertDataInRange, assertDefined, assertDomNode, assertGreaterThan, asse
 import {assertTNodeForLView} from '../assert';
 import {LContainer, TYPE} from '../interfaces/container';
 import {LContext, MONKEY_PATCH_KEY_NAME} from '../interfaces/context';
-import {TConstants, TNode} from '../interfaces/node';
+import {TConstants} from '../interfaces/definition';
+import {TAttributes, TNode} from '../interfaces/node';
 import {RNode, isProceduralRenderer} from '../interfaces/renderer';
 import {isLContainer, isLView} from '../interfaces/type_checks';
 import {FLAGS, HEADER_OFFSET, HOST, LView, LViewFlags, PARENT, PREORDER_HOOK_FLAGS, RENDERER, TData, TVIEW} from '../interfaces/view';
@@ -176,8 +177,9 @@ export function viewAttachedToContainer(view: LView): boolean {
 }
 
 /** Returns a constant from `TConstants` instance. */
-export function getConstant(consts: TConstants | null, index: number | null | undefined) {
-  return consts === null || index == null ? null : consts[index];
+export function getConstant<T>(consts: TConstants | null, index: number | null | undefined): T|
+    null {
+  return consts === null || index == null ? null : consts[index] as unknown as T;
 }
 
 /**

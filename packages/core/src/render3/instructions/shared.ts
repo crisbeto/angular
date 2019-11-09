@@ -15,15 +15,16 @@ import {createNamedArrayType} from '../../util/named_array_type';
 import {initNgDevMode} from '../../util/ng_dev_mode';
 import {normalizeDebugBindingName, normalizeDebugBindingValue} from '../../util/ng_reflect';
 import {assertFirstCreatePass, assertLView} from '../assert';
+import {bindingUpdated, bindingUpdated2, bindingUpdated3, bindingUpdated4, getBinding, updateBinding} from '../bindings';
 import {attachPatchData} from '../context_discovery';
 import {getFactoryDef} from '../definition';
 import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} from '../di';
 import {throwMultipleComponentError} from '../errors';
 import {executeCheckHooks, executeInitAndCheckHooks, incrementInitPhaseFlags, registerPreOrderHooks} from '../hooks';
 import {ACTIVE_INDEX, CONTAINER_HEADER_OFFSET, LContainer} from '../interfaces/container';
-import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, PipeDefListOrFactory, RenderFlags, ViewQueriesFunction} from '../interfaces/definition';
+import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, PipeDefListOrFactory, PureFunction1, PureFunction2, PureFunction3, PureFunction4, PureFunctionV, RenderFlags, TConstants, ViewQueriesFunction} from '../interfaces/definition';
 import {INJECTOR_BLOOM_PARENT_SIZE, NodeInjectorFactory} from '../interfaces/injector';
-import {AttributeMarker, InitialInputData, InitialInputs, LocalRefExtractor, PropertyAliasValue, PropertyAliases, TAttributes, TConstants, TContainerNode, TDirectiveHostNode, TElementContainerNode, TElementNode, TIcuContainerNode, TNode, TNodeFlags, TNodeProviderIndexes, TNodeType, TProjectionNode, TViewNode} from '../interfaces/node';
+import {AttributeMarker, InitialInputData, InitialInputs, LocalRefExtractor, PropertyAliasValue, PropertyAliases, TAttributes, TContainerNode, TDirectiveHostNode, TElementContainerNode, TElementNode, TIcuContainerNode, TNode, TNodeFlags, TNodeProviderIndexes, TNodeType, TProjectionNode, TViewNode} from '../interfaces/node';
 import {RComment, RElement, RNode, RText, Renderer3, RendererFactory3, isProceduralRenderer} from '../interfaces/renderer';
 import {SanitizerFn} from '../interfaces/sanitization';
 import {isComponentDef, isComponentHost, isContentQueryHost, isLContainer, isRootView} from '../interfaces/type_checks';
@@ -1849,4 +1850,58 @@ export function renderInitialStyling(
       writeStylingValueDirectly(renderer, native, styles, false, null);
     }
   }
+}
+
+export function pureFunction1Internal(
+    lView: LView, bindingRoot: number, slotOffset: number, pureFn: PureFunction1, exp: any,
+    thisArg?: any): any {
+  const bindingIndex = bindingRoot + slotOffset;
+  return bindingUpdated(lView, bindingIndex, exp) ?
+      updateBinding(lView, bindingIndex + 1, thisArg ? pureFn.call(thisArg, exp) : pureFn(exp)) :
+      getBinding(lView, bindingIndex + 1);
+}
+
+export function pureFunction2Internal(
+    lView: LView, bindingRoot: number, slotOffset: number, pureFn: PureFunction2, exp1: any,
+    exp2: any, thisArg?: any): any {
+  const bindingIndex = bindingRoot + slotOffset;
+  return bindingUpdated2(lView, bindingIndex, exp1, exp2) ?
+      updateBinding(
+          lView, bindingIndex + 2,
+          thisArg ? pureFn.call(thisArg, exp1, exp2) : pureFn(exp1, exp2)) :
+      getBinding(lView, bindingIndex + 2);
+}
+
+export function pureFunction3Internal(
+    lView: LView, bindingRoot: number, slotOffset: number, pureFn: PureFunction3, exp1: any,
+    exp2: any, exp3: any, thisArg?: any): any {
+  const bindingIndex = bindingRoot + slotOffset;
+  return bindingUpdated3(lView, bindingIndex, exp1, exp2, exp3) ?
+      updateBinding(
+          lView, bindingIndex + 3,
+          thisArg ? pureFn.call(thisArg, exp1, exp2, exp3) : pureFn(exp1, exp2, exp3)) :
+      getBinding(lView, bindingIndex + 3);
+}
+
+export function pureFunction4Internal(
+    lView: LView, bindingRoot: number, slotOffset: number, pureFn: PureFunction4, exp1: any,
+    exp2: any, exp3: any, exp4: any, thisArg?: any): any {
+  const bindingIndex = bindingRoot + slotOffset;
+  return bindingUpdated4(lView, bindingIndex, exp1, exp2, exp3, exp4) ?
+      updateBinding(
+          lView, bindingIndex + 4,
+          thisArg ? pureFn.call(thisArg, exp1, exp2, exp3, exp4) : pureFn(exp1, exp2, exp3, exp4)) :
+      getBinding(lView, bindingIndex + 4);
+}
+
+export function pureFunctionVInternal(
+    lView: LView, bindingRoot: number, slotOffset: number, pureFn: PureFunctionV, exps: any[],
+    thisArg?: any): any {
+  let bindingIndex = bindingRoot + slotOffset;
+  let different = false;
+  for (let i = 0; i < exps.length; i++) {
+    bindingUpdated(lView, bindingIndex++, exps[i]) && (different = true);
+  }
+  return different ? updateBinding(lView, bindingIndex, pureFn.apply(thisArg, exps)) :
+                     getBinding(lView, bindingIndex);
 }

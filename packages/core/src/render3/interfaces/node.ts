@@ -330,13 +330,6 @@ export const enum AttributeMarker {
 export type TAttributes = (string | AttributeMarker | CssSelector)[];
 
 /**
- * Constants that are associated with a view. Includes:
- * - Attribute arrays.
- * - Local definition arrays.
- */
-export type TConstants = (TAttributes | string)[];
-
-/**
  * Binding data (flyweight) for a particular node that is shared between all templates
  * of a specific type.
  *
