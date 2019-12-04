@@ -45,8 +45,9 @@ export function detectChanges<T>(component: T): void {
  * @param component Component to mark as dirty.
  *
  * @publicApi
+ * @globalApi ng
  */
-export function markDirty<T>(component: T) {
+export function markDirty<T>(component: T): void {
   ngDevMode && assertDefined(component, 'component');
   const rootView = markViewDirty(getComponentViewByInstance(component)) !;
 

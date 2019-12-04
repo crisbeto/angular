@@ -8,7 +8,6 @@
 
 import {CommonModule} from '@angular/common';
 import {Component} from '@angular/core';
-import {LView} from '@angular/core/src/render3/interfaces/view';
 import {getComponentLView, loadLContext} from '@angular/core/src/render3/util/discovery_utils';
 import {createNamedArrayType} from '@angular/core/src/util/named_array_type';
 import {TestBed} from '@angular/core/testing';

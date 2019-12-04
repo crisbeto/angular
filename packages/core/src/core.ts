@@ -37,6 +37,9 @@ export {SecurityContext} from './sanitization/security';
 export {Sanitizer} from './sanitization/sanitizer';
 export * from './codegen_private_exports';
 
+// TODO: just for testing. to be removed.
+export * from './render3/util/discovery_utils';
+
 import {global} from './util/global';
 if (ngDevMode) {
   // This helper is to give a reasonable error message to people upgrading to v9 that have not yet

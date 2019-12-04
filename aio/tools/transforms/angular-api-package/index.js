@@ -24,6 +24,7 @@ module.exports =
         .processor(require('./processors/extractPipeParams'))
         .processor(require('./processors/matchUpDirectiveDecorators'))
         .processor(require('./processors/addMetadataAliases'))
+        .processor(require('./processors/addGlobalApiData'))
         .processor(require('./processors/computeApiBreadCrumbs'))
         .processor(require('./processors/filterContainedDocs'))
         .processor(require('./processors/processClassLikeMembers'))

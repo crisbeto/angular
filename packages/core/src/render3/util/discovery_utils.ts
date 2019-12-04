@@ -42,6 +42,7 @@ import {getTNode, unwrapRNode} from './view_utils';
  * ```
  *
  * @publicApi
+ * @globalApi ng
  */
 export function getComponent<T = {}>(element: Element): T|null {
   if (!(element instanceof Node)) throw new Error('Expecting instance of DOM Node');
@@ -75,6 +76,7 @@ export function getComponent<T = {}>(element: Element): T|null {
  * ```
  *
  * @publicApi
+ * @globalApi ng
  */
 export function getContext<T = {}>(element: Element): T|null {
   if (!(element instanceof Node)) throw new Error('Expecting instance of DOM Node');
@@ -103,6 +105,7 @@ export function getContext<T = {}>(element: Element): T|null {
  * ```
  *
  * @publicApi
+ * @globalApi ng
  */
 export function getViewComponent<T = {}>(element: Element | {}): T|null {
   const context = loadLContext(element, false);
@@ -126,6 +129,7 @@ export function getViewComponent<T = {}>(element: Element | {}): T|null {
  * @param target A DOM element, component or directive instance.
  *
  * @publicApi
+ * @globalApi ng
  */
 export function getRootComponents(target: {}): any[] {
   return [...getRootContext(target).components];
@@ -137,6 +141,7 @@ export function getRootComponents(target: {}): any[] {
  * @param target A DOM element, component or directive instance.
  *
  * @publicApi
+ * @globalApi ng
  */
 export function getInjector(target: {}): Injector {
   const context = loadLContext(target, false);
@@ -178,12 +183,14 @@ export function getInjectionTokens(element: Element): any[] {
 /**
  * Retrieves directives associated with a given DOM host element.
  *
- * @param target A DOM element, component or directive instance.
+ * @param element DOM element from which the directives should be retrieved.
  *
  * @publicApi
+ * @globalApi ng
  */
-export function getDirectives(target: {}): Array<{}> {
-  const context = loadLContext(target) !;
+export function getDirectives(element: Element): {}[] {
+  if (!(element instanceof Node)) throw new Error('Expecting instance of DOM Node');
+  const context = loadLContext(element);
 
   if (context.directives === undefined) {
     context.directives = getDirectivesAtNodeIndex(context.nodeIndex, context.lView, false);
@@ -238,6 +245,7 @@ export function getLocalRefs(target: {}): {[key: string]: any} {
  * @param directive Component or Directive for which the host element should be retrieved.
  *
  * @publicApi
+ * @globalApi ng
  */
 export function getHostElement<T>(directive: T): Element {
   return getLContext(directive) !.native as never as Element;
@@ -296,6 +304,7 @@ export function isBrowserEvents(listener: Listener): boolean {
  *
  * @param element Element for which the DOM listeners should be retrieved.
  * @publicApi
+ * @globalApi ng
  */
 export function getListeners(element: Element): Listener[] {
   if (!(element instanceof Node)) throw new Error('Expecting instance of DOM Node');
@@ -350,8 +359,6 @@ function isDirectiveDefHack(obj: any): obj is DirectiveDef<any> {
  * Returns the attached `DebugNode` instance for an element in the DOM.
  *
  * @param element DOM element which is owned by an existing component's view.
- *
- * @publicApi
  */
 export function getDebugNode(element: Node): DebugNode|null {
   let debugNode: DebugNode|null = null;
