@@ -210,6 +210,7 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
     };
 
     const rawProviders = ngModule.has('providers') ? ngModule.get('providers') ! : null;
+    rawProviders && this._validateProviders(rawProviders, name);
     const providers = rawProviders !== null ? new WrappedNodeExpr(rawProviders) : null;
 
     // At this point, only add the module's imports as the injectors' imports. Any exported modules
@@ -474,6 +475,27 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
     });
 
     return refList;
+  }
+
+  private _validateProviders(providers: ts.Expression, className: string) {
+    const resolvedProviders = this.evaluator.evaluate(providers);
+
+    if (Array.isArray(resolvedProviders)) {
+      resolvedProviders.forEach((provider, idx) => {
+        // TODO: double-check whether using `bestGuessOwningModule` to determine if the
+        // class is from an external module is the correct thing to do here.
+        if (provider instanceof Reference && provider.bestGuessOwningModule === null &&
+            ts.isClassDeclaration(provider.node)) {
+          const decorators = this.reflector.getDecoratorsOfDeclaration(provider.node);
+
+          if (!decorators || !findAngularDecorator(decorators, 'Injectable', this.isCore)) {
+            throw new FatalDiagnosticError(
+                ErrorCode.NGMODULE_INVALID_PROVIDER, providers,
+                `Value at position ${idx} in the NgModule.providers of ${className} is not a provider.`);
+          }
+        }
+      });
+    }
   }
 }
 

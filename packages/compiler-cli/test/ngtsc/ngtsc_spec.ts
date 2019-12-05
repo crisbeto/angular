@@ -4264,6 +4264,55 @@ export const Foo = Foo__PRE_R3__;
         expect(jsContents).toContain('styles: ["h1[_ngcontent-%COMP%] {font-size: larger}"]');
       });
     });
+
+    describe('provider validation', () => {
+      it('should throw error if an undecorated class is provided', () => {
+        env.tsconfig({});
+        env.write('test.ts', `
+          import {NgModule} from '@angular/core';
+
+          class NotAProvider {}
+
+          @NgModule({
+            providers: [NotAProvider]
+          })
+          export class TestModule {
+          }
+        `);
+
+        const errors = env.driveDiagnostics();
+        const {code, messageText} = errors[0];
+        expect(code).toBe(ngErrorCode(ErrorCode.NGMODULE_INVALID_PROVIDER));
+        expect(trim(messageText as string))
+            .toContain(
+                'Value at position 0 in the NgModule.providers of TestModule is not a provider.');
+      });
+
+      it('should throw error if a non-Injectable class is provided', () => {
+        env.tsconfig({});
+        env.write('test.ts', `
+          import {NgModule, Directive} from '@angular/core';
+
+          @Directive({})
+          class TestDirective {}
+
+          @NgModule({
+            declarations: [TestDirective],
+            providers: [TestDirective]
+          })
+          export class TestModule {
+          }
+        `);
+
+        const errors = env.driveDiagnostics();
+        const {code, messageText} = errors[0];
+        expect(code).toBe(ngErrorCode(ErrorCode.NGMODULE_INVALID_PROVIDER));
+        expect(trim(messageText as string))
+            .toContain(
+                'Value at position 0 in the NgModule.providers of TestModule is not a provider.');
+      });
+
+    });
   });
 
   function expectTokenAtPosition<T extends ts.Node>(

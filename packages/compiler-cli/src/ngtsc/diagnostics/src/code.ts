@@ -59,6 +59,11 @@ export enum ErrorCode {
   NGMODULE_INVALID_REEXPORT = 6004,
 
   /**
+   * Raised when an NgModule contains a non-Injectable class in its `providers`.
+   */
+  NGMODULE_INVALID_PROVIDER = 6005,
+
+  /**
    * Raised when ngcc tries to inject a synthetic decorator over one that already exists.
    */
   NGCC_MIGRATION_DECORATOR_INJECTION_ERROR = 7001,

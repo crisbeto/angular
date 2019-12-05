@@ -15,6 +15,24 @@ import {ivyEnabled, onlyInIvy} from '@angular/private/testing';
 import {BehaviorSubject} from 'rxjs';
 
 describe('di', () => {
+  fit('', () => {
+    @Directive()
+    class MyProvider {
+      value = 'hello';
+    }
+
+    @Component({template: ''})
+    class MyComp {
+      constructor(public provider: MyProvider) {}
+    }
+
+    TestBed.configureTestingModule({declarations: [MyComp], providers: [MyProvider]});
+    const fixture = TestBed.createComponent(MyComp);
+    fixture.detectChanges();
+
+    console.log(fixture.componentInstance.provider);
+  });
+
   describe('no dependencies', () => {
     it('should create directive with no deps', () => {
       @Directive({selector: '[dir]', exportAs: 'dir'})
