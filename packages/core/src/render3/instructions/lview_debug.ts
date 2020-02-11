@@ -20,7 +20,7 @@ import {SelectorFlags} from '../interfaces/projection';
 import {TQueries} from '../interfaces/query';
 import {RComment, RElement, RNode} from '../interfaces/renderer';
 import {TStylingKey, TStylingRange, getTStylingRangeNext, getTStylingRangeNextDuplicate, getTStylingRangePrev, getTStylingRangePrevDuplicate} from '../interfaces/styling';
-import {CHILD_HEAD, CHILD_TAIL, CLEANUP, CONTEXT, DECLARATION_VIEW, ExpandoInstructions, FLAGS, HEADER_OFFSET, HOST, HookData, INJECTOR, LView, LViewFlags, NEXT, PARENT, QUERIES, RENDERER, RENDERER_FACTORY, SANITIZER, TData, TVIEW, TView as ITView, TView, TViewType, T_HOST} from '../interfaces/view';
+import {CHILD_HEAD, CHILD_TAIL, CLEANUP, CONTEXT, DECLARATION_VIEW, DestroyHookData, ExpandoInstructions, FLAGS, HEADER_OFFSET, HOST, HookData, INJECTOR, LView, LViewFlags, NEXT, PARENT, QUERIES, RENDERER, RENDERER_FACTORY, SANITIZER, TData, TVIEW, TView as ITView, TView, TViewType, T_HOST} from '../interfaces/view';
 import {attachDebugObject} from '../util/debug_utils';
 import {getLContainerActiveIndex, getTNode, unwrapRNode} from '../util/view_utils';
 
@@ -133,7 +133,7 @@ export const TViewConstructor = class TView implements ITView {
       public contentCheckHooks: HookData|null,               //
       public viewHooks: HookData|null,                       //
       public viewCheckHooks: HookData|null,                  //
-      public destroyHooks: HookData|null,                    //
+      public destroyHooks: DestroyHookData|null,             //
       public cleanup: any[]|null,                            //
       public contentQueries: number[]|null,                  //
       public components: number[]|null,                      //

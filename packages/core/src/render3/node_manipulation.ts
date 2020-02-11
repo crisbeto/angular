@@ -10,6 +10,7 @@ import {Renderer2} from '../core';
 import {ViewEncapsulation} from '../metadata/view';
 import {addToArray, removeFromArray} from '../util/array_utils';
 import {assertDefined, assertDomNode, assertEqual, assertString} from '../util/assert';
+
 import {assertLContainer, assertLView, assertTNodeForLView} from './assert';
 import {attachPatchData} from './context_discovery';
 import {ACTIVE_INDEX, ActiveIndexFlag, CONTAINER_HEADER_OFFSET, LContainer, MOVED_VIEWS, NATIVE, unusedValueExportToPlacateAjd as unused1} from './interfaces/container';
@@ -19,7 +20,7 @@ import {TElementNode, TNode, TNodeFlags, TNodeType, TProjectionNode, TViewNode, 
 import {unusedValueExportToPlacateAjd as unused3} from './interfaces/projection';
 import {ProceduralRenderer3, RElement, RNode, RText, Renderer3, isProceduralRenderer, unusedValueExportToPlacateAjd as unused4} from './interfaces/renderer';
 import {isLContainer, isLView} from './interfaces/type_checks';
-import {CHILD_HEAD, CLEANUP, DECLARATION_COMPONENT_VIEW, DECLARATION_LCONTAINER, FLAGS, HOST, HookData, LView, LViewFlags, NEXT, PARENT, QUERIES, RENDERER, TVIEW, TView, T_HOST, unusedValueExportToPlacateAjd as unused5} from './interfaces/view';
+import {CHILD_HEAD, CLEANUP, DECLARATION_COMPONENT_VIEW, DECLARATION_LCONTAINER, DestroyHookData, FLAGS, HOST, HookData, LView, LViewFlags, NEXT, PARENT, QUERIES, RENDERER, TVIEW, TView, T_HOST, unusedValueExportToPlacateAjd as unused5} from './interfaces/view';
 import {assertNodeOfPossibleTypes, assertNodeType} from './node_assert';
 import {getLViewParent} from './util/view_traversal_utils';
 import {getNativeByTNode, unwrapRNode} from './util/view_utils';
@@ -484,7 +485,7 @@ function removeListeners(tView: TView, lView: LView): void {
 
 /** Calls onDestroy hooks for this view */
 function executeOnDestroys(tView: TView, lView: LView): void {
-  let destroyHooks: HookData|null;
+  let destroyHooks: DestroyHookData|null;
 
   if (tView != null && (destroyHooks = tView.destroyHooks) != null) {
     for (let i = 0; i < destroyHooks.length; i += 2) {
@@ -492,7 +493,15 @@ function executeOnDestroys(tView: TView, lView: LView): void {
 
       // Only call the destroy hook if the context has been requested.
       if (!(context instanceof NodeInjectorFactory)) {
-        (destroyHooks[i + 1] as() => void).call(context);
+        const hooksToCall = destroyHooks[i + 1] as(() => void) | (() => void)[];
+
+        if (Array.isArray(hooksToCall)) {
+          for (let j = 0; j < hooksToCall.length; j++) {
+            hooksToCall[j].call(context[j]);
+          }
+        } else {
+          hooksToCall.call(context);
+        }
       }
     }
   }

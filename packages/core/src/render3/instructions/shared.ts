@@ -652,7 +652,7 @@ export function createTView(
              null,               // contentCheckHooks: HookData|null,
              null,               // viewHooks: HookData|null,
              null,               // viewCheckHooks: HookData|null,
-             null,               // destroyHooks: HookData|null,
+             null,               // destroyHooks: DestroyHookData|null,
              null,               // cleanup: any[]|null,
              null,               // contentQueries: number[]|null,
              null,               // components: number[]|null,

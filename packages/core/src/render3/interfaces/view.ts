@@ -615,9 +615,9 @@ export interface TView {
    * Array of ngOnDestroy hooks that should be executed when this view is destroyed.
    *
    * Even indices: Directive index
-   * Odd indices: Hook function
+   * Odd indices: Hook function or an array of hooks functions for multi providers.
    */
-  destroyHooks: HookData|null;
+  destroyHooks: DestroyHookData|null;
 
   /**
    * When a view is destroyed, listeners need to be released and outputs need to be
@@ -735,6 +735,8 @@ export interface RootContext {
  *  - a negative directive index flags an init hook (ngOnInit, ngAfterContentInit, ngAfterViewInit)
  */
 export type HookData = (number | (() => void))[];
+
+export type DestroyHookData = (number | (() => void) | (() => void)[])[];
 
 /**
  * Static data that corresponds to the instance-specific data array on an LView.
