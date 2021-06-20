@@ -9,6 +9,7 @@
 import {HttpClient} from '@angular/common/http/src/client';
 import {HttpErrorResponse, HttpEventType, HttpResponse, HttpStatusCode} from '@angular/common/http/src/response';
 import {HttpClientTestingBackend} from '@angular/common/http/testing/src/backend';
+import {firstValueFrom} from 'rxjs';
 import {toArray} from 'rxjs/operators';
 
 {
@@ -106,7 +107,7 @@ import {toArray} from 'rxjs/operators';
         backend.expectOne('/test').flush(body);
       });
       it('that returns a stream of events', done => {
-        client.get('/test', {observe: 'events'}).pipe(toArray()).toPromise().then(events => {
+        firstValueFrom(client.get('/test', {observe: 'events'}).pipe(toArray())).then(events => {
           expect(events.length).toBe(2);
           let x = HttpResponse;
           expect(events[0].type).toBe(HttpEventType.Sent);

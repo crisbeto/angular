@@ -99,7 +99,7 @@
     "@angular/router": "12.0.5",
     "@angular/service-worker": "12.0.5",
     "@webcomponents/custom-elements": "1.4.3",
-    "rxjs": "^6.6.7",
+    "rxjs": "^7.0.0-rc.2",
     "tslib": "^2.2.0",
     "zone.js": "~0.11.4"
   },
