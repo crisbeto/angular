@@ -9,7 +9,7 @@
 import {fakeAsync, tick} from '@angular/core/testing';
 import {AbstractControl, FormArray, FormControl, FormGroup, ValidationErrors, ValidatorFn} from '@angular/forms';
 import {Validators} from '@angular/forms/src/validators';
-import {of} from 'rxjs';
+import {of, Subject} from 'rxjs';
 import {asyncValidator} from './util';
 
 (function() {
@@ -28,9 +28,17 @@ describe('FormArray', () => {
     });
 
     it('should support pushing', () => {
+      const spy = jasmine.createSpy('spy');
+      const subject = new Subject();
+
+      subject.subscribe(spy);
+
       a.push(c1);
       expect(a.length).toEqual(1);
       expect(a.controls).toEqual([c1]);
+
+      subject.next();
+      expect(spy).toHaveBeenCalledTimes(1);
     });
 
     it('should support removing', () => {

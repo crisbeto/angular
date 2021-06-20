@@ -12,7 +12,7 @@ ts_library(
     testonly = True,
     srcs = glob(["**/*.ts"]),
     # Visible to //:saucelabs_unit_tests_poc target
-    visibility = ["//:__pkg__"],
+    visibility = ["//:__pkg__", "//packages/forms/hmm:__pkg__"],
     deps = [
         "//packages/common",
         "//packages/core",

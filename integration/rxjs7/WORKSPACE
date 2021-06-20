@@ -1,0 +1,38 @@
+workspace(name = "rxjs7_integration_test")
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# Fetch rules_nodejs so we can install our npm dependencies
+http_archive(
+    name = "build_bazel_rules_nodejs",
+    sha256 = "4a5d654a4ccd4a4c24eca5d319d85a88a650edf119601550c95bf400c8cc897e",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/3.5.1/rules_nodejs-3.5.1.tar.gz"],
+)
+
+# Check the bazel version and download npm dependencies
+load("@build_bazel_rules_nodejs//:index.bzl", "node_repositories", "yarn_install")
+
+# Setup the Node.js toolchain
+node_repositories(
+    # Use same node version as root angular WORKSPACE since
+    node_version = "14.16.1",
+    yarn_version = "1.12.1",
+)
+
+# Install our npm dependencies into @npm
+yarn_install(
+    name = "npm",
+    frozen_lockfile = False,
+    package_json = "//:package.json",
+    # Turn off symlink_node_modules here as it causes flakiness with missing
+    # files in node_modules.
+    # TODO: track down the root cause of the flakiness; current suspect is that
+    # it is an issue with managed_directories when resources are limited
+    symlink_node_modules = False,
+    yarn_lock = "//:yarn.lock",
+)
+
+local_repository(
+  name="parent",
+  path= "../../",
+)

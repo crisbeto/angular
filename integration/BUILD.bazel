@@ -106,6 +106,9 @@ INTEGRATION_TESTS = {
         # root @npm//typescript package.
         "pinned_npm_packages": ["typescript"],
     },
+    "rxjs7": {
+        "pinned_npm_packages": ["rxjs"],
+    },
 }
 
 [
