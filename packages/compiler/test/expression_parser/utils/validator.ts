@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AST, Binary, BindingPipe, Chain, Conditional, FunctionCall, ImplicitReceiver, Interpolation, KeyedRead, KeyedWrite, LiteralArray, LiteralMap, LiteralPrimitive, MethodCall, ParseSpan, PrefixNot, PropertyRead, PropertyWrite, Quote, RecursiveAstVisitor, SafeKeyedRead, SafeMethodCall, SafePropertyRead, Unary} from '../../../src/expression_parser/ast';
+import {AST, Binary, BindingPipe, Call, Chain, Conditional, ImplicitReceiver, Interpolation, KeyedRead, KeyedWrite, LiteralArray, LiteralMap, LiteralPrimitive, MethodCall, ParseSpan, PrefixNot, PropertyRead, PropertyWrite, Quote, RecursiveAstVisitor, SafeKeyedRead, SafeMethodCall, SafePropertyRead, Unary} from '../../../src/expression_parser/ast';
 
 import {unparse} from './unparser';
 
@@ -48,10 +48,6 @@ class ASTValidator extends RecursiveAstVisitor {
 
   visitConditional(ast: Conditional, context: any): any {
     this.validate(ast, () => super.visitConditional(ast, context));
-  }
-
-  visitFunctionCall(ast: FunctionCall, context: any): any {
-    this.validate(ast, () => super.visitFunctionCall(ast, context));
   }
 
   visitImplicitReceiver(ast: ImplicitReceiver, context: any): any {
@@ -116,6 +112,10 @@ class ASTValidator extends RecursiveAstVisitor {
 
   visitSafeKeyedRead(ast: SafeKeyedRead, context: any): any {
     this.validate(ast, () => super.visitSafeKeyedRead(ast, context));
+  }
+
+  visitCall(ast: Call, context: any): any {
+    this.validate(ast, () => super.visitCall(ast, context));
   }
 }
 

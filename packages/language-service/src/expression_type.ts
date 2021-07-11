@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AST, AstVisitor, ASTWithName, Binary, BindingPipe, Chain, Conditional, FunctionCall, ImplicitReceiver, Interpolation, KeyedRead, KeyedWrite, LiteralArray, LiteralMap, LiteralPrimitive, MethodCall, NonNullAssert, PrefixNot, PropertyRead, PropertyWrite, Quote, SafeKeyedRead, SafeMethodCall, SafePropertyRead, ThisReceiver, Unary} from '@angular/compiler';
+import {AST, AstVisitor, ASTWithName, Binary, BindingPipe, Call, Chain, Conditional, ImplicitReceiver, Interpolation, KeyedRead, KeyedWrite, LiteralArray, LiteralMap, LiteralPrimitive, MethodCall, NonNullAssert, PrefixNot, PropertyRead, PropertyWrite, Quote, SafeKeyedRead, SafeMethodCall, SafePropertyRead, ThisReceiver, Unary} from '@angular/compiler';
 
 import {createDiagnostic, Diagnostic} from './diagnostic_messages';
 import {BuiltinType, Signature, Symbol, SymbolQuery, SymbolTable} from './symbols';
@@ -197,30 +197,6 @@ export class AstType implements AstVisitor {
     return this.query.getTypeUnion(this.getType(ast.trueExp), this.getType(ast.falseExp));
   }
 
-  visitFunctionCall(ast: FunctionCall) {
-    // The type of a function call is the return type of the selected signature.
-    // The signature is selected based on the types of the arguments. Angular doesn't
-    // support contextual typing of arguments so this is simpler than TypeScript's
-    // version.
-    const args = ast.args.map(arg => this.getType(arg));
-    const target = this.getType(ast.target!);
-    if (!target || !target.callable) {
-      this.diagnostics.push(createDiagnostic(
-          refinedSpan(ast), Diagnostic.call_target_not_callable, this.sourceOf(ast.target!),
-          target.name));
-      return this.anyType;
-    }
-    const signature = target.selectSignature(args);
-    if (signature) {
-      return signature.result;
-    }
-    // TODO: Consider a better error message here. See `typescript_symbols#selectSignature` for more
-    // details.
-    this.diagnostics.push(
-        createDiagnostic(refinedSpan(ast), Diagnostic.unable_to_resolve_compatible_call_signature));
-    return this.anyType;
-  }
-
   visitImplicitReceiver(_ast: ImplicitReceiver): Symbol {
     const _this = this;
     // Return a pseudo-symbol for the implicit receiver.
@@ -385,6 +361,35 @@ export class AstType implements AstVisitor {
     const result = targetType.indexed(
         keyType, ast.key instanceof LiteralPrimitive ? ast.key.value : undefined);
     return result || this.anyType;
+  }
+
+  visitCall(ast: Call) {
+    const receiverType = this.query.getNonNullableType(this.getType(ast.receiver));
+    if (this.isAny(receiverType) || !(ast.receiver instanceof PropertyRead) ||
+        !(ast.receiver instanceof SafePropertyRead)) {
+      return this.anyType;
+    }
+    const methodType = this.resolvePropertyRead(receiverType, ast.receiver);
+    if (!methodType) {
+      this.diagnostics.push(
+          createDiagnostic(refinedSpan(ast), Diagnostic.could_not_resolve_type, ast.receiver.name));
+      return this.anyType;
+    }
+    if (this.isAny(methodType)) {
+      return this.anyType;
+    }
+    if (!methodType.callable) {
+      this.diagnostics.push(createDiagnostic(
+          refinedSpan(ast), Diagnostic.identifier_not_callable, ast.receiver.name));
+      return this.anyType;
+    }
+    const signature = methodType.selectSignature(ast.args.map(arg => this.getType(arg)));
+    if (!signature) {
+      this.diagnostics.push(createDiagnostic(
+          refinedSpan(ast), Diagnostic.unable_to_resolve_signature, ast.receiver.name));
+      return this.anyType;
+    }
+    return signature.result;
   }
 
   /**

@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {MethodCall, SafeMethodCall} from '@angular/compiler';
+import {Call} from '@angular/compiler';
 import {NgCompiler} from '@angular/compiler-cli/src/ngtsc/core';
 import {getSourceFileOrError} from '@angular/compiler-cli/src/ngtsc/file_system';
 import {SymbolKind} from '@angular/compiler-cli/src/ngtsc/typecheck/api';
@@ -33,7 +33,7 @@ export function getSignatureHelp(
   }
 
   if (targetInfo.context.kind !== TargetNodeKind.RawExpression &&
-      targetInfo.context.kind !== TargetNodeKind.MethodCallExpressionInArgContext) {
+      targetInfo.context.kind !== TargetNodeKind.CallExpressionInArgContext) {
     // Signature completions are only available in expressions.
     return undefined;
   }
@@ -48,19 +48,19 @@ export function getSignatureHelp(
   // Additionally, extract the `MethodCall` or `SafeMethodCall` node for which signature help is
   // being queried, as this is needed to construct the correct span for the results later.
   let shimPosition: number;
-  let expr: MethodCall|SafeMethodCall;
+  let expr: Call;
   switch (targetInfo.context.kind) {
     case TargetNodeKind.RawExpression:
       // For normal expressions, just use the primary TCB position of the expression.
       shimPosition = symbol.shimLocation.positionInShimFile;
 
-      // Walk up the parents of this expression and try to find a `MethodCall` or `SafeMethodCall`
-      // for which signature information is being fetched.
-      let callExpr: MethodCall|SafeMethodCall|null = null;
+      // Walk up the parents of this expression and try to find a
+      // `Call` for which signature information is being fetched.
+      let callExpr: Call|null = null;
       const parents = targetInfo.context.parents;
       for (let i = parents.length - 1; i >= 0; i--) {
         const parent = parents[i];
-        if (parent instanceof MethodCall || parent instanceof SafeMethodCall) {
+        if (parent instanceof Call) {
           callExpr = parent;
           break;
         }
@@ -74,7 +74,7 @@ export function getSignatureHelp(
 
       expr = callExpr;
       break;
-    case TargetNodeKind.MethodCallExpressionInArgContext:
+    case TargetNodeKind.CallExpressionInArgContext:
       // The `Symbol` points to a `MethodCall` or `SafeMethodCall` expression in the TCB (where it
       // will be represented as a `ts.CallExpression`) *and* the template position was within the
       // argument list of the method call. This happens when there was no narrower expression inside

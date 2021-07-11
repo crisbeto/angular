@@ -432,18 +432,6 @@ class _AstToIrVisitor implements cdAst.AstVisitor {
         `Illegal state: Pipes should have been converted into functions. Pipe: ${ast.name}`);
   }
 
-  visitFunctionCall(ast: cdAst.FunctionCall, mode: _Mode): any {
-    const convertedArgs = this.visitAll(ast.args, _Mode.Expression);
-    let fnResult: o.Expression;
-    if (ast instanceof BuiltinFunctionCall) {
-      fnResult = ast.converter(convertedArgs);
-    } else {
-      fnResult = this._visit(ast.target!, _Mode.Expression)
-                     .callFn(convertedArgs, this.convertSourceSpan(ast.span));
-    }
-    return convertToStatementIfNeeded(mode, fnResult);
-  }
-
   visitImplicitReceiver(ast: cdAst.ImplicitReceiver, mode: _Mode): any {
     ensureExpressionMode(mode, ast);
     this.usesImplicitReceiver = true;
@@ -647,6 +635,35 @@ class _AstToIrVisitor implements cdAst.AstVisitor {
         Statement: ${ast.uninterpretedExpression} located at ${ast.location}`);
   }
 
+  visitCall(ast: cdAst.Call, mode: _Mode): any {
+    const convertedArgs = this.visitAll(ast.args, _Mode.Expression);
+
+    if (ast instanceof BuiltinFunctionCall) {
+      return convertToStatementIfNeeded(mode, ast.converter(convertedArgs));
+    }
+
+    const receiver = ast.receiver;
+    if (receiver instanceof cdAst.PropertyRead &&
+        receiver.receiver instanceof cdAst.ImplicitReceiver &&
+        !(receiver.receiver instanceof cdAst.ThisReceiver) && receiver.name === '$any') {
+      if (convertedArgs.length !== 1) {
+        throw new Error(`Invalid call to $any, expected 1 argument but received ${
+            convertedArgs.length || 'none'}`);
+      }
+      return (convertedArgs[0] as o.Expression)
+          .cast(o.DYNAMIC_TYPE, this.convertSourceSpan(ast.span));
+    }
+
+    const leftMostSafe = this.leftMostSafeNode(ast);
+    if (leftMostSafe) {
+      return this.convertSafeAccess(ast, leftMostSafe, mode);
+    }
+
+    const call = this._visit(receiver, _Mode.Expression)
+                     .callFn(convertedArgs, this.convertSourceSpan(ast.span));
+    return convertToStatementIfNeeded(mode, call);
+  }
+
   private _visit(ast: cdAst.AST, mode: _Mode): any {
     const result = this._resultMap.get(ast);
     if (result) return result;
@@ -791,8 +808,8 @@ class _AstToIrVisitor implements cdAst.AstVisitor {
       visitConditional(ast: cdAst.Conditional) {
         return null;
       },
-      visitFunctionCall(ast: cdAst.FunctionCall) {
-        return null;
+      visitCall(ast: cdAst.Call) {
+        return visit(this, ast.receiver);
       },
       visitImplicitReceiver(ast: cdAst.ImplicitReceiver) {
         return null;
@@ -874,7 +891,7 @@ class _AstToIrVisitor implements cdAst.AstVisitor {
       visitConditional(ast: cdAst.Conditional): boolean {
         return visit(this, ast.condition) || visit(this, ast.trueExp) || visit(this, ast.falseExp);
       },
-      visitFunctionCall(ast: cdAst.FunctionCall) {
+      visitCall(ast: cdAst.Call) {
         return true;
       },
       visitImplicitReceiver(ast: cdAst.ImplicitReceiver) {
@@ -1014,10 +1031,10 @@ function convertStmtIntoExpression(stmt: o.Statement): o.Expression|null {
   return null;
 }
 
-export class BuiltinFunctionCall extends cdAst.FunctionCall {
+export class BuiltinFunctionCall extends cdAst.Call {
   constructor(
       span: cdAst.ParseSpan, sourceSpan: cdAst.AbsoluteSourceSpan, public args: cdAst.AST[],
       public converter: BuiltinConverter) {
-    super(span, sourceSpan, null, args);
+    super(span, sourceSpan, new cdAst.EmptyExpr(span, sourceSpan), args, null!);
   }
 }

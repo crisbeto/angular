@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AST, AstVisitor, ASTWithSource, Binary, BindingPipe, Chain, Conditional, EmptyExpr, FunctionCall, ImplicitReceiver, Interpolation, KeyedRead, KeyedWrite, LiteralArray, LiteralMap, LiteralPrimitive, MethodCall, NonNullAssert, PrefixNot, PropertyRead, PropertyWrite, Quote, SafeKeyedRead, SafeMethodCall, SafePropertyRead, ThisReceiver, Unary} from '@angular/compiler';
+import {AST, AstVisitor, ASTWithSource, Binary, BindingPipe, Call, Chain, Conditional, EmptyExpr, ImplicitReceiver, Interpolation, KeyedRead, KeyedWrite, LiteralArray, LiteralMap, LiteralPrimitive, MethodCall, NonNullAssert, PrefixNot, PropertyRead, PropertyWrite, Quote, SafeKeyedRead, SafeMethodCall, SafePropertyRead, ThisReceiver, Unary} from '@angular/compiler';
 import * as ts from 'typescript';
 
 import {TypeCheckingConfig} from '../api';
@@ -125,14 +125,6 @@ class AstTranslator implements AstVisitor {
     // This should be instead be `conditional /*1,2*/ ? trueExpr /*3,4*/ : (falseExpr /*5,6*/)`
     const falseExpr = wrapForTypeChecker(this.translate(ast.falseExp));
     const node = ts.createParen(ts.createConditional(condExpr, trueExpr, falseExpr));
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
-  }
-
-  visitFunctionCall(ast: FunctionCall): ts.Expression {
-    const receiver = wrapForDiagnostics(this.translate(ast.target!));
-    const args = ast.args.map(expr => this.translate(expr));
-    const node = ts.createCall(receiver, undefined, args);
     addParseSpanInfo(node, ast.sourceSpan);
     return node;
   }
@@ -354,6 +346,42 @@ class AstTranslator implements AstVisitor {
     addParseSpanInfo(node, ast.sourceSpan);
     return node;
   }
+
+  visitCall(ast: Call): ts.Expression {
+    if (!(ast.receiver instanceof SafePropertyRead)) {
+      const receiver = wrapForDiagnostics(this.translate(ast.receiver));
+      const args = ast.args.map(expr => this.translate(expr));
+      const node = ts.createCall(receiver, undefined, args);
+      addParseSpanInfo(node, ast.sourceSpan);
+      return node;
+    }
+
+    // See the comments in SafePropertyRead above for an explanation of the cases here.
+    let node: ts.Expression;
+    const callReceiver = wrapForDiagnostics(this.translate(ast.receiver.receiver));
+    const args = ast.args.map(expr => this.translate(expr));
+    if (this.config.strictSafeNavigationTypes) {
+      // "a?.method(...)" becomes (null as any ? a!.method(...) : undefined)
+      const method =
+          ts.createPropertyAccess(ts.createNonNullExpression(callReceiver), ast.receiver.name);
+      addParseSpanInfo(method, ast.receiver.nameSpan);
+      const call = ts.createCall(method, undefined, args);
+      node = ts.createParen(ts.createConditional(NULL_AS_ANY, call, UNDEFINED));
+    } else if (VeSafeLhsInferenceBugDetector.veWillInferAnyFor(ast)) {
+      // "a?.method(...)" becomes (a as any).method(...)
+      const method = ts.createPropertyAccess(tsCastToAny(callReceiver), ast.receiver.name);
+      addParseSpanInfo(method, ast.receiver.nameSpan);
+      node = ts.createCall(method, undefined, args);
+    } else {
+      // "a?.method(...)" becomes (a!.method(...) as any)
+      const method =
+          ts.createPropertyAccess(ts.createNonNullExpression(callReceiver), ast.receiver.name);
+      addParseSpanInfo(method, ast.receiver.nameSpan);
+      node = tsCastToAny(ts.createCall(method, undefined, args));
+    }
+    addParseSpanInfo(node, ast.sourceSpan);
+    return node;
+  }
 }
 
 /**
@@ -372,9 +400,9 @@ class AstTranslator implements AstVisitor {
 class VeSafeLhsInferenceBugDetector implements AstVisitor {
   private static SINGLETON = new VeSafeLhsInferenceBugDetector();
 
-  static veWillInferAnyFor(ast: SafeMethodCall|SafePropertyRead|SafeKeyedRead) {
+  static veWillInferAnyFor(ast: Call|SafePropertyRead|SafeKeyedRead) {
     const visitor = VeSafeLhsInferenceBugDetector.SINGLETON;
-    return ast instanceof SafeKeyedRead ? ast.receiver.visit(visitor) : ast.receiver.visit(visitor);
+    return ast instanceof Call ? ast.visit(visitor) : ast.receiver.visit(visitor);
   }
 
   visitUnary(ast: Unary): boolean {
@@ -389,7 +417,7 @@ class VeSafeLhsInferenceBugDetector implements AstVisitor {
   visitConditional(ast: Conditional): boolean {
     return ast.condition.visit(this) || ast.trueExp.visit(this) || ast.falseExp.visit(this);
   }
-  visitFunctionCall(ast: FunctionCall): boolean {
+  visitCall(ast: Call): boolean {
     return true;
   }
   visitImplicitReceiver(ast: ImplicitReceiver): boolean {

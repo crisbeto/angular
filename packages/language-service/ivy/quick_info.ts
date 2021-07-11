@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import {AST, ImplicitReceiver, MethodCall, ThisReceiver, TmplAstBoundAttribute, TmplAstNode, TmplAstTextAttribute} from '@angular/compiler';
+import {AST, Call, ImplicitReceiver, PropertyRead, ThisReceiver, TmplAstBoundAttribute, TmplAstNode, TmplAstTextAttribute} from '@angular/compiler';
 import {NgCompiler} from '@angular/compiler-cli/src/ngtsc/core';
 import {DirectiveSymbol, DomBindingSymbol, ElementSymbol, InputBindingSymbol, OutputBindingSymbol, PipeSymbol, ReferenceSymbol, ShimLocation, Symbol, SymbolKind, VariableSymbol} from '@angular/compiler-cli/src/ngtsc/typecheck/api';
 import * as ts from 'typescript';
@@ -185,12 +185,14 @@ function displayPartsEqual(a: {text: string, kind: string}, b: {text: string, ki
   return a.text === b.text && a.kind === b.kind;
 }
 
-function isDollarAny(node: TmplAstNode|AST): node is MethodCall {
-  return node instanceof MethodCall && node.receiver instanceof ImplicitReceiver &&
-      !(node.receiver instanceof ThisReceiver) && node.name === '$any' && node.args.length === 1;
+function isDollarAny(node: TmplAstNode|AST): node is Call {
+  return node instanceof Call && node.receiver instanceof PropertyRead &&
+      node.receiver.receiver instanceof ImplicitReceiver &&
+      !(node.receiver.receiver instanceof ThisReceiver) && node.receiver.name === '$any' &&
+      node.args.length === 1;
 }
 
-function createDollarAnyQuickInfo(node: MethodCall): ts.QuickInfo {
+function createDollarAnyQuickInfo(node: Call): ts.QuickInfo {
   return createQuickInfo(
       '$any',
       DisplayInfoKind.METHOD,

@@ -22,8 +22,8 @@ export function getTextSpanOfNode(node: t.Node|e.AST): ts.TextSpan {
   if (isTemplateNodeWithKeyAndValue(node)) {
     return toTextSpan(node.keySpan);
   } else if (
-      node instanceof e.PropertyWrite || node instanceof e.MethodCall ||
-      node instanceof e.BindingPipe || node instanceof e.PropertyRead) {
+      node instanceof e.PropertyWrite || node instanceof e.BindingPipe ||
+      node instanceof e.PropertyRead) {
     // The `name` part of a `PropertyWrite`, `MethodCall`, and `BindingPipe` does not
     // have its own AST so there is no way to retrieve a `Symbol` for just the `name` via a specific
     // node.

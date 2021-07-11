@@ -67,7 +67,7 @@ export function getExpressionCompletions(
     visitBinary(_ast) {},
     visitChain(_ast) {},
     visitConditional(_ast) {},
-    visitFunctionCall(_ast) {},
+    visitCall(_ast) {},
     visitImplicitReceiver(_ast) {},
     visitThisReceiver(_ast) {},
     visitInterpolation(_ast) {
@@ -164,7 +164,7 @@ export function getExpressionSymbol(
     visitBinary(_ast) {},
     visitChain(_ast) {},
     visitConditional(_ast) {},
-    visitFunctionCall(_ast) {},
+    visitCall(_ast) {},
     visitImplicitReceiver(_ast) {},
     visitThisReceiver(_ast) {},
     visitInterpolation(_ast) {},

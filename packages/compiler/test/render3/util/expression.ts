@@ -46,10 +46,6 @@ class ExpressionSourceHumanizer extends e.RecursiveAstVisitor implements t.Visit
     this.recordAst(ast);
     super.visitConditional(ast, null);
   }
-  visitFunctionCall(ast: e.FunctionCall) {
-    this.recordAst(ast);
-    super.visitFunctionCall(ast, null);
-  }
   visitImplicitReceiver(ast: e.ImplicitReceiver) {
     this.recordAst(ast);
     super.visitImplicitReceiver(ast, null);
@@ -117,6 +113,10 @@ class ExpressionSourceHumanizer extends e.RecursiveAstVisitor implements t.Visit
   visitSafeKeyedRead(ast: e.SafeKeyedRead) {
     this.recordAst(ast);
     super.visitSafeKeyedRead(ast, null);
+  }
+  visitCall(ast: e.Call) {
+    this.recordAst(ast);
+    super.visitCall(ast, null);
   }
 
   visitTemplate(ast: t.Template) {
