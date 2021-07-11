@@ -115,7 +115,8 @@ export interface TemplateTypeChecker {
    * autocompletion at that point in the expression, if such a location exists.
    */
   getExpressionCompletionLocation(
-      expr: PropertyRead|SafePropertyRead|Call, component: ts.ClassDeclaration): ShimLocation|null;
+      expr: PropertyRead|SafePropertyRead|Call, parent: AST|TmplAstNode|null,
+      component: ts.ClassDeclaration): ShimLocation|null;
 
   /**
    * Get basic metadata on the directives which are in scope for the given component.

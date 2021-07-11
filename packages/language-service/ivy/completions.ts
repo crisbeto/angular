@@ -119,7 +119,6 @@ export class CompletionBuilder<N extends TmplAstNode|AST> {
       this is PropertyExpressionCompletionBuilder {
     return this.node instanceof PropertyRead || this.node instanceof SafePropertyRead ||
         this.node instanceof PropertyWrite || this.node instanceof EmptyExpr ||
-        this.node instanceof Call ||
         // BoundEvent nodes only count as property completions if in an EventValue context.
         (this.node instanceof BoundEvent && this.nodeContext === CompletionNodeContext.EventValue);
   }
@@ -136,7 +135,7 @@ export class CompletionBuilder<N extends TmplAstNode|AST> {
       return this.getGlobalPropertyExpressionCompletion(options);
     } else {
       const location = this.compiler.getTemplateTypeChecker().getExpressionCompletionLocation(
-          this.node, this.component);
+          this.node, this.nodeParent, this.component);
       if (location === null) {
         return undefined;
       }
@@ -177,7 +176,7 @@ export class CompletionBuilder<N extends TmplAstNode|AST> {
           entryName, formatOptions, preferences, data);
     } else {
       const location = this.compiler.getTemplateTypeChecker().getExpressionCompletionLocation(
-          this.node, this.component);
+          this.node, this.nodeParent, this.component);
       if (location === null) {
         return undefined;
       }
@@ -201,7 +200,7 @@ export class CompletionBuilder<N extends TmplAstNode|AST> {
       return this.getGlobalPropertyExpressionCompletionSymbol(name);
     } else {
       const location = this.compiler.getTemplateTypeChecker().getExpressionCompletionLocation(
-          this.node, this.component);
+          this.node, this.nodeParent, this.component);
       if (location === null) {
         return undefined;
       }

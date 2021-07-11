@@ -269,13 +269,14 @@ export class TemplateTypeCheckerImpl implements TemplateTypeChecker {
   }
 
   getExpressionCompletionLocation(
-      ast: PropertyRead|SafePropertyRead|Call, component: ts.ClassDeclaration): ShimLocation|null {
+      ast: PropertyRead|SafePropertyRead|Call, parent: AST|TmplAstNode|null,
+      component: ts.ClassDeclaration): ShimLocation|null {
     const engine = this.getOrCreateCompletionEngine(component);
     if (engine === null) {
       return null;
     }
     return this.perf.inPhase(
-        PerfPhase.TtcAutocompletion, () => engine.getExpressionCompletionLocation(ast));
+        PerfPhase.TtcAutocompletion, () => engine.getExpressionCompletionLocation(ast, parent));
   }
 
   invalidateClass(clazz: ts.ClassDeclaration): void {

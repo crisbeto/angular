@@ -95,7 +95,8 @@ export class CompletionEngine {
     };
   }
 
-  getExpressionCompletionLocation(expr: PropertyRead|PropertyWrite|Call): ShimLocation|null {
+  getExpressionCompletionLocation(
+      expr: PropertyRead|PropertyWrite|Call, parent: AST|TmplAstNode|null): ShimLocation|null {
     if (this.expressionCompletionCache.has(expr)) {
       return this.expressionCompletionCache.get(expr)!;
     }
@@ -114,22 +115,31 @@ export class CompletionEngine {
         (expr instanceof Call && expr.receiver instanceof SafePropertyRead)) {
       // Safe navigation operations are a little more complex, and involve a ternary. Completion
       // happens in the "true" case of the ternary.
-      const ternaryExpr = findFirstMatchingNode(this.tcb, {
+      let ternaryExpr = findFirstMatchingNode(this.tcb, {
         filter: ts.isParenthesizedExpression,
         withSpan: expr.sourceSpan,
       });
+
+      if (ternaryExpr === null && expr instanceof SafePropertyRead && parent instanceof Call &&
+          parent.receiver === expr) {
+        ternaryExpr = findFirstMatchingNode(this.tcb, {
+          filter: ts.isParenthesizedExpression,
+          withSpan: parent.sourceSpan,
+        });
+      }
 
       if (ternaryExpr === null || !ts.isConditionalExpression(ternaryExpr.expression)) {
         return null;
       }
       const whenTrue = ternaryExpr.expression.whenTrue;
 
-      if (expr instanceof SafePropertyRead && ts.isPropertyAccessExpression(whenTrue)) {
-        tsExpr = whenTrue;
-      } else if (
-          (expr instanceof Call && expr.receiver instanceof SafePropertyRead) &&
+      if (((expr instanceof Call && expr.receiver instanceof SafePropertyRead) ||
+           expr instanceof SafePropertyRead && parent instanceof Call &&
+               parent.receiver === expr) &&
           ts.isCallExpression(whenTrue) && ts.isPropertyAccessExpression(whenTrue.expression)) {
         tsExpr = whenTrue.expression;
+      } else if (expr instanceof SafePropertyRead && ts.isPropertyAccessExpression(whenTrue)) {
+        tsExpr = whenTrue;
       }
     }
 
