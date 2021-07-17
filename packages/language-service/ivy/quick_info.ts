@@ -18,16 +18,25 @@ export class QuickInfoBuilder {
 
   constructor(
       private readonly tsLS: ts.LanguageService, private readonly compiler: NgCompiler,
-      private readonly component: ts.ClassDeclaration, private node: TmplAstNode|AST) {}
+      private readonly component: ts.ClassDeclaration, private node: TmplAstNode|AST,
+      private parent: TmplAstNode|AST|null) {}
 
   get(): ts.QuickInfo|undefined {
     const symbol =
         this.compiler.getTemplateTypeChecker().getSymbolOfNode(this.node, this.component);
-    if (symbol === null) {
-      return isDollarAny(this.node) ? createDollarAnyQuickInfo(this.node) : undefined;
+    if (symbol !== null) {
+      return this.getQuickInfoForSymbol(symbol);
     }
 
-    return this.getQuickInfoForSymbol(symbol);
+    if (isDollarAny(this.node)) {
+      return createDollarAnyQuickInfo(this.node);
+    }
+
+    // If the cursor lands on the receiver of a method call, we have to look
+    // at the entire call in order to figure out if it's a call to `$any`.
+    if (this.parent !== null && isDollarAny(this.parent) && this.parent.receiver === this.node) {
+      return createDollarAnyQuickInfo(this.parent);
+    }
   }
 
   private getQuickInfoForSymbol(symbol: Symbol): ts.QuickInfo|undefined {
@@ -196,7 +205,7 @@ function createDollarAnyQuickInfo(node: Call): ts.QuickInfo {
   return createQuickInfo(
       '$any',
       DisplayInfoKind.METHOD,
-      getTextSpanOfNode(node),
+      getTextSpanOfNode(node.receiver),
       /** containerName */ undefined,
       'any',
       [{

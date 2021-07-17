@@ -348,40 +348,28 @@ class AstTranslator implements AstVisitor {
   }
 
   visitCall(ast: Call): ts.Expression {
-    if (!(ast.receiver instanceof SafePropertyRead)) {
-      const receiver = wrapForDiagnostics(this.translate(ast.receiver));
-      const args = ast.args.map(expr => this.translate(expr));
-      const node = ts.createCall(receiver, undefined, args);
-      addParseSpanInfo(node, ast.sourceSpan);
-      return node;
+    const args = ast.args.map(expr => this.translate(expr));
+    const expr = wrapForDiagnostics(this.translate(ast.receiver));
+    let node: ts.Expression;
+
+    // Safe property/keyed reads will produce a ternary whose value is nullable.
+    // We have to generate a similar ternary around the call.
+    if (ast.receiver instanceof SafePropertyRead || ast.receiver instanceof SafeKeyedRead) {
+      if (this.config.strictSafeNavigationTypes) {
+        // "a?.method(...)" becomes (null as any ? a!.method(...) : undefined)
+        const call = ts.createCall(ts.createNonNullExpression(expr), undefined, args);
+        node = ts.createParen(ts.createConditional(NULL_AS_ANY, call, UNDEFINED));
+      } else if (VeSafeLhsInferenceBugDetector.veWillInferAnyFor(ast)) {
+        // "a?.method(...)" becomes (a as any).method(...)
+        node = ts.createCall(tsCastToAny(expr), undefined, args);
+      } else {
+        // "a?.method(...)" becomes (a!.method(...) as any)
+        node = tsCastToAny(ts.createCall(ts.createNonNullExpression(expr), undefined, args));
+      }
+    } else {
+      node = ts.createCall(expr, undefined, args);
     }
 
-    // See the comments in SafePropertyRead above for an explanation of the cases here.
-    let node: ts.Expression;
-    const callReceiver = wrapForDiagnostics(this.translate(ast.receiver.receiver));
-    const args = ast.args.map(expr => this.translate(expr));
-    if (this.config.strictSafeNavigationTypes) {
-      // "a?.method(...)" becomes (null as any ? a!.method(...) : undefined)
-      const method = ts.createParen(
-          ts.createPropertyAccess(ts.createNonNullExpression(callReceiver), ast.receiver.name));
-      addParseSpanInfo(method, ast.receiver.sourceSpan);
-      const call = ts.createCall(method, undefined, args);
-      node = ts.createParen(ts.createConditional(NULL_AS_ANY, call, UNDEFINED));
-    } else if (VeSafeLhsInferenceBugDetector.veWillInferAnyFor(ast)) {
-      // "a?.method(...)" becomes (a as any).method(...)
-      const method =
-          ts.createParen(ts.createPropertyAccess(tsCastToAny(callReceiver), ast.receiver.name));
-      addParseSpanInfo(method, ast.receiver.sourceSpan);
-      // addParseSpanInfo(method, ast.receiver.nameSpan);
-      node = ts.createCall(method, undefined, args);
-    } else {
-      // "a?.method(...)" becomes (a!.method(...) as any)
-      const method = ts.createParen(
-          ts.createPropertyAccess(ts.createNonNullExpression(callReceiver), ast.receiver.name));
-      addParseSpanInfo(method, ast.receiver.sourceSpan);
-      // addParseSpanInfo(method, ast.receiver.nameSpan);
-      node = tsCastToAny(ts.createCall(method, undefined, args));
-    }
     addParseSpanInfo(node, ast.sourceSpan);
     return node;
   }

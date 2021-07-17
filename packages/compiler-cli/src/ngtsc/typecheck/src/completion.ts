@@ -112,19 +112,29 @@ export class CompletionEngine {
     } else if (
         expr instanceof SafePropertyRead ||
         (expr instanceof Call && expr.receiver instanceof SafePropertyRead)) {
+      // TODO: update this comment
       // Safe navigation operations are a little more complex, and involve a ternary. Completion
       // happens in the "true" case of the ternary.
-      const parenthesizedExpr = findFirstMatchingNode(this.tcb, {
-        filter: ts.isParenthesizedExpression,
-        withSpan: expr.sourceSpan,
-      });
+      let resultExpr: ts.ParenthesizedExpression|ts.PropertyAccessExpression|null =
+          findFirstMatchingNode(this.tcb, {
+            filter: ts.isParenthesizedExpression,
+            withSpan: expr.sourceSpan,
+          });
 
-      if (parenthesizedExpr === null) {
+      if (resultExpr === null && expr instanceof SafePropertyRead) {
+        resultExpr = findFirstMatchingNode(this.tcb, {
+          filter: ts.isPropertyAccessExpression,
+          withSpan: expr.nameSpan,
+        });
+      }
+
+      if (resultExpr === null) {
         return null;
       }
 
-      if (ts.isConditionalExpression(parenthesizedExpr.expression)) {
-        const whenTrue = parenthesizedExpr.expression.whenTrue;
+      if (ts.isParenthesizedExpression(resultExpr) &&
+          ts.isConditionalExpression(resultExpr.expression)) {
+        const whenTrue = resultExpr.expression.whenTrue;
 
         if (ts.isPropertyAccessExpression(whenTrue)) {
           tsExpr = whenTrue;
@@ -132,8 +142,8 @@ export class CompletionEngine {
             ts.isCallExpression(whenTrue) && ts.isPropertyAccessExpression(whenTrue.expression)) {
           tsExpr = whenTrue.expression;
         }
-      } else if (ts.isPropertyAccessExpression(parenthesizedExpr.expression)) {
-        tsExpr = parenthesizedExpr.expression;
+      } else if (ts.isPropertyAccessExpression(resultExpr)) {
+        tsExpr = resultExpr;
       }
     }
 

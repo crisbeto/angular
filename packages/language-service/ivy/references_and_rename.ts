@@ -59,8 +59,6 @@ export class ReferencesBuilder {
       return undefined;
     }
 
-    debugger;
-
     const entries: ts.ReferenceEntry[] = [];
     for (const ref of refs) {
       if (this.ttc.isTrackedTypeCheckFile(absoluteFrom(ref.fileName))) {

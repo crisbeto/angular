@@ -497,7 +497,7 @@ export class SymbolBuilder {
 
     // The `name` part of a `PropertyWrite` and a non-safe `Call` does not have its own
     // AST so there is no way to retrieve a `Symbol` for just the `name` via a specific node.
-    if (expression instanceof PropertyWrite) {
+    if (expression instanceof PropertyWrite || expression instanceof SafePropertyRead) {
       withSpan = expression.nameSpan;
     } else if (expression instanceof Call && expression.receiver instanceof PropertyRead) {
       withSpan = expression.receiver.nameSpan;
