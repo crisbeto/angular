@@ -114,22 +114,26 @@ export class CompletionEngine {
         (expr instanceof Call && expr.receiver instanceof SafePropertyRead)) {
       // Safe navigation operations are a little more complex, and involve a ternary. Completion
       // happens in the "true" case of the ternary.
-      const ternaryExpr = findFirstMatchingNode(this.tcb, {
+      const parenthesizedExpr = findFirstMatchingNode(this.tcb, {
         filter: ts.isParenthesizedExpression,
         withSpan: expr.sourceSpan,
       });
 
-      if (ternaryExpr === null || !ts.isConditionalExpression(ternaryExpr.expression)) {
+      if (parenthesizedExpr === null) {
         return null;
       }
-      const whenTrue = ternaryExpr.expression.whenTrue;
 
-      if (expr instanceof SafePropertyRead && ts.isPropertyAccessExpression(whenTrue)) {
-        tsExpr = whenTrue;
-      } else if (
-          (expr instanceof Call && expr.receiver instanceof SafePropertyRead) &&
-          ts.isCallExpression(whenTrue) && ts.isPropertyAccessExpression(whenTrue.expression)) {
-        tsExpr = whenTrue.expression;
+      if (ts.isConditionalExpression(parenthesizedExpr.expression)) {
+        const whenTrue = parenthesizedExpr.expression.whenTrue;
+
+        if (ts.isPropertyAccessExpression(whenTrue)) {
+          tsExpr = whenTrue;
+        } else if (
+            ts.isCallExpression(whenTrue) && ts.isPropertyAccessExpression(whenTrue.expression)) {
+          tsExpr = whenTrue.expression;
+        }
+      } else if (ts.isPropertyAccessExpression(parenthesizedExpr.expression)) {
+        tsExpr = parenthesizedExpr.expression;
       }
     }
 

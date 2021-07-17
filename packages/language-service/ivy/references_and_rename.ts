@@ -59,6 +59,8 @@ export class ReferencesBuilder {
       return undefined;
     }
 
+    debugger;
+
     const entries: ts.ReferenceEntry[] = [];
     for (const ref of refs) {
       if (this.ttc.isTrackedTypeCheckFile(absoluteFrom(ref.fileName))) {
@@ -234,7 +236,9 @@ export class RenameBuilder {
 
     const allRenameLocations: ts.RenameLocation[] = [];
     for (const renameRequest of renameRequests) {
+      debugger;
       const locations = this.findRenameLocationsAtTypescriptPosition(renameRequest);
+      debugger;
       // If we couldn't find rename locations for _any_ result, we should not allow renaming to
       // proceed instead of having a partially complete rename.
       if (locations === null) {
@@ -258,12 +262,14 @@ export class RenameBuilder {
       const findInComments = false;
       const locations =
           this.tsLS.findRenameLocations(fileName, position, findInStrings, findInComments);
+      debugger;
       if (locations === undefined) {
         return null;
       }
 
       for (const location of locations) {
         if (this.ttc.isTrackedTypeCheckFile(absoluteFrom(location.fileName))) {
+          debugger;
           const entry = convertToTemplateDocumentSpan(
               location, this.ttc, this.driver.getProgram(), expectedRenameText);
           // There is no template node whose text matches the original rename request. Bail on
@@ -271,6 +277,7 @@ export class RenameBuilder {
           if (entry === null) {
             return null;
           }
+          ////
           entries.push(entry);
         } else {
           if (!isDirectRenameContext(renameRequest)) {
@@ -288,6 +295,7 @@ export class RenameBuilder {
           entries.push(location);
         }
       }
+      debugger;
       return entries;
     });
   }

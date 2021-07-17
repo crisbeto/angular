@@ -119,7 +119,6 @@ export class CompletionBuilder<N extends TmplAstNode|AST> {
       this is PropertyExpressionCompletionBuilder {
     return this.node instanceof PropertyRead || this.node instanceof SafePropertyRead ||
         this.node instanceof PropertyWrite || this.node instanceof EmptyExpr ||
-        this.node instanceof Call ||
         // BoundEvent nodes only count as property completions if in an EventValue context.
         (this.node instanceof BoundEvent && this.nodeContext === CompletionNodeContext.EventValue);
   }

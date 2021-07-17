@@ -362,21 +362,24 @@ class AstTranslator implements AstVisitor {
     const args = ast.args.map(expr => this.translate(expr));
     if (this.config.strictSafeNavigationTypes) {
       // "a?.method(...)" becomes (null as any ? a!.method(...) : undefined)
-      const method =
-          ts.createPropertyAccess(ts.createNonNullExpression(callReceiver), ast.receiver.name);
-      addParseSpanInfo(method, ast.receiver.nameSpan);
+      const method = ts.createParen(
+          ts.createPropertyAccess(ts.createNonNullExpression(callReceiver), ast.receiver.name));
+      addParseSpanInfo(method, ast.receiver.sourceSpan);
       const call = ts.createCall(method, undefined, args);
       node = ts.createParen(ts.createConditional(NULL_AS_ANY, call, UNDEFINED));
     } else if (VeSafeLhsInferenceBugDetector.veWillInferAnyFor(ast)) {
       // "a?.method(...)" becomes (a as any).method(...)
-      const method = ts.createPropertyAccess(tsCastToAny(callReceiver), ast.receiver.name);
-      addParseSpanInfo(method, ast.receiver.nameSpan);
+      const method =
+          ts.createParen(ts.createPropertyAccess(tsCastToAny(callReceiver), ast.receiver.name));
+      addParseSpanInfo(method, ast.receiver.sourceSpan);
+      // addParseSpanInfo(method, ast.receiver.nameSpan);
       node = ts.createCall(method, undefined, args);
     } else {
       // "a?.method(...)" becomes (a!.method(...) as any)
-      const method =
-          ts.createPropertyAccess(ts.createNonNullExpression(callReceiver), ast.receiver.name);
-      addParseSpanInfo(method, ast.receiver.nameSpan);
+      const method = ts.createParen(
+          ts.createPropertyAccess(ts.createNonNullExpression(callReceiver), ast.receiver.name));
+      addParseSpanInfo(method, ast.receiver.sourceSpan);
+      // addParseSpanInfo(method, ast.receiver.nameSpan);
       node = tsCastToAny(ts.createCall(method, undefined, args));
     }
     addParseSpanInfo(node, ast.sourceSpan);

@@ -536,7 +536,7 @@ describe('find references and rename locations', () => {
         });
       });
 
-      describe('when cursor is on safe method call', () => {
+      fdescribe('when cursor is on safe method call', () => {
         let file: OpenBuffer;
         beforeEach(() => {
           const files = {
@@ -551,7 +551,7 @@ describe('find references and rename locations', () => {
         });
 
 
-        it('should get references', () => {
+        fit('should get references', () => {
           const refs = getReferencesAtPosition(file)!;
           expect(refs.length).toBe(2);
           assertFileNames(refs, ['dir.ts', 'app.html']);
