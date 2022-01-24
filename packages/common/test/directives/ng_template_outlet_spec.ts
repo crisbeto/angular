@@ -7,7 +7,7 @@
  */
 
 import {CommonModule} from '@angular/common';
-import {Component, ContentChildren, Directive, Inject, Injectable, InjectionToken, Injector, NO_ERRORS_SCHEMA, OnDestroy, QueryList, TemplateRef} from '@angular/core';
+import {Component, ContentChildren, Directive, Inject, Injectable, InjectionToken, Injector, NO_ERRORS_SCHEMA, OnDestroy, Provider, QueryList, TemplateRef} from '@angular/core';
 import {ComponentFixture, TestBed, waitForAsync} from '@angular/core/testing';
 import {expect} from '@angular/platform-browser/testing/src/matchers';
 
@@ -277,6 +277,15 @@ describe('NgTemplateOutlet', () => {
            Injector.create({providers: [{provide: templateToken, useValue: 'world'}]});
        detectChangesAndExpectText('Hello world');
      }));
+
+  it('should override providers from parent component using custom injector', waitForAsync(() => {
+       const template = `<ng-template #tpl><inject-value></inject-value></ng-template>` +
+           `<ng-container *ngTemplateOutlet="tpl; injector: injector"></ng-container>`;
+       fixture = createTestComponent(template, [{provide: templateToken, useValue: 'parent'}]);
+       fixture.componentInstance.injector =
+           Injector.create({providers: [{provide: templateToken, useValue: 'world'}]});
+       detectChangesAndExpectText('Hello world');
+     }));
 });
 
 const templateToken = new InjectionToken<string>('templateToken');
@@ -331,8 +340,9 @@ class MultiContextComponent {
   context2: {name: string}|undefined;
 }
 
-function createTestComponent(template: string): ComponentFixture<TestComponent> {
-  return TestBed.overrideComponent(TestComponent, {set: {template: template}})
+function createTestComponent(
+    template: string, providers: Provider[] = []): ComponentFixture<TestComponent> {
+  return TestBed.overrideComponent(TestComponent, {set: {template: template, providers}})
       .configureTestingModule({schemas: [NO_ERRORS_SCHEMA]})
       .createComponent(TestComponent);
 }

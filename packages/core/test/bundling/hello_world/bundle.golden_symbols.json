@@ -159,6 +159,9 @@
     "name": "getSimpleChangesStore"
   },
   {
+    "name": "getTNodeFromLView"
+  },
+  {
     "name": "includeViewProviders"
   },
   {

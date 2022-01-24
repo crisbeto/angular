@@ -3,9 +3,6 @@
     "name": "CLEAN_PROMISE"
   },
   {
-    "name": "ChainedInjector"
-  },
-  {
     "name": "ChangeDetectionStrategy"
   },
   {
@@ -474,6 +471,9 @@
     "name": "getTNode"
   },
   {
+    "name": "getTNodeFromLView"
+  },
+  {
     "name": "getTStylingRangeNext"
   },
   {
@@ -607,6 +607,9 @@
   },
   {
     "name": "lookupTokenUsingModuleInjector"
+  },
+  {
+    "name": "lookupTokenUsingNodeInjector"
   },
   {
     "name": "makeParamDecorator"

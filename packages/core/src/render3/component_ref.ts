@@ -9,6 +9,8 @@
 import {ChangeDetectorRef as ViewEngine_ChangeDetectorRef} from '../change_detection/change_detector_ref';
 import {InjectionToken} from '../di/injection_token';
 import {Injector} from '../di/injector';
+import {InjectFlags} from '../di/interface/injector';
+import {ProviderToken} from '../di/provider_token';
 import {Type} from '../interface/type';
 import {ComponentFactory as viewEngine_ComponentFactory, ComponentRef as viewEngine_ComponentRef} from '../linker/component_factory';
 import {ComponentFactoryResolver as viewEngine_ComponentFactoryResolver} from '../linker/component_factory_resolver';
@@ -17,9 +19,9 @@ import {NgModuleRef as viewEngine_NgModuleRef} from '../linker/ng_module_factory
 import {RendererFactory2} from '../render/api';
 import {Sanitizer} from '../sanitization/sanitizer';
 import {VERSION} from '../version';
+import {NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR} from '../view/provider_flags';
 
 import {assertComponentType} from './assert';
-import {ChainedInjector} from './chained_injector';
 import {createRootComponent, createRootComponentView, createRootContext, LifecycleHooksFeature} from './component';
 import {getComponentDef} from './definition';
 import {NodeInjector} from './di';
@@ -67,6 +69,30 @@ function toRefArray(map: {[key: string]: string}): {propName: string; templateNa
 function getNamespace(elementName: string): string|null {
   const name = elementName.toLowerCase();
   return name === 'svg' ? SVG_NAMESPACE : (name === 'math' ? MATH_ML_NAMESPACE : null);
+}
+
+/**
+ * Injector that looks up a value using a specific injector, before falling back to the module
+ * injector. Used primarily when creating components or embedded views dynamically.
+ */
+class ChainedInjector implements Injector {
+  constructor(private injector: Injector, private parentInjector: Injector) {}
+
+  get<T>(token: ProviderToken<T>, notFoundValue?: T, flags?: InjectFlags): T {
+    const value = this.injector.get(token, NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR as T, flags);
+
+    if (value !== NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR ||
+        notFoundValue === NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR) {
+      // Return the value from the root element injector when
+      // - it provides it
+      //   (value !== NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR)
+      // - the module injector should not be checked
+      //   (notFoundValue === NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR)
+      return value;
+    }
+
+    return this.parentInjector.get(token, notFoundValue, flags);
+  }
 }
 
 /**
@@ -139,7 +165,7 @@ export class ComponentFactory<T> extends viewEngine_ComponentFactory<T> {
     const rootTView = createTView(TViewType.Root, null, null, 1, 0, null, null, null, null, null);
     const rootLView = createLView(
         null, rootTView, rootContext, rootFlags, null, null, rendererFactory, hostRenderer,
-        sanitizer, rootViewInjector);
+        sanitizer, rootViewInjector, null);
 
     // rootView is the parent when bootstrapping
     // TODO(misko): it looks like we are entering view here but we don't really need to as

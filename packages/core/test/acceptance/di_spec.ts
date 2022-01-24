@@ -3805,6 +3805,45 @@ describe('di', () => {
       expect(fixture.componentInstance.menu.tokenValue).toBe('hello from injector');
     });
 
+    it('should have value from custom injector take precedence over parent injector', () => {
+      @Directive({selector: 'menu'})
+      class Menu {
+        constructor(@Inject(token) public tokenValue: string) {}
+      }
+
+      @Component({
+        template: `
+          <menu-trigger [triggerFor]="menuTemplate"></menu-trigger>
+          <ng-template #menuTemplate>
+            <menu></menu>
+          </ng-template>
+      `,
+        providers: [{provide: token, useValue: 'hello from parent'}]
+      })
+      class App {
+        @ViewChild(MenuTrigger) trigger!: MenuTrigger;
+        @ViewChild(Menu) menu!: Menu;
+      }
+
+      @NgModule({
+        declarations: [App, MenuTrigger, Menu],
+        exports: [App, MenuTrigger, Menu],
+      })
+      class Module {
+      }
+
+      TestBed.configureTestingModule({imports: [Module]});
+      const injector =
+          Injector.create({providers: [{provide: token, useValue: 'hello from injector'}]});
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+
+      fixture.componentInstance.trigger.open(injector);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.menu.tokenValue).toBe('hello from injector');
+    });
+
     it('should be able to inject built-in tokens when a custom injector is provided', () => {
       @Directive({selector: 'menu'})
       class Menu {
@@ -4069,80 +4108,212 @@ describe('di', () => {
          expect(declarer.menu.creatorTokenValue).toBeNull();
        });
 
-    it('should behave consistently with `createComponent` when token is shadowed in node injector',
-       () => {
-         @Directive({selector: 'trigger'})
-         class Trigger {
-           constructor(public viewContainerRef: ViewContainerRef) {}
-         }
+    it('should give precedence to value provided lower in the tree over custom injector', () => {
+      @Directive({selector: 'menu'})
+      class Menu {
+        constructor(@Inject(token) public tokenValue: string) {}
+      }
 
-         @Directive({selector: 'overlay'})
-         class Overlay {
+      @Directive({
+        selector: '[provide-token]',
+        providers: [{provide: token, useValue: 'hello from directive'}]
+      })
+      class ProvideToken {
+      }
+
+      @Component({
+        template: `
+          <menu-trigger [triggerFor]="menuTemplate"></menu-trigger>
+          <ng-template #menuTemplate>
+            <section>
+              <div provide-token>
+                <menu></menu>
+              </div>
+            </section>
+          </ng-template>
+        `,
+        providers: [{provide: token, useValue: 'hello from parent'}]
+      })
+      class App {
+        @ViewChild(MenuTrigger) trigger!: MenuTrigger;
+        @ViewChild(Menu) menu!: Menu;
+      }
+
+      @NgModule({
+        declarations: [App, MenuTrigger, Menu, ProvideToken],
+        exports: [App, MenuTrigger, Menu, ProvideToken],
+      })
+      class Module {
+      }
+
+      TestBed.configureTestingModule({imports: [Module]});
+      const injector =
+          Injector.create({providers: [{provide: token, useValue: 'hello from injector'}]});
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+
+      fixture.componentInstance.trigger.open(injector);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.menu.tokenValue).toBe('hello from directive');
+    });
+
+    it('should give precedence to value provided in custom injector over one provided higher',
+       () => {
+         @Directive({selector: 'menu'})
+         class Menu {
            constructor(@Inject(token) public tokenValue: string) {}
          }
 
-         @Component({
-           selector: 'overlay-host',
-           template: '<overlay></overlay>',
-           providers: [{provide: token, useValue: 'hello from parent'}],
+         @Directive({
+           selector: '[provide-token]',
+           providers: [{provide: token, useValue: 'hello from directive'}]
          })
-         class OverlayHost {
-           @ViewChild(Overlay) overlay!: Overlay;
-         }
-
-         @Component({
-           selector: 'wrapper',
-           template: '<ng-content></ng-content>',
-           providers: [{provide: token, useValue: 'hello from parent'}],
-         })
-         class Wrapper {
+         class ProvideToken {
          }
 
          @Component({
            template: `
-              <trigger></trigger>
-
-              <wrapper>
-                <ng-template #template>
-                  <overlay></overlay>
+              <menu-trigger [triggerFor]="menuTemplate"></menu-trigger>
+              <div provide-token>
+                <ng-template #menuTemplate>
+                  <menu></menu>
                 </ng-template>
-              </wrapper>
-            `
+              </div>
+            `,
+           providers: [{provide: token, useValue: 'hello from parent'}]
          })
          class App {
-           @ViewChild(Trigger) trigger!: Trigger;
-           @ViewChild('template', {read: TemplateRef}) template!: TemplateRef<any>;
-           @ViewChild(Overlay) overlayInTemplate!: Overlay;
-
-           openFromTemplate(injector: Injector) {
-             this.trigger.viewContainerRef.createEmbeddedView(this.template, null, {injector});
-           }
-
-           openFromComponent(injector: Injector) {
-             return this.trigger.viewContainerRef.createComponent(OverlayHost, {injector});
-           }
+           @ViewChild(MenuTrigger) trigger!: MenuTrigger;
+           @ViewChild(Menu) menu!: Menu;
          }
 
-         TestBed.configureTestingModule(
-             {declarations: [App, Trigger, Overlay, OverlayHost, Wrapper]});
+         @NgModule({
+           declarations: [App, MenuTrigger, Menu, ProvideToken],
+           exports: [App, MenuTrigger, Menu, ProvideToken],
+         })
+         class Module {
+         }
+
+         TestBed.configureTestingModule({imports: [Module]});
+         const injector =
+             Injector.create({providers: [{provide: token, useValue: 'hello from injector'}]});
          const fixture = TestBed.createComponent(App);
          fixture.detectChanges();
-         const providers = [{provide: token, useValue: 'hello from custom injector'}];
 
-         fixture.componentInstance.openFromTemplate(Injector.create({providers}));
+         fixture.componentInstance.trigger.open(injector);
          fixture.detectChanges();
 
-         const componentRef =
-             fixture.componentInstance.openFromComponent(Injector.create({providers}));
+         expect(fixture.componentInstance.menu.tokenValue).toBe('hello from injector');
+       });
+
+    it('should give precedence to value provided lower in the tree over custom injector when crossing view boundaries',
+       () => {
+         @Directive({selector: 'menu'})
+         class Menu {
+           constructor(@Inject(token) public tokenValue: string) {}
+         }
+
+         @Directive({
+           selector: '[provide-token]',
+           providers: [{provide: token, useValue: 'hello from directive'}]
+         })
+         class ProvideToken {
+         }
+
+         @Component({selector: 'wrapper', template: `<div><menu></menu></div>`})
+         class Wrapper {
+           @ViewChild(Menu) menu!: Menu;
+         }
+
+         @Component({
+           template: `
+              <menu-trigger [triggerFor]="menuTemplate"></menu-trigger>
+              <ng-template #menuTemplate>
+                <section provide-token>
+                  <wrapper></wrapper>
+                </section>
+              </ng-template>
+            `,
+           providers: [{provide: token, useValue: 'hello from parent'}]
+         })
+         class App {
+           @ViewChild(MenuTrigger) trigger!: MenuTrigger;
+           @ViewChild(Wrapper) wrapper!: Wrapper;
+         }
+
+         @NgModule({
+           declarations: [App, MenuTrigger, Menu, ProvideToken, Wrapper],
+           exports: [App, MenuTrigger, Menu, ProvideToken, Wrapper],
+         })
+         class Module {
+         }
+
+         TestBed.configureTestingModule({imports: [Module]});
+         const injector =
+             Injector.create({providers: [{provide: token, useValue: 'hello from injector'}]});
+         const fixture = TestBed.createComponent(App);
          fixture.detectChanges();
 
-         // The node injector is expected to take precedence over the provided injector, despite
-         // technically being higher in the tree, because the custom one is provided as a module
-         // injector. This is consistent with how `createComponent` has always worked and avoids
-         // ambiguity as to whether the provided injector should be in the declaration or insertion
-         // node injector tree.
-         expect(fixture.componentInstance.overlayInTemplate.tokenValue).toBe('hello from parent');
-         expect(componentRef.instance.overlay.tokenValue).toBe('hello from parent');
+         fixture.componentInstance.trigger.open(injector);
+         fixture.detectChanges();
+
+         expect(fixture.componentInstance.wrapper.menu.tokenValue).toBe('hello from directive');
+       });
+
+    it('should give precedence to value provided in custom injector over one provided higher when crossing view boundaries',
+       () => {
+         @Directive({selector: 'menu'})
+         class Menu {
+           constructor(@Inject(token) public tokenValue: string) {}
+         }
+
+         @Directive({
+           selector: '[provide-token]',
+           providers: [{provide: token, useValue: 'hello from directive'}]
+         })
+         class ProvideToken {
+         }
+
+         @Component({selector: 'wrapper', template: `<div><menu></menu></div>`})
+         class Wrapper {
+           @ViewChild(Menu) menu!: Menu;
+         }
+
+
+         @Component({
+           template: `
+              <menu-trigger [triggerFor]="menuTemplate"></menu-trigger>
+              <div provide-token>
+                <ng-template #menuTemplate>
+                  <wrapper></wrapper>
+                </ng-template>
+              </div>
+            `,
+           providers: [{provide: token, useValue: 'hello from parent'}]
+         })
+         class App {
+           @ViewChild(MenuTrigger) trigger!: MenuTrigger;
+           @ViewChild(Wrapper) wrapper!: Wrapper;
+         }
+
+         @NgModule({
+           declarations: [App, MenuTrigger, Menu, ProvideToken, Wrapper],
+           exports: [App, MenuTrigger, Menu, ProvideToken, Wrapper],
+         })
+         class Module {
+         }
+
+         TestBed.configureTestingModule({imports: [Module]});
+         const injector =
+             Injector.create({providers: [{provide: token, useValue: 'hello from injector'}]});
+         const fixture = TestBed.createComponent(App);
+         fixture.detectChanges();
+
+         fixture.componentInstance.trigger.open(injector);
+         fixture.detectChanges();
+
+         expect(fixture.componentInstance.wrapper.menu.tokenValue).toBe('hello from injector');
        });
   });
 });
