@@ -3546,4 +3546,58 @@ describe('di', () => {
     TestBed.configureTestingModule({declarations: [App]});
     expect(() => TestBed.createComponent(App)).toThrowError(/NullInjectorError/);
   });
+
+
+  @Directive({selector: 'menu-trigger'})
+  class MenuTrigger {
+    @Input('triggerFor') menu!: TemplateRef<unknown>;
+
+    constructor(private viewContainerRef: ViewContainerRef) {}
+
+    open() {
+      this.viewContainerRef.createEmbeddedView(this.menu);
+    }
+  }
+
+  @Directive({selector: '[some-attr]'})
+  class SomeAttr {
+  }
+
+  fit('should be able to provide an injection token through a custom injector', () => {
+    const values: any[] = [];
+
+    @Directive({selector: 'menu'})
+    class Menu {
+      constructor(@Inject('foo') public tokenValue: string) {
+        values.push(tokenValue);
+      }
+    }
+
+    @Component({
+      template: `
+        <menu-trigger [triggerFor]="menuTemplate"></menu-trigger>
+        <ng-template some-attr #menuTemplate>
+          <menu></menu>
+        </ng-template>
+    `
+    })
+    class App {
+      @ViewChild(MenuTrigger) trigger!: MenuTrigger;
+      @ViewChild(Menu) menu!: Menu;
+    }
+
+    TestBed.configureTestingModule({
+      declarations: [App, MenuTrigger, Menu, SomeAttr],
+      providers: [{provide: 'foo', useValue: 'fallback'}]
+    });
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    for (let i = 0; i < 5; i++) {
+      fixture.componentInstance.trigger.open();
+      fixture.detectChanges();
+    }
+
+    console.log(values);
+  });
 });

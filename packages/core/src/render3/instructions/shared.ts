@@ -21,6 +21,7 @@ import {assertFirstCreatePass, assertFirstUpdatePass, assertLContainer, assertLV
 import {attachPatchData, readPatchedLView} from '../context_discovery';
 import {getFactoryDef} from '../definition_factory';
 import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} from '../di';
+import {resolveProvider} from '../di_setup';
 import {throwMultipleComponentError} from '../errors';
 import {executeCheckHooks, executeInitAndCheckHooks, incrementInitPhaseFlags} from '../hooks';
 import {CONTAINER_HEADER_OFFSET, HAS_TRANSPLANTED_VIEWS, LContainer, MOVED_VIEWS} from '../interfaces/container';
@@ -1150,6 +1151,8 @@ export function instantiateRootComponent<T>(tView: TView, lView: LView, def: Com
   return directive;
 }
 
+let counter = 0;
+
 /**
  * Resolve the matched directives on a node.
  */
@@ -1168,6 +1171,12 @@ export function resolveDirectives(
     if (directiveDefs !== null) {
       hasDirectives = true;
       initTNodeFlags(tNode, tView.data.length, directiveDefs.length);
+
+      if (tNode.value === 'ng-template') {
+        resolveProvider(
+            [{provide: 'foo', useValue: counter++}], tView.data, tView.blueprint, false, false);
+      }
+
       // When the same token is provided by several directives on the same node, some rules apply in
       // the viewEngine:
       // - viewProviders have priority over providers

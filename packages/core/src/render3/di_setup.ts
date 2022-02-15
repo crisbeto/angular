@@ -58,7 +58,7 @@ export function providersResolver<T>(
 /**
  * Resolves a provider and publishes it to the DI system.
  */
-function resolveProvider(
+export function resolveProvider(
     provider: Provider, tInjectables: TData, lInjectablesBlueprint: NodeInjectorFactory[],
     isComponent: boolean, isViewProvider: boolean): void {
   provider = resolveForwardRef(provider);
