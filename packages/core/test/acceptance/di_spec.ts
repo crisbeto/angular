@@ -3546,4 +3546,62 @@ describe('di', () => {
     TestBed.configureTestingModule({declarations: [App]});
     expect(() => TestBed.createComponent(App)).toThrowError(/NullInjectorError/);
   });
+
+  //////////////////////
+
+  fit('', () => {
+    const values: any[] = [];
+
+    @Component({selector: 'menu', template: ''})
+    class Menu {
+      constructor(@Inject('foo') public tokenValue: string) {
+        values.push(tokenValue);
+      }
+    }
+
+    @Directive({selector: 'menu-trigger'})
+    class MenuTrigger {
+      constructor(private viewContainerRef: ViewContainerRef) {}
+
+      open(injector: Injector|undefined) {
+        this.viewContainerRef.createComponent(Menu, {injector});
+      }
+    }
+
+    @Directive({selector: 'provide-foo', providers: [{provide: 'foo', useValue: 'node injector'}]})
+    class ProvideFoo {
+    }
+
+    @Component({
+      template: `
+        <provide-foo>
+          <menu-trigger></menu-trigger>
+        </provide-foo>
+      `
+    })
+    class App {
+      @ViewChild(MenuTrigger) trigger!: MenuTrigger;
+    }
+
+    TestBed.configureTestingModule({
+      declarations: [App, MenuTrigger, Menu, ProvideFoo],
+      providers: [{provide: 'foo', useValue: 'module injector'}]
+    });
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    // const injector = Injector.create({
+    //   providers: [{
+    //     provide: 'foo',
+    //     useValue: 'custom injector',
+    //   }]
+    // });
+    // const injector = Injector.create({providers: []});
+    const injector = undefined;
+
+    fixture.componentInstance.trigger.open(injector);
+    fixture.detectChanges();
+
+    console.log(values);
+  });
 });
