@@ -9,7 +9,7 @@ import {animate, AnimationEvent, state, style, transition, trigger} from '@angul
 import {AnimationDriver} from '@angular/animations/browser';
 import {MockAnimationDriver, MockAnimationPlayer} from '@angular/animations/browser/testing';
 import {CommonModule} from '@angular/common';
-import {Component, ContentChild, Directive, ElementRef, EventEmitter, HostBinding, HostListener, Input, NgModule, OnInit, Output, Pipe, QueryList, TemplateRef, ViewChild, ViewChildren, ViewContainerRef} from '@angular/core';
+import {ChangeDetectorRef, Component, ContentChild, Directive, ElementRef, EventEmitter, HostBinding, HostListener, Input, NgModule, OnInit, Output, Pipe, QueryList, TemplateRef, ViewChild, ViewChildren, ViewContainerRef, ViewRef} from '@angular/core';
 import {Inject} from '@angular/core/src/di';
 import {readPatchedLView} from '@angular/core/src/render3/context_discovery';
 import {LContainer} from '@angular/core/src/render3/interfaces/container';
@@ -27,6 +27,38 @@ describe('acceptance integration tests', () => {
   function stripHtmlComments(str: string) {
     return str.replace(/<!--[\s\S]*?-->/g, '');
   }
+
+  fit('', () => {
+    const calls: string[] = [];
+
+    @Component({template: '<button (click)="countUp()">Count up</button>'})
+    class App {
+      constructor(public cdr: ChangeDetectorRef) {
+        this.addDestroyCallback('constructor');
+      }
+
+      addDestroyCallback(message: string) {
+        (this.cdr as ViewRef).onDestroy(() => calls.push(message));
+      }
+
+      countUp() {}
+    }
+
+    TestBed.configureTestingModule({declarations: [App]});
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const removeEventListenerSpy =
+        spyOn(fixture.nativeElement.querySelector('button'), 'removeEventListener')
+            .and.callThrough();
+
+    fixture.componentInstance.addDestroyCallback('after init');
+    fixture.detectChanges();
+
+    fixture.destroy();
+    expect(calls).toEqual(['constructor', 'after init']);
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('click', jasmine.any(Function), false);
+  });
+
 
   describe('render', () => {
     it('should render basic template', () => {

@@ -16,7 +16,7 @@ import {collectNativeNodes} from './collect_native_nodes';
 import {checkNoChangesInRootView, checkNoChangesInternal, detectChangesInRootView, detectChangesInternal, markViewDirty, storeCleanupWithContext} from './instructions/shared';
 import {CONTAINER_HEADER_OFFSET, VIEW_REFS} from './interfaces/container';
 import {isLContainer} from './interfaces/type_checks';
-import {CONTEXT, FLAGS, LView, LViewFlags, PARENT, TVIEW} from './interfaces/view';
+import {CLEANUP, CONTEXT, FLAGS, LView, LViewFlags, PARENT, TVIEW} from './interfaces/view';
 import {destroyLView, detachView, renderDetachView} from './node_manipulation';
 
 
@@ -30,6 +30,8 @@ export class ViewRef<T> implements viewEngine_EmbeddedViewRef<T>, viewEngine_Int
                                    viewEngine_ChangeDetectorRef_interface {
   private _appRef: ViewRefTracker|null = null;
   private _attachedToViewContainer = false;
+  private _hasRegisteredPendingCallbacks = false;
+  private _pendingCallbacks: Function[] = [];
 
   get rootNodes(): any[] {
     const lView = this._lView;
@@ -94,7 +96,19 @@ export class ViewRef<T> implements viewEngine_EmbeddedViewRef<T>, viewEngine_Int
   }
 
   onDestroy(callback: Function) {
-    storeCleanupWithContext(this._lView[TVIEW], this._lView, null, callback);
+    const lView = this._lView;
+    const tView = lView[TVIEW];
+
+    if (tView.firstCreatePass) {
+      if (!this._hasRegisteredPendingCallbacks) {
+        this._hasRegisteredPendingCallbacks = true;
+        storeCleanupWithContext(tView, lView, this, this._invokePendingCallbacks);
+      }
+
+      this._pendingCallbacks.push(callback);
+    } else {
+      storeCleanupWithContext(tView, lView, null, callback);
+    }
   }
 
   /**
@@ -306,6 +320,16 @@ export class ViewRef<T> implements viewEngine_EmbeddedViewRef<T>, viewEngine_Int
       throw new RuntimeError(RuntimeErrorCode.VIEW_ALREADY_ATTACHED, errorMessage);
     }
     this._appRef = appRef;
+  }
+
+  private _invokePendingCallbacks = () => {
+    if (this._pendingCallbacks.length) {
+      for (const current of this._pendingCallbacks) {
+        current();
+      }
+
+      this._pendingCallbacks = [];
+    }
   }
 }
 
