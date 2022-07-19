@@ -357,6 +357,8 @@ function convertDirectiveFacadeToMetadata(facade: R3DirectiveMetadataFacade): R3
     providers: facade.providers != null ? new WrappedNodeExpr(facade.providers) : null,
     viewQueries: facade.viewQueries.map(convertToR3QueryMetadata),
     fullInheritance: false,
+    hostDirectives:
+        facade.hostDirectives ? facade.hostDirectives.map(dir => new WrappedNodeExpr(dir)) : null,
   };
 }
 
@@ -382,6 +384,9 @@ function convertDeclareDirectiveFacadeToMetadata(
     typeArgumentCount: 0,
     fullInheritance: false,
     isStandalone: declaration.isStandalone ?? false,
+    hostDirectives: declaration.hostDirectives ?
+        declaration.hostDirectives.map(dir => new WrappedNodeExpr(dir)) :
+        null,
   };
 }
 

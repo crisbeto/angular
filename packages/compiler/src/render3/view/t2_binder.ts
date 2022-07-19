@@ -10,7 +10,7 @@ import {AST, BindingPipe, ImplicitReceiver, PropertyRead, PropertyWrite, Recursi
 import {SelectorMatcher} from '../../selector';
 import {BoundAttribute, BoundEvent, BoundText, Content, Element, Icu, Node, Reference, Template, Text, TextAttribute, Variable, Visitor} from '../r3_ast';
 
-import {BoundTarget, DirectiveMeta, Target, TargetBinder} from './t2_api';
+import {BoundTarget, DirectiveMeta, MatchedDirectives, Target, TargetBinder} from './t2_api';
 import {createCssSelector} from './template';
 import {getAttrsForDirectiveMatching} from './util';
 
@@ -21,7 +21,7 @@ import {getAttrsForDirectiveMatching} from './util';
  * target.
  */
 export class R3TargetBinder<DirectiveT extends DirectiveMeta> implements TargetBinder<DirectiveT> {
-  constructor(private directiveMatcher: SelectorMatcher<DirectiveT>) {}
+  constructor(private directiveMatcher: SelectorMatcher<MatchedDirectives<DirectiveT>>) {}
 
   /**
    * Perform a binding operation on the given `Target` and return a `BoundTarget` which contains
@@ -47,7 +47,7 @@ export class R3TargetBinder<DirectiveT extends DirectiveMeta> implements TargetB
     //     them. TODO(alxhub): handle multiple directives claiming an input/output/etc.
     //   - references: Map of #references to their targets.
     const {directives, bindings, references} =
-        DirectiveBinder.apply(target.template, this.directiveMatcher);
+        DirectiveBinder.apply<DirectiveT>(target.template, this.directiveMatcher);
     // Finally, run the TemplateBinder to bind references, variables, and other entities within the
     // template. This extracts all the metadata that doesn't depend on directive matching.
     const {expressions, symbols, nestingLevel, usedPipes} =
@@ -192,7 +192,7 @@ class Scope implements Visitor {
  */
 class DirectiveBinder<DirectiveT extends DirectiveMeta> implements Visitor {
   constructor(
-      private matcher: SelectorMatcher<DirectiveT>,
+      private matcher: SelectorMatcher<MatchedDirectives<DirectiveT>>,
       private directives: Map<Element|Template, DirectiveT[]>,
       private bindings: Map<BoundAttribute|BoundEvent|TextAttribute, DirectiveT|Element|Template>,
       private references:
@@ -211,7 +211,7 @@ class DirectiveBinder<DirectiveT extends DirectiveMeta> implements Visitor {
    * template node.
    */
   static apply<DirectiveT extends DirectiveMeta>(
-      template: Node[], selectorMatcher: SelectorMatcher<DirectiveT>): {
+      template: Node[], selectorMatcher: SelectorMatcher<MatchedDirectives<DirectiveT>>): {
     directives: Map<Element|Template, DirectiveT[]>,
     bindings: Map<BoundAttribute|BoundEvent|TextAttribute, DirectiveT|Element|Template>,
     references: Map<Reference, {directive: DirectiveT, node: Element|Template}|Element|Template>,
@@ -245,7 +245,12 @@ class DirectiveBinder<DirectiveT extends DirectiveMeta> implements Visitor {
 
     // Next, use the `SelectorMatcher` to get the list of directives on the node.
     const directives: DirectiveT[] = [];
-    this.matcher.match(cssSelector, (_, directive) => directives.push(directive));
+    this.matcher.match(cssSelector, (_selector, result) => {
+      if (result.hostDirectives) {
+        directives.push(...result.hostDirectives as DirectiveT[]);
+      }
+      directives.push(result.directive as DirectiveT);
+    });
     if (directives.length > 0) {
       this.directives.set(node, directives);
     }

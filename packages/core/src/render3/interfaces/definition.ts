@@ -206,6 +206,8 @@ export interface DirectiveDef<T> {
    */
   readonly features: DirectiveDefFeature[]|null;
 
+  readonly hostDirectives: Type<unknown>[]|null;
+
   setInput:
       (<U extends T>(
            this: DirectiveDef<U>, instance: U, value: any, publicName: string,

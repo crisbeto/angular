@@ -702,6 +702,7 @@ class TcbDirectiveInputsOp extends TcbOp {
     // TODO(joost): report duplicate properties
 
     const inputs = getBoundInputs(this.dir, this.node, this.tcb);
+    debugger;
     for (const input of inputs) {
       // For bound inputs, the property is assigned the binding expression.
       const expr = widenBinding(translateInput(input.attribute, this.tcb, this.scope), this.tcb);
@@ -758,6 +759,8 @@ class TcbDirectiveInputsOp extends TcbOp {
           if (dirId === null) {
             dirId = this.scope.resolve(this.node, this.dir);
           }
+
+          // TODO: assignment created here
 
           // To get errors assign directly to the fields on the instance, using property access
           // when possible. String literal fields may not be valid JS identifiers so we use
@@ -1501,6 +1504,7 @@ class Scope {
     // Collect all the inputs on the element.
     const claimedInputs = new Set<string>();
     const directives = this.tcb.boundTarget.getDirectivesOfNode(node);
+    debugger;
     if (directives === null || directives.length === 0) {
       // If there are no directives, then all inputs are unclaimed inputs, so queue an operation
       // to add them if needed.

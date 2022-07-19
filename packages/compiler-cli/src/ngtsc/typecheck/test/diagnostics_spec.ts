@@ -38,6 +38,28 @@ runInEachFileSystem(() => {
           [`TestComponent.html(1, 11): Type 'string' is not assignable to type 'number'.`]);
     });
 
+    it('', () => {
+      const messages = diagnose(
+          `<div dir [doesNotExist]="person.name"></div>`, `
+            class Dir {
+              doesNotExist: string;
+            }
+            class TestComponent {
+              person: {
+                name: string;
+              };
+            }`,
+          [{
+            type: 'directive',
+            name: 'Dir',
+            selector: '[dir]',
+            inputs: {input: 'input'},
+          }]);
+
+
+      console.log(messages);
+    });
+
     it('infers type of template variables', () => {
       const messages = diagnose(
           `<div *ngFor="let person of persons; let idx=index">{{ render(idx) }}</div>`, `

@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AnimationTriggerNames, compileClassMetadata, compileComponentFromMetadata, compileDeclareClassMetadata, compileDeclareComponentFromMetadata, ConstantPool, CssSelector, DeclarationListEmitMode, DeclareComponentTemplateInfo, DEFAULT_INTERPOLATION_CONFIG, DomElementSchemaRegistry, Expression, FactoryTarget, makeBindingParser, R3ComponentMetadata, R3DirectiveDependencyMetadata, R3NgModuleDependencyMetadata, R3PipeDependencyMetadata, R3TargetBinder, R3TemplateDependency, R3TemplateDependencyKind, R3TemplateDependencyMetadata, SchemaMetadata, SelectorMatcher, ViewEncapsulation, WrappedNodeExpr} from '@angular/compiler';
+import {AnimationTriggerNames, compileClassMetadata, compileComponentFromMetadata, compileDeclareClassMetadata, compileDeclareComponentFromMetadata, ConstantPool, CssSelector, DeclarationListEmitMode, DeclareComponentTemplateInfo, DEFAULT_INTERPOLATION_CONFIG, DomElementSchemaRegistry, Expression, FactoryTarget, makeBindingParser, MatchedDirectives, R3ComponentMetadata, R3DirectiveDependencyMetadata, R3NgModuleDependencyMetadata, R3PipeDependencyMetadata, R3TargetBinder, R3TemplateDependency, R3TemplateDependencyKind, R3TemplateDependencyMetadata, SchemaMetadata, SelectorMatcher, ViewEncapsulation, WrappedNodeExpr} from '@angular/compiler';
 import ts from 'typescript';
 
 import {Cycle, CycleAnalyzer, CycleHandlingStrategy} from '../../../cycles';
@@ -17,16 +17,17 @@ import {DependencyTracker} from '../../../incremental/api';
 import {extractSemanticTypeParameters, SemanticDepGraphUpdater} from '../../../incremental/semantic_graph';
 import {IndexingContext} from '../../../indexer';
 import {DirectiveMeta, extractDirectiveTypeCheckMeta, InjectableClassRegistry, MetadataReader, MetadataRegistry, MetaKind, PipeMeta, ResourceRegistry} from '../../../metadata';
+import {HostDirectiveResolver} from '../../../metadata/src/matching';
 import {PartialEvaluator} from '../../../partial_evaluator';
 import {PerfEvent, PerfRecorder} from '../../../perf';
 import {ClassDeclaration, DeclarationNode, Decorator, ReflectionHost, reflectObjectLiteral} from '../../../reflection';
 import {ComponentScopeKind, ComponentScopeReader, DtsModuleScopeResolver, LocalModuleScopeRegistry, makeNotStandaloneDiagnostic, makeUnknownComponentImportDiagnostic, TypeCheckScopeRegistry} from '../../../scope';
 import {AnalysisOutput, CompileResult, DecoratorHandler, DetectResult, HandlerFlags, HandlerPrecedence, ResolveResult} from '../../../transform';
-import {TypeCheckContext} from '../../../typecheck/api';
+import {TypeCheckableDirectiveMeta, TypeCheckContext} from '../../../typecheck/api';
 import {ExtendedTemplateChecker} from '../../../typecheck/extended/api';
 import {getSourceFile} from '../../../util/src/typescript';
 import {Xi18nContext} from '../../../xi18n';
-import {combineResolvers, compileDeclareFactory, compileNgFactoryDefField, compileResults, extractClassMetadata, extractSchemas, findAngularDecorator, forwardRefResolver, getDirectiveDiagnostics, getProviderDiagnostics, isExpressionForwardReference, readBaseClass, resolveEnumValue, resolveImportedFile, resolveLiteral, resolveProvidersRequiringFactory, ResourceLoader, toFactoryMetadata, wrapFunctionExpressionsInParens,} from '../../common';
+import {combineResolvers, compileDeclareFactory, compileNgFactoryDefField, compileResults, extractClassMetadata, extractSchemas, findAngularDecorator, forwardRefResolver, getDirectiveDiagnostics, getProviderDiagnostics, isExpressionForwardReference, readBaseClass, resolveEnumValue, resolveHostDirectives, resolveImportedFile, resolveLiteral, resolveProvidersRequiringFactory, ResourceLoader, toFactoryMetadata, wrapFunctionExpressionsInParens,} from '../../common';
 import {extractDirectiveMetadata, parseFieldArrayValue} from '../../directive';
 import {createModuleWithProvidersResolver, NgModuleSymbol} from '../../ng_module';
 
@@ -59,7 +60,8 @@ export class ComponentDecoratorHandler implements
       private refEmitter: ReferenceEmitter, private depTracker: DependencyTracker|null,
       private injectableRegistry: InjectableClassRegistry,
       private semanticDepGraphUpdater: SemanticDepGraphUpdater|null,
-      private annotateForClosureCompiler: boolean, private perf: PerfRecorder) {}
+      private annotateForClosureCompiler: boolean, private perf: PerfRecorder,
+      private directiveMatcher: HostDirectiveResolver<DirectiveMeta>) {}
 
   private literalCache = new Map<Decorator, ts.ObjectLiteralExpression>();
   private elementSchemaRegistry = new DomElementSchemaRegistry();
@@ -301,6 +303,12 @@ export class ComponentDecoratorHandler implements
       schemas = [];
     }
 
+    let hostDirectives: Reference<ClassDeclaration>[]|null = null;
+    if (directiveResult.decorator.has('hostDirectives')) {
+      hostDirectives = resolveHostDirectives(
+          directiveResult.decorator.get('hostDirectives')!, this.reflector, this.evaluator);
+    }
+
     // Parse the template.
     // If a preanalyze phase was executed, the template may already exist in parsed form, so check
     // the preanalyzeTemplateCache.
@@ -409,6 +417,7 @@ export class ComponentDecoratorHandler implements
         baseClass: readBaseClass(node, this.reflector, this.evaluator),
         inputs,
         outputs,
+        hostDirectives,
         meta: {
           ...metadata,
           template: {
@@ -476,6 +485,7 @@ export class ComponentDecoratorHandler implements
       queries: analysis.meta.queries.map(query => query.propertyName),
       isComponent: true,
       baseClass: analysis.baseClass,
+      hostDirectives: analysis.hostDirectives,
       ...analysis.typeCheckMeta,
       isPoisoned: analysis.isPoisoned,
       isStructural: false,
@@ -496,7 +506,7 @@ export class ComponentDecoratorHandler implements
     }
     const scope = this.scopeReader.getScopeForComponent(node);
     const selector = analysis.meta.selector;
-    const matcher = new SelectorMatcher<DirectiveMeta>();
+    const matcher = new SelectorMatcher<MatchedDirectives<DirectiveMeta>>();
     if (scope !== null) {
       let {dependencies, isPoisoned} =
           scope.kind === ComponentScopeKind.NgModule ? scope.compilation : scope;
@@ -510,7 +520,8 @@ export class ComponentDecoratorHandler implements
 
       for (const dep of dependencies) {
         if (dep.kind === MetaKind.Directive && dep.selector !== null) {
-          matcher.addSelectables(CssSelector.parse(dep.selector), dep);
+          matcher.addSelectables(
+              CssSelector.parse(dep.selector), this.directiveMatcher.getMatchedDirectives(dep));
         }
       }
     }
@@ -543,7 +554,7 @@ export class ComponentDecoratorHandler implements
       return;
     }
 
-    const binder = new R3TargetBinder(scope.matcher);
+    const binder = new R3TargetBinder<TypeCheckableDirectiveMeta>(scope.matcher);
     ctx.addTemplate(
         new Reference(node), binder, meta.template.diagNodes, scope.pipes, scope.schemas,
         meta.template.sourceMapping, meta.template.file, meta.template.errors,
@@ -602,8 +613,7 @@ export class ComponentDecoratorHandler implements
       // Set up the R3TargetBinder, as well as a 'directives' array and a 'pipes' map that are
       // later fed to the TemplateDefinitionBuilder. First, a SelectorMatcher is constructed to
       // match directives that are in scope.
-      type MatchedDirective = DirectiveMeta&{selector: string};
-      const matcher = new SelectorMatcher<MatchedDirective>();
+      const matcher = new SelectorMatcher<MatchedDirectives<DirectiveMeta>>();
 
       const pipes = new Map<string, PipeMeta>();
 
@@ -613,7 +623,8 @@ export class ComponentDecoratorHandler implements
 
       for (const dep of dependencies) {
         if (dep.kind === MetaKind.Directive && dep.selector !== null) {
-          matcher.addSelectables(CssSelector.parse(dep.selector), dep as MatchedDirective);
+          matcher.addSelectables(
+              CssSelector.parse(dep.selector), this.directiveMatcher.getMatchedDirectives(dep));
         } else if (dep.kind === MetaKind.Pipe) {
           pipes.set(dep.name, dep);
         }

@@ -15,7 +15,7 @@ import {ClassPropertyMapping} from '../../../metadata';
 import {DynamicValue, EnumValue, PartialEvaluator} from '../../../partial_evaluator';
 import {ClassDeclaration, ClassMember, ClassMemberKind, Decorator, filterToMembersWithDecorator, ReflectionHost, reflectObjectLiteral} from '../../../reflection';
 import {HandlerFlags} from '../../../transform';
-import {createSourceSpan, createValueHasWrongTypeError, getConstructorDependencies, tryUnwrapForwardRef, unwrapConstructorDependencies, unwrapExpression, validateConstructorDependencies, wrapFunctionExpressionsInParens, wrapTypeReference} from '../../common';
+import {createSourceSpan, createValueHasWrongTypeError, forwardRefResolver, getConstructorDependencies, tryUnwrapForwardRef, unwrapConstructorDependencies, unwrapExpression, validateConstructorDependencies, wrapFunctionExpressionsInParens, wrapTypeReference} from '../../common';
 
 const EMPTY_OBJECT: {[key: string]: string} = {};
 const QUERY_TYPES = new Set([
@@ -179,12 +179,40 @@ export function extractDirectiveMetadata(
     isStandalone = resolved;
   }
 
+  let hostDirectives: Expression[]|null = null;
+  if (directive.has('hostDirectives')) {
+    const expr = directive.get('hostDirectives')!;
+    const resolved = evaluator.evaluate(expr, forwardRefResolver);
+    if (!Array.isArray(resolved)) {
+      throw createValueHasWrongTypeError(expr, resolved, `hostDirectives must be an array`);
+    }
+    // TODO: maybe simplify this since the same logic is repeated in
+    hostDirectives = resolved.map(item => {
+      if (!(item instanceof Reference)) {
+        throw Error('Host directive must be a reference');
+      }
+      if (!ts.isClassDeclaration(item.node)) {
+        throw Error('Host directive reference must be a class');
+      }
+      return new WrappedNodeExpr(reflector.getInternalNameOfClass(item.node as ClassDeclaration));
+    });
+  }
+
+
   // Detect if the component inherits from another class
   const usesInheritance = reflector.hasBaseClass(clazz);
   const type = wrapTypeReference(reflector, clazz);
   const internalType = new WrappedNodeExpr(reflector.getInternalNameOfClass(clazz));
 
-  const inputs = ClassPropertyMapping.fromMappedObject({...inputsFromMeta, ...inputsFromFields});
+  const inputs = ClassPropertyMapping.fromMappedObject({
+    ...inputsFromMeta,
+    ...inputsFromFields,
+    // ...{
+    // TODO: can be used to expose host directive inputs on node. Needs more thought since it may
+    // be better to expose the host directives during directive matching instead.
+    // doesNotExist: 'doesNotExist'
+    // }
+  });
   const outputs = ClassPropertyMapping.fromMappedObject({...outputsFromMeta, ...outputsFromFields});
 
   const metadata: R3DirectiveMetadata = {
@@ -208,6 +236,7 @@ export function extractDirectiveMetadata(
     exportAs,
     providers,
     isStandalone,
+    hostDirectives,
   };
   return {
     decorator: directive,

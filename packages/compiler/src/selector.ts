@@ -242,6 +242,7 @@ export class SelectorMatcher<T = any> {
 
   addSelectables(cssSelectors: CssSelector[], callbackCtxt?: T) {
     let listContext: SelectorListContext = null!;
+    // debugger;
     if (cssSelectors.length > 1) {
       listContext = new SelectorListContext(cssSelectors);
       this._listContexts.push(listContext);

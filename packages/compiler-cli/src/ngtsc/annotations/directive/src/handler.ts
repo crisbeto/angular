@@ -17,7 +17,7 @@ import {PerfEvent, PerfRecorder} from '../../../perf';
 import {ClassDeclaration, ClassMember, ClassMemberKind, Decorator, ReflectionHost} from '../../../reflection';
 import {LocalModuleScopeRegistry} from '../../../scope';
 import {AnalysisOutput, CompileResult, DecoratorHandler, DetectResult, HandlerFlags, HandlerPrecedence, ResolveResult} from '../../../transform';
-import {compileDeclareFactory, compileNgFactoryDefField, compileResults, extractClassMetadata, findAngularDecorator, getDirectiveDiagnostics, getProviderDiagnostics, getUndecoratedClassWithAngularFeaturesDiagnostic, isAngularDecorator, readBaseClass, resolveProvidersRequiringFactory, toFactoryMetadata} from '../../common';
+import {compileDeclareFactory, compileNgFactoryDefField, compileResults, extractClassMetadata, findAngularDecorator, getDirectiveDiagnostics, getProviderDiagnostics, getUndecoratedClassWithAngularFeaturesDiagnostic, isAngularDecorator, readBaseClass, resolveHostDirectives, resolveProvidersRequiringFactory, toFactoryMetadata} from '../../common';
 
 import {extractDirectiveMetadata} from './shared';
 import {DirectiveSymbol} from './symbol';
@@ -37,6 +37,7 @@ export interface DirectiveHandlerData {
   meta: R3DirectiveMetadata;
   classMetadata: R3ClassMetadata|null;
   providersRequiringFactory: Set<Reference<ClassDeclaration>>|null;
+  hostDirectives: Reference<ClassDeclaration>[]|null;
   inputs: ClassPropertyMapping;
   outputs: ClassPropertyMapping;
   isPoisoned: boolean;
@@ -98,16 +99,27 @@ export class DirectiveDecoratorHandler implements
     const analysis = directiveResult.metadata;
 
     let providersRequiringFactory: Set<Reference<ClassDeclaration>>|null = null;
-    if (directiveResult !== undefined && directiveResult.decorator.has('providers')) {
+    if (directiveResult.decorator.has('providers')) {
       providersRequiringFactory = resolveProvidersRequiringFactory(
           directiveResult.decorator.get('providers')!, this.reflector, this.evaluator);
     }
+
+    let hostDirectives: Reference<ClassDeclaration>[]|null = null;
+    if (directiveResult.decorator.has('hostDirectives')) {
+      hostDirectives = resolveHostDirectives(
+          directiveResult.decorator.get('hostDirectives')!, this.reflector, this.evaluator);
+    }
+
+    // TODO: forward `directiveResult.metadata.hostDirectives`.
+    // TODO: probably do something like `directiveResult.metadata.hostDirectives.map(d =>
+    // this.metaReader.getDirectiveMetadata(d))`.
 
     return {
       analysis: {
         inputs: directiveResult.inputs,
         outputs: directiveResult.outputs,
         meta: analysis,
+        hostDirectives,
         classMetadata: extractClassMetadata(
             node, this.reflector, this.isCore, this.annotateForClosureCompiler),
         baseClass: readBaseClass(node, this.reflector, this.evaluator),
@@ -131,6 +143,7 @@ export class DirectiveDecoratorHandler implements
     // Register this directive's information with the `MetadataRegistry`. This ensures that
     // the information about the directive is available during the compile() phase.
     const ref = new Reference(node);
+
     this.metaRegistry.registerDirectiveMetadata({
       kind: MetaKind.Directive,
       ref,
@@ -142,6 +155,7 @@ export class DirectiveDecoratorHandler implements
       queries: analysis.meta.queries.map(query => query.propertyName),
       isComponent: false,
       baseClass: analysis.baseClass,
+      hostDirectives: analysis.hostDirectives,
       ...analysis.typeCheckMeta,
       isPoisoned: analysis.isPoisoned,
       isStructural: analysis.isStructural,

@@ -107,6 +107,7 @@ export class DtsMetadataReader implements MetadataReader {
       exportAs: readStringArrayType(def.type.typeArguments[2]),
       inputs,
       outputs,
+      hostDirectives: null,  // TODO: does this need to be filled out?
       queries: readStringArrayType(def.type.typeArguments[5]),
       ...extractDirectiveTypeCheckMeta(clazz, inputs, this.reflector),
       baseClass: readBaseClass(clazz, this.checker, this.reflector),

@@ -93,6 +93,11 @@ export interface DirectiveMeta {
   animationTriggerNames: AnimationTriggerNames|null;
 }
 
+export interface MatchedDirectives<T extends DirectiveMeta> {
+  directive: T;
+  hostDirectives: T[]|null;
+}
+
 /**
  * Interface to the binding API, which processes a template and returns an object similar to the
  * `ts.TypeChecker`.

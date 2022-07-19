@@ -20,6 +20,7 @@ import {normalizeDebugBindingName, normalizeDebugBindingValue} from '../../util/
 import {stringify} from '../../util/stringify';
 import {assertFirstCreatePass, assertFirstUpdatePass, assertLContainer, assertLView, assertTNodeForLView, assertTNodeForTView} from '../assert';
 import {attachPatchData, readPatchedLView} from '../context_discovery';
+import {getDirectiveDef} from '../definition';
 import {getFactoryDef} from '../definition_factory';
 import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} from '../di';
 import {throwMultipleComponentError} from '../errors';
@@ -895,6 +896,10 @@ function generatePropertyAliases(
     propStore: PropertyAliases|null): PropertyAliases|null {
   for (let publicName in inputAliasMap) {
     if (inputAliasMap.hasOwnProperty(publicName)) {
+      // if (publicName === 'directiveOnly') {
+      //   continue;
+      // }
+
       propStore = propStore === null ? {} : propStore;
       const internalName = inputAliasMap[publicName];
 
@@ -934,8 +939,28 @@ export function initializeInputAndOutputAliases(tView: TView, tNode: TNode): voi
         generateInitialInputs(directiveInputs, tNodeAttrs) :
         null;
     inputsFromAttrs.push(initialInputs);
-    inputsStore = generatePropertyAliases(directiveInputs, i, inputsStore);
-    outputsStore = generatePropertyAliases(directiveDef.outputs, i, outputsStore);
+
+    // TODO: we can disable inputs/output here.
+    if (Date.now()) {
+      inputsStore = generatePropertyAliases(directiveInputs, i, inputsStore);
+      outputsStore = generatePropertyAliases(directiveDef.outputs, i, outputsStore);
+    }
+
+    // TODO: this isn't actually a viable solution, it's only here to verify that the approach
+    // works. Also the input aliases should be within `hostDirectives`, not read from the host
+    // directive's `inputs`.
+    if (directiveDef.hostDirectives) {
+      directiveDef.hostDirectives.forEach(type => {
+        const hostDef = getDirectiveDef(type)!;
+        const index = tViewData.indexOf(hostDef);
+
+        if (index === -1) {
+          throw Error('should not happen');
+        }
+
+        inputsStore = generatePropertyAliases(directiveInputs, index, inputsStore);
+      });
+    }
   }
 
   if (inputsStore !== null) {
@@ -979,6 +1004,11 @@ export function elementPropertyInternal<T>(
   const element = getNativeByTNode(tNode, lView) as RElement | RComment;
   let inputData = tNode.inputs;
   let dataValue: PropertyAliasValue|undefined;
+
+  // if (propName === 'fooAlias' || propName === 'foo') {
+  //   debugger;
+  // }
+
   if (!nativeOnly && inputData != null && (dataValue = inputData[propName])) {
     setInputsForProperty(tView, lView, dataValue, propName, value);
     if (isComponentHost(tNode)) markDirtyIfOnPush(lView, tNode.index);
@@ -1317,10 +1347,33 @@ function findDirectiveDefMatches(
         } else {
           matches.push(def);
         }
+
+        addHostDirectives(tView, viewData, tNode, def, matches);
       }
     }
   }
   return matches;
+}
+
+function addHostDirectives(
+    tView: TView, viewData: LView, tNode: TElementNode|TContainerNode|TElementContainerNode,
+    def: DirectiveDef<unknown>, matches: any[]) {
+  if (def.hostDirectives) {
+    // Iterate in reverse so the directive that declares
+    // the host directives preserves its original order.
+    for (let i = def.hostDirectives.length - 1; i > -1; i--) {
+      const directiveDef = getDirectiveDef(def.hostDirectives[i]);
+      if (!directiveDef) {
+        throw Error('No directive def on host directive');
+      }
+      // Allows for the directive to be injected by the component.
+      diPublicInInjector(getOrCreateNodeInjectorForNode(tNode, viewData), tView, directiveDef.type);
+      // Host directives execute before the component so that its inputs can be overwritten.
+      // TODO: check for duplicates?
+      matches.unshift(directiveDef);
+      addHostDirectives(tView, viewData, tNode, directiveDef, matches);
+    }
+  }
 }
 
 /**
@@ -2003,6 +2056,10 @@ export function setInputsForProperty(
     } else {
       instance[privateName] = value;
     }
+
+    // if (publicName === 'fooAlias' || publicName === 'foo') {
+    //   debugger;
+    // }
   }
 }
 

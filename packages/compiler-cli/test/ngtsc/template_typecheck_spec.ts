@@ -2205,6 +2205,41 @@ export declare class AnimationEvent {
             .toBe(`Can't bind to 'foo' since it isn't a known property of 'div'.`);
       });
 
+      it('', () => {
+        env.write('test.ts', `
+        import {Component, NgModule, Directive, Input, forwardRef} from '@angular/core';
+
+        @Directive({hostDirectives: [forwardRef(() => OtherHostDir)]})
+        export class HostDir {
+          @Input() hostInput: number;
+        }
+
+        @Directive()
+        export class OtherHostDir {
+          @Input() otherHostInput: number;
+        }
+
+        @Directive({
+          selector: '[someDir]',
+          hostDirectives: [HostDir]
+        })
+        export class SomeDir {}
+
+        @Component({
+          selector: 'blah',
+          template: '<div someDir [hostInput]="1" [otherHostInput]="2">test</div>',
+        })
+        export class FooCmp {}
+
+        @NgModule({
+          declarations: [FooCmp, SomeDir],
+        })
+        export class FooModule {}
+      `);
+        const diags = env.driveDiagnostics();
+        console.log(diags.map(m => m.messageText));
+      });
+
       it('should have a descriptive error for unknown properties with an "ng-" prefix', () => {
         env.write('test.ts', `
         import {Component, NgModule} from '@angular/core';

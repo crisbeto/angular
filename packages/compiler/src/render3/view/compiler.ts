@@ -81,6 +81,10 @@ function baseDirectiveFields(
     definitionMap.set('standalone', o.literal(true));
   }
 
+  if (meta.hostDirectives) {
+    definitionMap.set('hostDirectives', o.literalArr(meta.hostDirectives));
+  }
+
   return definitionMap;
 }
 

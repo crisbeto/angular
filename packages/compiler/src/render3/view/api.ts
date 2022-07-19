@@ -122,6 +122,8 @@ export interface R3DirectiveMetadata {
    * Whether or not the component or directive is standalone.
    */
   isStandalone: boolean;
+
+  hostDirectives: o.Expression[]|null;
 }
 
 /**

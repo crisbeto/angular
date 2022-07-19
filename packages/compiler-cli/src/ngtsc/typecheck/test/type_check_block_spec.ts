@@ -755,6 +755,22 @@ describe('type check blocks', () => {
       suggestionsForSuboptimalTypeInference: false,
     };
 
+    fit('', () => {
+      const block = tcb(`<div dir [dirInput]="a" [otherDirInput]="b"></div>`, [{
+                          type: 'directive',
+                          name: 'Dir',
+                          selector: '[dir]',
+                          inputs: {'dirInput': 'dirInput'},
+                          hostDirectives: [{
+                            type: 'directive',
+                            name: 'OtherDir',
+                            selector: '[willNotMatch]',
+                            inputs: {'otherDirInput': 'otherDirInput'},
+                          }]
+                        }]);
+      console.log(block);
+    });
+
     describe('config.applyTemplateContextGuards', () => {
       const TEMPLATE = `<div *dir>{{ value }}</div>`;
       const GUARD_APPLIED = 'if (i0.Dir.ngTemplateContextGuard(';

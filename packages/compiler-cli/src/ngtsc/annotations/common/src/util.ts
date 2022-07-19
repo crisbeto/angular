@@ -300,6 +300,23 @@ export function resolveProvidersRequiringFactory(
   return providers;
 }
 
+export function resolveHostDirectives(
+    rawHostDirectives: ts.Expression, reflector: ReflectionHost,
+    evaluator: PartialEvaluator): Reference<ClassDeclaration>[] {
+  const result: Reference<ClassDeclaration>[] = [];
+  const resolved = evaluator.evaluate(rawHostDirectives, forwardRefResolver);
+
+  if (Array.isArray(resolved)) {
+    for (const item of resolved) {
+      if (item instanceof Reference && reflector.isClass(item.node)) {
+        result.push(item as Reference<ClassDeclaration>);
+      }
+    }
+  }
+
+  return result;
+}
+
 /**
  * Create an R3Reference for a class.
  *

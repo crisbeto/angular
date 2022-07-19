@@ -3866,6 +3866,30 @@ function allTests(os: string) {
               '`:\u241F5dbba0a3da8dff890e20cf76eb075d58900fbcd3\u241F8321000940098097247:Some text`');
     });
 
+    fit('', () => {
+      env.tsconfig({});
+      env.write(`test.ts`, `
+        import {Component, Directive} from '@angular/core';
+
+        @Directive({
+          selector: '[foo-dir]',
+          host: {'class': 'foo-dir', '(foo)': '1', '[id]': 'id'}
+        })
+        class FooDir {
+          id = 100;
+        }
+
+        @Component({
+          selector: 'test',
+          template: '<div>Some text</div>',
+          hostDirectives: [FooDir]
+        })
+        class FooCmp {}`);
+      env.driveMain();
+      const jsContents = env.getContents('test.js');
+      console.log(jsContents);
+    });
+
     it('should render custom id and legacy ids if `enableI18nLegacyMessageIdFormat` is not false',
        () => {
          env.tsconfig({i18nFormatIn: 'xlf'});

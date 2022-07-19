@@ -90,6 +90,11 @@ export class ClassPropertyMapping implements InputOutputPropertySet {
       forwardMap.set(classPropertyName, inputOrOutput);
     }
 
+    // TODO: host directive inputs will have to be added to all call sites of this method.
+    // forwardMap.set(
+    //     'doesNotExist', {classPropertyName: 'doesNotExist', bindingPropertyName:
+    //     'doesNotExist'});
+
     return new ClassPropertyMapping(forwardMap);
   }
 

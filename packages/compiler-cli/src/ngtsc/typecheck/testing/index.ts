@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CssSelector, ParseSourceFile, ParseSourceSpan, parseTemplate, R3TargetBinder, SchemaMetadata, SelectorMatcher, TmplAstElement, Type} from '@angular/compiler';
+import {CssSelector, MatchedDirectives, ParseSourceFile, ParseSourceSpan, parseTemplate, R3TargetBinder, SchemaMetadata, SelectorMatcher, TmplAstElement, Type} from '@angular/compiler';
 import ts from 'typescript';
 
 import {absoluteFrom, AbsoluteFsPath, getSourceFileOrError, LogicalFileSystem} from '../../file_system';
@@ -14,6 +14,7 @@ import {TestFile} from '../../file_system/testing';
 import {AbsoluteModuleStrategy, LocalIdentifierStrategy, LogicalProjectStrategy, ModuleResolver, Reexport, Reference, ReferenceEmitter, RelativePathStrategy} from '../../imports';
 import {NOOP_INCREMENTAL_BUILD} from '../../incremental';
 import {ClassPropertyMapping, CompoundMetadataReader, DirectiveMeta, LocalMetadataRegistry, MetadataReader, MetaKind} from '../../metadata';
+import {HostDirectiveResolver} from '../../metadata/src/matching';
 import {NOOP_PERF_RECORDER} from '../../perf';
 import {TsCreateProgramDriver} from '../../program_driver';
 import {ClassDeclaration, isNamedClassDeclaration, TypeScriptReflectionHost} from '../../reflection';
@@ -242,6 +243,7 @@ export interface TestDirective extends Partial<Pick<
   undeclaredInputFields?: string[];
   isGeneric?: boolean;
   code?: string;
+  hostDirectives?: TestDirective[];
 }
 
 export interface TestPipe {
@@ -260,13 +262,20 @@ export function tcb(
     options?: {emitSpans?: boolean}): string {
   const codeLines = [`export class Test<T extends string> {}`];
 
-  for (const decl of declarations) {
-    if (decl.code !== undefined) {
-      codeLines.push(decl.code);
-    } else {
-      codeLines.push(`export class ${decl.name}<T extends string> {}`);
+  (function addCodeLines(currentDeclarations) {
+    for (const decl of currentDeclarations) {
+      if (decl.type === 'directive' && decl.hostDirectives) {
+        addCodeLines(decl.hostDirectives);
+      }
+
+      if (decl.code !== undefined) {
+        codeLines.push(decl.code);
+      } else {
+        codeLines.push(`export class ${decl.name}<T extends string> {}`);
+      }
     }
-  }
+  })(declarations);
+
   const rootFilePath = absoluteFrom('/synthetic.ts');
   const {program, host} = makeProgram([
     {name: rootFilePath, contents: codeLines.join('\n'), isRoot: true},
@@ -279,7 +288,7 @@ export function tcb(
 
   const {matcher, pipes} =
       prepareDeclarations(declarations, decl => getClass(sf, decl.name), new Map());
-  const binder = new R3TargetBinder(matcher);
+  const binder = new R3TargetBinder<DirectiveMeta>(matcher);
   const boundTarget = binder.bind({template: nodes});
 
   const id = 'tcb' as TemplateId;
@@ -474,7 +483,7 @@ export function setup(targets: TypeCheckingTarget[], overrides: {
           }
           return getClass(declFile, decl.name);
         }, fakeMetadataRegistry);
-        const binder = new R3TargetBinder(matcher);
+        const binder = new R3TargetBinder<DirectiveMeta>(matcher);
         const classRef = new Reference(classDecl);
 
         const sourceMapping: TemplateSourceMapping = {
@@ -549,8 +558,9 @@ export function setup(targets: TypeCheckingTarget[], overrides: {
     }
   } as MetadataReader;
 
-  const typeCheckScopeRegistry =
-      new TypeCheckScopeRegistry(fakeScopeReader, new CompoundMetadataReader([fakeMetadataReader]));
+  const typeCheckScopeRegistry = new TypeCheckScopeRegistry(
+      fakeScopeReader, new CompoundMetadataReader([fakeMetadataReader]),
+      new HostDirectiveResolver(fakeMetadataReader));
 
   const templateTypeChecker = new TemplateTypeCheckerImpl(
       program, programStrategy, checkAdapter, fullConfig, emitter, reflectionHost, host,
@@ -567,40 +577,28 @@ function createTypeCheckAdapter(fn: (sf: ts.SourceFile, ctx: TypeCheckContext) =
   return {typeCheck: fn};
 }
 
+type DeclarationResolver = (decl: TestDeclaration) => ClassDeclaration<ts.ClassDeclaration>;
+
 function prepareDeclarations(
-    declarations: TestDeclaration[],
-    resolveDeclaration: (decl: TestDeclaration) => ClassDeclaration<ts.ClassDeclaration>,
+    declarations: TestDeclaration[], resolveDeclaration: DeclarationResolver,
     metadataRegistry: Map<string, TypeCheckableDirectiveMeta>) {
-  const matcher = new SelectorMatcher();
+  const matcher = new SelectorMatcher<MatchedDirectives<DirectiveMeta>>();
   for (const decl of declarations) {
     if (decl.type !== 'directive') {
       continue;
     }
 
     const selector = CssSelector.parse(decl.selector);
-    const meta = {
-      name: decl.name,
-      ref: new Reference(resolveDeclaration(decl)),
-      exportAs: decl.exportAs || null,
-      selector: decl.selector || null,
-      hasNgTemplateContextGuard: decl.hasNgTemplateContextGuard || false,
-      inputs: ClassPropertyMapping.fromMappedObject(decl.inputs || {}),
-      isComponent: decl.isComponent || false,
-      ngTemplateGuards: decl.ngTemplateGuards || [],
-      coercedInputFields: new Set<string>(decl.coercedInputFields || []),
-      restrictedInputFields: new Set<string>(decl.restrictedInputFields || []),
-      stringLiteralInputFields: new Set<string>(decl.stringLiteralInputFields || []),
-      undeclaredInputFields: new Set<string>(decl.undeclaredInputFields || []),
-      isGeneric: decl.isGeneric ?? false,
-      outputs: ClassPropertyMapping.fromMappedObject(decl.outputs || {}),
-      queries: decl.queries || [],
-      isStructural: false,
-      isStandalone: !!decl.isStandalone,
-      baseClass: null,
-      animationTriggerNames: null,
-    } as TypeCheckableDirectiveMeta;
+    const meta = getDirectiveMetaFromDeclaration(decl, resolveDeclaration);
     metadataRegistry.set(decl.name, meta);
-    matcher.addSelectables(selector, meta);
+    // TODO: the casts here are weird
+    matcher.addSelectables(selector, {
+      directive: meta as DirectiveMeta,
+      hostDirectives: decl.hostDirectives?.map(
+                          hostDecl => getDirectiveMetaFromDeclaration(
+                                          hostDecl, resolveDeclaration) as DirectiveMeta) ||
+          null
+    });
   }
 
   const pipes = new Map<string, Reference<ClassDeclaration<ts.ClassDeclaration>>>();
@@ -620,6 +618,32 @@ export function getClass(sf: ts.SourceFile, name: string): ClassDeclaration<ts.C
     }
   }
   throw new Error(`Class ${name} not found in file: ${sf.fileName}: ${sf.text}`);
+}
+
+function getDirectiveMetaFromDeclaration(
+    decl: TestDirective, resolveDeclaration: DeclarationResolver) {
+  return {
+    name: decl.name,
+    ref: new Reference(resolveDeclaration(decl)),
+    exportAs: decl.exportAs || null,
+    selector: decl.selector || null,
+    hasNgTemplateContextGuard: decl.hasNgTemplateContextGuard || false,
+    inputs: ClassPropertyMapping.fromMappedObject(decl.inputs || {}),
+    isComponent: decl.isComponent || false,
+    ngTemplateGuards: decl.ngTemplateGuards || [],
+    coercedInputFields: new Set<string>(decl.coercedInputFields || []),
+    restrictedInputFields: new Set<string>(decl.restrictedInputFields || []),
+    stringLiteralInputFields: new Set<string>(decl.stringLiteralInputFields || []),
+    undeclaredInputFields: new Set<string>(decl.undeclaredInputFields || []),
+    isGeneric: decl.isGeneric ?? false,
+    outputs: ClassPropertyMapping.fromMappedObject(decl.outputs || {}),
+    queries: decl.queries || [],
+    isStructural: false,
+    isStandalone: !!decl.isStandalone,
+    baseClass: null,
+    animationTriggerNames: null,
+    hostDirectives: decl.hostDirectives || null,
+  } as TypeCheckableDirectiveMeta;
 }
 
 /**
@@ -665,6 +689,11 @@ function makeScope(program: ts.Program, sf: ts.SourceFile, decls: TestDeclaratio
         isStandalone: false,
         imports: null,
         schemas: null,
+        hostDirectives: decl.hostDirectives?.map(
+                            hostDecl => new Reference(getClass(
+                                hostDecl.file ? getSourceFileOrError(program, hostDecl.file) : sf,
+                                hostDecl.name))) ||
+            null,
       });
     } else if (decl.type === 'pipe') {
       scope.dependencies.push({

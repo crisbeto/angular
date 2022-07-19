@@ -332,6 +332,8 @@ export interface Directive {
    * @developerPreview
    */
   standalone?: boolean;
+
+  hostDirectives?: Type<unknown>[];
 }
 
 /**

@@ -282,6 +282,8 @@ export function ɵɵdefineComponent<T>(componentDefinition: {
    * Whether this directive/component is standalone.
    */
   standalone?: boolean;
+
+  hostDirectives?: Type<unknown>[];
 }): unknown {
   return noSideEffects(() => {
     // Initialize ngDevMode. This must be the first statement in ɵɵdefineComponent.
@@ -325,6 +327,7 @@ export function ɵɵdefineComponent<T>(componentDefinition: {
       setInput: null,
       schemas: componentDefinition.schemas || null,
       tView: null,
+      hostDirectives: componentDefinition.hostDirectives || null,
     };
     const dependencies = componentDefinition.dependencies;
     const feature = componentDefinition.features;
@@ -664,6 +667,8 @@ export const ɵɵdefineDirective =
        * [AttributeMarker] enum.
        */
       hostAttrs?: TAttributes;
+
+      hostDirectives?: Type<unknown>[];
 
       /**
        * Function to create instances of content queries associated with a given directive.
