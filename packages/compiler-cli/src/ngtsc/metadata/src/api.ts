@@ -161,6 +161,16 @@ export interface DirectiveMeta extends T2DirectiveMeta, DirectiveTypeCheckMeta {
    * For standalone components, the list of schemas declared.
    */
   schemas: SchemaMetadata[]|null;
+
+  /** Additional directives applied to the directive host. */
+  hostDirectives: HostDirectiveMeta[]|null;
+}
+
+/** Metadata collected about an additional directive that is being applied to a directive host. */
+export interface HostDirectiveMeta {
+  directive: Reference<ClassDeclaration>;
+  inputs: ClassPropertyMapping|null;
+  outputs: ClassPropertyMapping|null;
 }
 
 /**
