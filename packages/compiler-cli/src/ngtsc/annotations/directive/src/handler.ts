@@ -9,7 +9,7 @@
 import {compileClassMetadata, compileDeclareClassMetadata, compileDeclareDirectiveFromMetadata, compileDirectiveFromMetadata, ConstantPool, FactoryTarget, makeBindingParser, R3ClassMetadata, R3DirectiveMetadata, WrappedNodeExpr} from '@angular/compiler';
 import ts from 'typescript';
 
-import {Reference} from '../../../imports';
+import {Reference, ReferenceEmitter} from '../../../imports';
 import {extractSemanticTypeParameters, SemanticDepGraphUpdater} from '../../../incremental/semantic_graph';
 import {ClassPropertyMapping, DirectiveTypeCheckMeta, extractDirectiveTypeCheckMeta, InjectableClassRegistry, MetadataReader, MetadataRegistry, MetaKind} from '../../../metadata';
 import {PartialEvaluator} from '../../../partial_evaluator';
@@ -41,6 +41,11 @@ export interface DirectiveHandlerData {
   outputs: ClassPropertyMapping;
   isPoisoned: boolean;
   isStructural: boolean;
+  hostDirectives: {
+    directive: Reference<ClassDeclaration>,
+    inputs: ClassPropertyMapping|null,
+    outputs: ClassPropertyMapping|null
+  }[]|null;
 }
 
 export class DirectiveDecoratorHandler implements
@@ -49,7 +54,8 @@ export class DirectiveDecoratorHandler implements
       private reflector: ReflectionHost, private evaluator: PartialEvaluator,
       private metaRegistry: MetadataRegistry, private scopeRegistry: LocalModuleScopeRegistry,
       private metaReader: MetadataReader, private injectableRegistry: InjectableClassRegistry,
-      private isCore: boolean, private semanticDepGraphUpdater: SemanticDepGraphUpdater|null,
+      private refEmitter: ReferenceEmitter, private isCore: boolean,
+      private semanticDepGraphUpdater: SemanticDepGraphUpdater|null,
       private annotateForClosureCompiler: boolean,
       private compileUndecoratedClassesWithAngularFeatures: boolean, private perf: PerfRecorder) {}
 
@@ -90,7 +96,7 @@ export class DirectiveDecoratorHandler implements
     this.perf.eventCount(PerfEvent.AnalyzeDirective);
 
     const directiveResult = extractDirectiveMetadata(
-        node, decorator, this.reflector, this.evaluator, this.isCore, flags,
+        node, decorator, this.reflector, this.evaluator, this.refEmitter, this.isCore, flags,
         this.annotateForClosureCompiler);
     if (directiveResult === undefined) {
       return {};
@@ -108,6 +114,7 @@ export class DirectiveDecoratorHandler implements
         inputs: directiveResult.inputs,
         outputs: directiveResult.outputs,
         meta: analysis,
+        hostDirectives: directiveResult.hostDirectives,
         classMetadata: extractClassMetadata(
             node, this.reflector, this.isCore, this.annotateForClosureCompiler),
         baseClass: readBaseClass(node, this.reflector, this.evaluator),
@@ -142,6 +149,7 @@ export class DirectiveDecoratorHandler implements
       queries: analysis.meta.queries.map(query => query.propertyName),
       isComponent: false,
       baseClass: analysis.baseClass,
+      hostDirectives: analysis.hostDirectives,
       ...analysis.typeCheckMeta,
       isPoisoned: analysis.isPoisoned,
       isStructural: analysis.isStructural,

@@ -70,6 +70,13 @@ export interface ComponentAnalysisData {
   resolvedImports: Reference<ClassDeclaration>[]|null;
 
   schemas: SchemaMetadata[]|null;
+
+  /** Additional directives applied to the component host. */
+  hostDirectives: {
+    directive: Reference<ClassDeclaration>,
+    inputs: ClassPropertyMapping|null,
+    outputs: ClassPropertyMapping|null
+  }[]|null;
 }
 
 export type ComponentResolutionData =
