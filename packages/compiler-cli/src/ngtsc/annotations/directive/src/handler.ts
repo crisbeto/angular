@@ -54,7 +54,7 @@ export class DirectiveDecoratorHandler implements
       private semanticDepGraphUpdater: SemanticDepGraphUpdater|null,
       private annotateForClosureCompiler: boolean,
       private compileUndecoratedClassesWithAngularFeatures: boolean, private perf: PerfRecorder,
-      private hostDirectivesResolver: HostDirectivesResolver<DirectiveMeta>) {}
+      private hostDirectivesResolver: HostDirectivesResolver) {}
 
   readonly precedence = HandlerPrecedence.PRIMARY;
   readonly name = DirectiveDecoratorHandler.name;
