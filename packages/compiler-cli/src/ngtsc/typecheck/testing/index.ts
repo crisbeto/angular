@@ -648,10 +648,8 @@ function getDirectiveMetaFromDeclaration(
     hostDirectives: decl.hostDirectives === undefined ? null : decl.hostDirectives.map(hostDecl => {
       return {
         directive: new Reference(resolveDeclaration(hostDecl.directive)),
-        inputs: ClassPropertyMapping.fromMappedObject(
-            parseInputOutputMappingArray(hostDecl.inputs || [])),
-        outputs: ClassPropertyMapping.fromMappedObject(
-            parseInputOutputMappingArray(hostDecl.outputs || []))
+        inputs: parseInputOutputMappingArray(hostDecl.inputs || []),
+        outputs: parseInputOutputMappingArray(hostDecl.outputs || [])
       };
     }),
   } as TypeCheckableDirectiveMeta;
@@ -709,8 +707,8 @@ function makeScope(program: ts.Program, sf: ts.SourceFile, decls: TestDeclaratio
                     hostDecl.directive.name)),
                 origin: sf,
                 isForwardReference: false,
-                inputs: ClassPropertyMapping.fromMappedObject(hostDecl.directive.inputs || {}),
-                outputs: ClassPropertyMapping.fromMappedObject(hostDecl.directive.outputs || {}),
+                inputs: hostDecl.directive.inputs || {},
+                outputs: hostDecl.directive.outputs || {},
               };
             }),
       });
