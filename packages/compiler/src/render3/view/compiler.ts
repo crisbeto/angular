@@ -845,14 +845,14 @@ export function createHostDirectivesArg(
       const keys = [{key: 'directive', value: current.directive.type, quoted: false}];
 
       if (current.inputs) {
-        const inputsLiteral = conditionallyCreateMapObjectLiteral(current.inputs);
+        const inputsLiteral = createHostDirectivesMappingArray(current.inputs);
         if (inputsLiteral) {
           keys.push({key: 'inputs', value: inputsLiteral, quoted: false});
         }
       }
 
       if (current.outputs) {
-        const outputsLiteral = conditionallyCreateMapObjectLiteral(current.outputs);
+        const outputsLiteral = createHostDirectivesMappingArray(current.outputs);
         if (outputsLiteral) {
           keys.push({key: 'outputs', value: outputsLiteral, quoted: false});
         }
@@ -871,4 +871,21 @@ export function createHostDirectivesArg(
   return hasForwardRef ?
       new o.FunctionExpr([], [new o.ReturnStatement(o.literalArr(expressions))]) :
       o.literalArr(expressions);
+}
+
+function createHostDirectivesMappingArray(mapping: Record<string, string>): o.LiteralArrayExpr|
+    null {
+  if (Object.getOwnPropertyNames(mapping).length > 0) {
+    const elements: o.LiteralExpr[] = [];
+
+    for (const publicName in mapping) {
+      if (mapping.hasOwnProperty(publicName)) {
+        elements.push(o.literal(publicName), o.literal(mapping[publicName]));
+      }
+    }
+
+    return o.literalArr(elements);
+  }
+
+  return null;
 }

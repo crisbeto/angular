@@ -25,7 +25,7 @@ import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} f
 import {throwMultipleComponentError} from '../errors';
 import {executeCheckHooks, executeInitAndCheckHooks, incrementInitPhaseFlags} from '../hooks';
 import {CONTAINER_HEADER_OFFSET, HAS_TRANSPLANTED_VIEWS, LContainer, MOVED_VIEWS} from '../interfaces/container';
-import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, HostBindingsFunction, PipeDefListOrFactory, RenderFlags, ViewQueriesFunction} from '../interfaces/definition';
+import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, HostBindingsFunction, HostDirectiveDef, PipeDefListOrFactory, RenderFlags, ViewQueriesFunction} from '../interfaces/definition';
 import {NodeInjectorFactory} from '../interfaces/injector';
 import {getUniqueLViewId} from '../interfaces/lview_tracking';
 import {AttributeMarker, InitialInputData, InitialInputs, LocalRefExtractor, PropertyAliases, PropertyAliasValue, TAttributes, TConstantsOrFactory, TContainerNode, TDirectiveHostNode, TElementContainerNode, TElementNode, TIcuContainerNode, TNode, TNodeFlags, TNodeType, TProjectionNode} from '../interfaces/node';
@@ -886,27 +886,39 @@ export function createTNode(
 
 function generatePropertyAliases(
     inputAliasMap: {[publicName: string]: string}, directiveDefIdx: number,
-    propStore: PropertyAliases|null): PropertyAliases|null {
+    propStore: PropertyAliases|null,
+    hostDirectiveMap: {[publicName: string]: string}|null): PropertyAliases|null {
   for (let publicName in inputAliasMap) {
     if (inputAliasMap.hasOwnProperty(publicName)) {
       propStore = propStore === null ? {} : propStore;
       const internalName = inputAliasMap[publicName];
 
-      if (propStore.hasOwnProperty(publicName)) {
-        propStore[publicName].push(directiveDefIdx, internalName);
-      } else {
-        (propStore[publicName] = [directiveDefIdx, internalName]);
+      if (hostDirectiveMap === null) {
+        addToPropStore(propStore, directiveDefIdx, publicName, internalName);
+      } else if (hostDirectiveMap.hasOwnProperty(publicName)) {
+        addToPropStore(propStore, directiveDefIdx, hostDirectiveMap[publicName], internalName);
       }
     }
   }
   return propStore;
 }
 
+function addToPropStore(
+    propStore: PropertyAliases, index: number, publicName: string, internalName: string) {
+  if (propStore.hasOwnProperty(publicName)) {
+    propStore[publicName].push(index, internalName);
+  } else {
+    (propStore[publicName] = [index, internalName]);
+  }
+}
+
 /**
  * Initializes data structures required to work with directive inputs and outputs.
  * Initialization is done for all directives matched on a given TNode.
  */
-export function initializeInputAndOutputAliases(tView: TView, tNode: TNode): void {
+function initializeInputAndOutputAliases(
+    tView: TView, tNode: TNode,
+    hostDirectives: WeakMap<DirectiveDef<unknown>, HostDirectiveDef>|null): void {
   ngDevMode && assertFirstCreatePass(tView);
 
   const start = tNode.directiveStart;
@@ -920,16 +932,21 @@ export function initializeInputAndOutputAliases(tView: TView, tNode: TNode): voi
   for (let i = start; i < end; i++) {
     const directiveDef = tViewData[i] as DirectiveDef<any>;
     const directiveInputs = directiveDef.inputs;
+    const hostDirectiveData = hostDirectives ? hostDirectives.get(directiveDef) : null;
+    const hostDirectiveInputs = hostDirectiveData ? hostDirectiveData.inputs : null;
+    const hostDirectiveOutputs = hostDirectiveData ? hostDirectiveData.outputs : null;
+
     // Do not use unbound attributes as inputs to structural directives, since structural
     // directive inputs can only be set using microsyntax (e.g. `<div *dir="exp">`).
     // TODO(FW-1930): microsyntax expressions may also contain unbound/static attributes, which
     // should be set for inline templates.
     const initialInputs = (tNodeAttrs !== null && !isInlineTemplate(tNode)) ?
-        generateInitialInputs(directiveInputs, tNodeAttrs) :
+        generateInitialInputs(directiveInputs, tNodeAttrs, hostDirectiveInputs) :
         null;
     inputsFromAttrs.push(initialInputs);
-    inputsStore = generatePropertyAliases(directiveInputs, i, inputsStore);
-    outputsStore = generatePropertyAliases(directiveDef.outputs, i, outputsStore);
+    inputsStore = generatePropertyAliases(directiveInputs, i, inputsStore, hostDirectiveInputs);
+    outputsStore =
+        generatePropertyAliases(directiveDef.outputs, i, outputsStore, hostDirectiveOutputs);
   }
 
   if (inputsStore !== null) {
@@ -1061,7 +1078,8 @@ export function instantiateRootComponent<T>(tView: TView, lView: LView, def: Com
             directiveIndex, rootTNode.directiveStart,
             'Because this is a root component the allocated expando should match the TNode component.');
     configureViewWithDirective(tView, rootTNode, lView, directiveIndex, def);
-    initializeInputAndOutputAliases(tView, rootTNode);
+    // TODO: probably needs to run `applyHostDirectives` here as well.
+    initializeInputAndOutputAliases(tView, rootTNode, null);
   }
   const directive =
       getNodeInjectable(lView, tView, rootTNode.directiveStart, rootTNode as TElementNode);
@@ -1085,7 +1103,9 @@ export function resolveDirectives(
 
   let hasDirectives = false;
   if (getBindingsEnabled()) {
-    const directiveDefs: DirectiveDef<any>[]|null = findDirectiveDefMatches(tView, lView, tNode);
+    const results = findDirectiveDefMatches(tView, lView, tNode);
+    const directiveDefs = results ? results[0] : null;
+    const hostDirectives = results ? results[1] : null;
     const exportsMap: ({[key: string]: number}|null) = localRefs === null ? null : {'': -1};
 
     if (directiveDefs !== null) {
@@ -1142,7 +1162,7 @@ export function resolveDirectives(
         directiveIdx++;
       }
 
-      initializeInputAndOutputAliases(tView, tNode);
+      initializeInputAndOutputAliases(tView, tNode, hostDirectives);
     }
     if (exportsMap) cacheMatchingLocalNames(tNode, localRefs, exportsMap);
   }
@@ -1278,13 +1298,17 @@ export function invokeHostBindingsInCreationMode(def: DirectiveDef<any>, directi
  * If a component is matched (at most one), it is returned in first position in the array.
  */
 function findDirectiveDefMatches(
-    tView: TView, viewData: LView,
-    tNode: TElementNode|TContainerNode|TElementContainerNode): DirectiveDef<any>[]|null {
+    tView: TView, viewData: LView, tNode: TElementNode|TContainerNode|TElementContainerNode):
+    [
+      matches: DirectiveDef<any>[]|null,
+      hostDirectives: WeakMap<DirectiveDef<unknown>, HostDirectiveDef>|null
+    ]|null {
   ngDevMode && assertFirstCreatePass(tView);
   ngDevMode && assertTNodeType(tNode, TNodeType.AnyRNode | TNodeType.AnyContainer);
 
   const registry = tView.directiveRegistry;
   let matches: any[]|null = null;
+  let hostDirectives: WeakMap<DirectiveDef<unknown>, HostDirectiveDef>|null = null;
   if (registry) {
     for (let i = 0; i < registry.length; i++) {
       const def = registry[i] as ComponentDef<any>| DirectiveDef<any>;
@@ -1312,13 +1336,17 @@ function findDirectiveDefMatches(
           matches.push(def);
         }
 
-        if (def.applyHostDirectives) {
-          def.applyHostDirectives(tView, viewData, tNode, matches);
+        if (def.applyHostDirectives !== null) {
+          if (hostDirectives === null) {
+            hostDirectives = new WeakMap();
+          }
+
+          def.applyHostDirectives(tView, viewData, tNode, def, matches, hostDirectives);
         }
       }
     }
   }
-  return matches;
+  return (matches || hostDirectives) ? [matches, hostDirectives] : null;
 }
 
 /**
@@ -1516,8 +1544,10 @@ function setInputsFromAttrs<T>(
  * @param inputs The list of inputs from the directive def
  * @param attrs The static attrs on this node
  */
-function generateInitialInputs(inputs: {[key: string]: string}, attrs: TAttributes): InitialInputs|
-    null {
+function generateInitialInputs(
+    inputs: {[key: string]: string}, attrs: TAttributes,
+    // TODO
+    hostDirectiveInputs: {[key: string]: string}|null): InitialInputs|null {
   let inputsToStore: InitialInputs|null = null;
   let i = 0;
   while (i < attrs.length) {

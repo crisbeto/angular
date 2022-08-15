@@ -69,7 +69,7 @@ let componentDefCount = 0;
  *    this reason `NgOnChanges` will be deprecated and removed in future version and this
  *    API will be simplified to be consistent with `output`.
  */
-export type InputsDefinition<T> = {
+type InputsDefinition<T> = {
   [P in keyof T]?: string|[string, string]
 };
 
@@ -83,7 +83,7 @@ export type InputsDefinition<T> = {
  * This allows the render to re-construct the minified and non-minified names
  * of properties.
  */
-export type OutputsDefinition<T> = {
+type OutputsDefinition<T> = {
   [P in keyof T]?: string
 };
 
@@ -336,6 +336,7 @@ export function ɵɵdefineComponent<T>(componentDefinition: {
       schemas: componentDefinition.schemas || null,
       tView: null,
       applyHostDirectives: null,
+      hostDirectives: null,
     };
     const dependencies = componentDefinition.dependencies;
     const feature = componentDefinition.features;
