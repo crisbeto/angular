@@ -212,7 +212,11 @@ export interface DirectiveDef<T> {
    */
   applyHostDirectives:
       ((tView: TView, viewData: LView, tNode: TElementNode|TContainerNode|TElementContainerNode,
-        matches: any[]) => void)|null;
+        def: DirectiveDef<unknown>, matches: any[],
+        hostDirectives: WeakMap<DirectiveDef<unknown>, HostDirectiveDef>) => void)|null;
+
+  /** Additional directives to be applied whenever the directive has been matched. */
+  hostDirectives: HostDirectiveDef[]|null;
 
   setInput:
       (<U extends T>(
@@ -416,6 +420,11 @@ export interface ComponentDefFeature {
   ngInherit?: true;
 }
 
+export interface HostDirectiveDef<T = unknown> {
+  directive: Type<T>;
+  inputs: {[publicName: string]: string};
+  outputs: {[publicName: string]: string};
+}
 
 /**
  * Type used for directiveDefs on component definition.
