@@ -25,7 +25,7 @@ import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} f
 import {throwMultipleComponentError} from '../errors';
 import {executeCheckHooks, executeInitAndCheckHooks, incrementInitPhaseFlags} from '../hooks';
 import {CONTAINER_HEADER_OFFSET, HAS_TRANSPLANTED_VIEWS, LContainer, MOVED_VIEWS} from '../interfaces/container';
-import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, HostBindingsFunction, PipeDefListOrFactory, RenderFlags, ViewQueriesFunction} from '../interfaces/definition';
+import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, HostBindingsFunction, HostDirectiveDef, PipeDefListOrFactory, RenderFlags, ViewQueriesFunction} from '../interfaces/definition';
 import {NodeInjectorFactory} from '../interfaces/injector';
 import {getUniqueLViewId} from '../interfaces/lview_tracking';
 import {AttributeMarker, InitialInputData, InitialInputs, LocalRefExtractor, PropertyAliases, PropertyAliasValue, TAttributes, TConstantsOrFactory, TContainerNode, TDirectiveHostNode, TElementContainerNode, TElementNode, TIcuContainerNode, TNode, TNodeFlags, TNodeType, TProjectionNode} from '../interfaces/node';
@@ -862,27 +862,39 @@ export function createTNode(
 
 function generatePropertyAliases(
     inputAliasMap: {[publicName: string]: string}, directiveDefIdx: number,
-    propStore: PropertyAliases|null): PropertyAliases|null {
+    propStore: PropertyAliases|null,
+    hostDirectiveMap: {[internalName: string]: string}|null): PropertyAliases|null {
   for (let publicName in inputAliasMap) {
     if (inputAliasMap.hasOwnProperty(publicName)) {
       propStore = propStore === null ? {} : propStore;
       const internalName = inputAliasMap[publicName];
 
-      if (propStore.hasOwnProperty(publicName)) {
-        propStore[publicName].push(directiveDefIdx, internalName);
-      } else {
-        (propStore[publicName] = [directiveDefIdx, internalName]);
+      if (hostDirectiveMap === null) {
+        addToPropStore(propStore, directiveDefIdx, publicName, internalName);
+      } else if (hostDirectiveMap.hasOwnProperty(publicName)) {
+        addToPropStore(propStore, directiveDefIdx, hostDirectiveMap[publicName], internalName);
       }
     }
   }
   return propStore;
 }
 
+function addToPropStore(
+    propStore: PropertyAliases, index: number, publicName: string, internalName: string) {
+  if (propStore.hasOwnProperty(publicName)) {
+    propStore[publicName].push(index, internalName);
+  } else {
+    (propStore[publicName] = [index, internalName]);
+  }
+}
+
 /**
  * Initializes data structures required to work with directive inputs and outputs.
  * Initialization is done for all directives matched on a given TNode.
  */
-export function initializeInputAndOutputAliases(tView: TView, tNode: TNode): void {
+function initializeInputAndOutputAliases(
+    tView: TView, tNode: TNode,
+    hostDirectives: WeakMap<DirectiveDef<unknown>, HostDirectiveDef>|null): void {
   ngDevMode && assertFirstCreatePass(tView);
 
   const start = tNode.directiveStart;
@@ -895,17 +907,23 @@ export function initializeInputAndOutputAliases(tView: TView, tNode: TNode): voi
   let outputsStore: PropertyAliases|null = null;
   for (let i = start; i < end; i++) {
     const directiveDef = tViewData[i] as DirectiveDef<any>;
-    const directiveInputs = directiveDef.inputs;
+    const hostDirectiveData = hostDirectives ? hostDirectives.get(directiveDef) : null;
+    const hostDirectiveInputs = hostDirectiveData ? hostDirectiveData.inputs : null;
+    const hostDirectiveOutputs = hostDirectiveData ? hostDirectiveData.outputs : null;
+
+    inputsStore = generatePropertyAliases(directiveDef.inputs, i, inputsStore, hostDirectiveInputs);
+    outputsStore =
+        generatePropertyAliases(directiveDef.outputs, i, outputsStore, hostDirectiveOutputs);
+
     // Do not use unbound attributes as inputs to structural directives, since structural
     // directive inputs can only be set using microsyntax (e.g. `<div *dir="exp">`).
     // TODO(FW-1930): microsyntax expressions may also contain unbound/static attributes, which
     // should be set for inline templates.
-    const initialInputs = (tNodeAttrs !== null && !isInlineTemplate(tNode)) ?
-        generateInitialInputs(directiveInputs, tNodeAttrs) :
+    const initialInputs =
+        (inputsStore !== null && tNodeAttrs !== null && !isInlineTemplate(tNode)) ?
+        generateInitialInputs(inputsStore, i, tNodeAttrs) :
         null;
     inputsFromAttrs.push(initialInputs);
-    inputsStore = generatePropertyAliases(directiveInputs, i, inputsStore);
-    outputsStore = generatePropertyAliases(directiveDef.outputs, i, outputsStore);
   }
 
   if (inputsStore !== null) {
@@ -1037,7 +1055,8 @@ export function instantiateRootComponent<T>(tView: TView, lView: LView, def: Com
             directiveIndex, rootTNode.directiveStart,
             'Because this is a root component the allocated expando should match the TNode component.');
     configureViewWithDirective(tView, rootTNode, lView, directiveIndex, def);
-    initializeInputAndOutputAliases(tView, rootTNode);
+    // TODO: probably needs to run `applyHostDirectives` here as well.
+    initializeInputAndOutputAliases(tView, rootTNode, null);
   }
   const directive =
       getNodeInjectable(lView, tView, rootTNode.directiveStart, rootTNode as TElementNode);
@@ -1061,70 +1080,123 @@ export function resolveDirectives(
 
   let hasDirectives = false;
   if (getBindingsEnabled()) {
-    const directiveDefs: DirectiveDef<any>[]|null = findDirectiveDefMatches(tView, lView, tNode);
     const exportsMap: ({[key: string]: number}|null) = localRefs === null ? null : {'': -1};
+    const registry = tView.directiveRegistry;
+    let directiveDefs: any[]|null = null;
+    let hostDirectives: WeakMap<DirectiveDef<unknown>, HostDirectiveDef>|null = null;
+
+    ngDevMode && assertFirstCreatePass(tView);
+    ngDevMode && assertTNodeType(tNode, TNodeType.AnyRNode | TNodeType.AnyContainer);
+
+    if (registry) {
+      for (let i = 0; i < registry.length; i++) {
+        const def = registry[i] as ComponentDef<any>| DirectiveDef<any>;
+        if (isNodeMatchingSelectorList(tNode, def.selectors!, /* isProjectionMode */ false)) {
+          directiveDefs || (directiveDefs = ngDevMode ? new MatchesArray() : []);
+          diPublicInInjector(getOrCreateNodeInjectorForNode(tNode, lView), tView, def.type);
+
+          if (isComponentDef(def)) {
+            if (ngDevMode) {
+              assertTNodeType(
+                  tNode, TNodeType.Element,
+                  `"${tNode.value}" tags cannot be used as component hosts. ` +
+                      `Please use a different tag to activate the ${
+                          stringify(def.type)} component.`);
+
+              if (tNode.flags & TNodeFlags.isComponentHost) {
+                // If another component has been matched previously, it's the first element in the
+                // `matches` array, see how we store components/directives in `matches` below.
+                throwMultipleComponentError(tNode, directiveDefs[0].type, def.type);
+              }
+            }
+            markAsComponentHost(tView, tNode);
+            // The component is always stored first with directives after.
+            directiveDefs.unshift(def);
+          } else {
+            directiveDefs.push(def);
+          }
+
+          if (def.applyHostDirectives !== null) {
+            if (hostDirectives === null) {
+              hostDirectives = new WeakMap();
+            }
+
+            def.applyHostDirectives(tView, lView, tNode, def, directiveDefs, hostDirectives);
+          }
+        }
+      }
+    }
 
     if (directiveDefs !== null) {
       hasDirectives = true;
-      initTNodeFlags(tNode, tView.data.length, directiveDefs.length);
-      // When the same token is provided by several directives on the same node, some rules apply in
-      // the viewEngine:
-      // - viewProviders have priority over providers
-      // - the last directive in NgModule.declarations has priority over the previous one
-      // So to match these rules, the order in which providers are added in the arrays is very
-      // important.
-      for (let i = 0; i < directiveDefs.length; i++) {
-        const def = directiveDefs[i];
-        if (def.providersResolver) def.providersResolver(def);
-      }
-      let preOrderHooksFound = false;
-      let preOrderCheckHooksFound = false;
-      let directiveIdx = allocExpando(tView, lView, directiveDefs.length, null);
-      ngDevMode &&
-          assertSame(
-              directiveIdx, tNode.directiveStart,
-              'TNode.directiveStart should point to just allocated space');
-
-      for (let i = 0; i < directiveDefs.length; i++) {
-        const def = directiveDefs[i];
-        // Merge the attrs in the order of matches. This assumes that the first directive is the
-        // component itself, so that the component has the least priority.
-        tNode.mergedAttrs = mergeHostAttrs(tNode.mergedAttrs, def.hostAttrs);
-
-        configureViewWithDirective(tView, tNode, lView, directiveIdx, def);
-        saveNameToExportMap(directiveIdx, def, exportsMap);
-
-        if (def.contentQueries !== null) tNode.flags |= TNodeFlags.hasContentQuery;
-        if (def.hostBindings !== null || def.hostAttrs !== null || def.hostVars !== 0)
-          tNode.flags |= TNodeFlags.hasHostBindings;
-
-        const lifeCycleHooks: OnChanges&OnInit&DoCheck = def.type.prototype;
-        // Only push a node index into the preOrderHooks array if this is the first
-        // pre-order hook found on this node.
-        if (!preOrderHooksFound &&
-            (lifeCycleHooks.ngOnChanges || lifeCycleHooks.ngOnInit || lifeCycleHooks.ngDoCheck)) {
-          // We will push the actual hook function into this array later during dir instantiation.
-          // We cannot do it now because we must ensure hooks are registered in the same
-          // order that directives are created (i.e. injection order).
-          (tView.preOrderHooks || (tView.preOrderHooks = [])).push(tNode.index);
-          preOrderHooksFound = true;
-        }
-
-        if (!preOrderCheckHooksFound && (lifeCycleHooks.ngOnChanges || lifeCycleHooks.ngDoCheck)) {
-          (tView.preOrderCheckHooks || (tView.preOrderCheckHooks = [])).push(tNode.index);
-          preOrderCheckHooksFound = true;
-        }
-
-        directiveIdx++;
-      }
-
-      initializeInputAndOutputAliases(tView, tNode);
+      applyDirectives(tNode, tView, directiveDefs, hostDirectives, lView, exportsMap);
     }
+
     if (exportsMap) cacheMatchingLocalNames(tNode, localRefs, exportsMap);
   }
   // Merge the template attrs last so that they have the highest priority.
   tNode.mergedAttrs = mergeHostAttrs(tNode.mergedAttrs, tNode.attrs);
   return hasDirectives;
+}
+
+function applyDirectives(
+    tNode: TElementNode|TContainerNode|TElementContainerNode, tView: TView,
+    directiveDefs: DirectiveDef<any>[],
+    hostDirectives: WeakMap<DirectiveDef<unknown>, HostDirectiveDef<unknown>>|null,
+    lView: LView<unknown>, exportsMap: {[key: string]: number;}|null) {
+  initTNodeFlags(tNode, tView.data.length, directiveDefs.length);
+  // When the same token is provided by several directives on the same node, some rules apply in
+  // the viewEngine:
+  // - viewProviders have priority over providers
+  // - the last directive in NgModule.declarations has priority over the previous one
+  // So to match these rules, the order in which providers are added in the arrays is very
+  // important.
+  for (let i = 0; i < directiveDefs.length; i++) {
+    const def = directiveDefs[i];
+    if (def.providersResolver) def.providersResolver(def);
+  }
+  let preOrderHooksFound = false;
+  let preOrderCheckHooksFound = false;
+  let directiveIdx = allocExpando(tView, lView, directiveDefs.length, null);
+  ngDevMode &&
+      assertSame(
+          directiveIdx, tNode.directiveStart,
+          'TNode.directiveStart should point to just allocated space');
+
+  for (let i = 0; i < directiveDefs.length; i++) {
+    const def = directiveDefs[i];
+    // Merge the attrs in the order of matches. This assumes that the first directive is the
+    // component itself, so that the component has the least priority.
+    tNode.mergedAttrs = mergeHostAttrs(tNode.mergedAttrs, def.hostAttrs);
+
+    configureViewWithDirective(tView, tNode, lView, directiveIdx, def);
+    saveNameToExportMap(directiveIdx, def, exportsMap);
+
+    if (def.contentQueries !== null) tNode.flags |= TNodeFlags.hasContentQuery;
+    if (def.hostBindings !== null || def.hostAttrs !== null || def.hostVars !== 0)
+      tNode.flags |= TNodeFlags.hasHostBindings;
+
+    const lifeCycleHooks: OnChanges&OnInit&DoCheck = def.type.prototype;
+    // Only push a node index into the preOrderHooks array if this is the first
+    // pre-order hook found on this node.
+    if (!preOrderHooksFound &&
+        (lifeCycleHooks.ngOnChanges || lifeCycleHooks.ngOnInit || lifeCycleHooks.ngDoCheck)) {
+      // We will push the actual hook function into this array later during dir instantiation.
+      // We cannot do it now because we must ensure hooks are registered in the same
+      // order that directives are created (i.e. injection order).
+      (tView.preOrderHooks || (tView.preOrderHooks = [])).push(tNode.index);
+      preOrderHooksFound = true;
+    }
+
+    if (!preOrderCheckHooksFound && (lifeCycleHooks.ngOnChanges || lifeCycleHooks.ngDoCheck)) {
+      (tView.preOrderCheckHooks || (tView.preOrderCheckHooks = [])).push(tNode.index);
+      preOrderCheckHooksFound = true;
+    }
+
+    directiveIdx++;
+  }
+
+  initializeInputAndOutputAliases(tView, tNode, hostDirectives);
 }
 
 /**
@@ -1247,52 +1319,6 @@ export function invokeHostBindingsInCreationMode(def: DirectiveDef<any>, directi
   if (def.hostBindings !== null) {
     def.hostBindings!(RenderFlags.Create, directive);
   }
-}
-
-/**
- * Matches the current node against all available selectors.
- * If a component is matched (at most one), it is returned in first position in the array.
- */
-function findDirectiveDefMatches(
-    tView: TView, viewData: LView,
-    tNode: TElementNode|TContainerNode|TElementContainerNode): DirectiveDef<any>[]|null {
-  ngDevMode && assertFirstCreatePass(tView);
-  ngDevMode && assertTNodeType(tNode, TNodeType.AnyRNode | TNodeType.AnyContainer);
-
-  const registry = tView.directiveRegistry;
-  let matches: any[]|null = null;
-  if (registry) {
-    for (let i = 0; i < registry.length; i++) {
-      const def = registry[i] as ComponentDef<any>| DirectiveDef<any>;
-      if (isNodeMatchingSelectorList(tNode, def.selectors!, /* isProjectionMode */ false)) {
-        matches || (matches = ngDevMode ? new MatchesArray() : []);
-        diPublicInInjector(getOrCreateNodeInjectorForNode(tNode, viewData), tView, def.type);
-
-        if (isComponentDef(def)) {
-          if (ngDevMode) {
-            assertTNodeType(
-                tNode, TNodeType.Element,
-                `"${tNode.value}" tags cannot be used as component hosts. ` +
-                    `Please use a different tag to activate the ${stringify(def.type)} component.`);
-
-            if (tNode.flags & TNodeFlags.isComponentHost) {
-              // If another component has been matched previously, it's the first element in the
-              // `matches` array, see how we store components/directives in `matches` below.
-              throwMultipleComponentError(tNode, matches[0].type, def.type);
-            }
-          }
-          markAsComponentHost(tView, tNode);
-          // The component is always stored first with directives after.
-          matches.unshift(def);
-        } else {
-          matches.push(def);
-        }
-
-        def.applyHostDirectives?.(tView, viewData, tNode, matches);
-      }
-    }
-  }
-  return matches;
 }
 
 /**
@@ -1490,8 +1516,8 @@ function setInputsFromAttrs<T>(
  * @param inputs The list of inputs from the directive def
  * @param attrs The static attrs on this node
  */
-function generateInitialInputs(inputs: {[key: string]: string}, attrs: TAttributes): InitialInputs|
-    null {
+function generateInitialInputs(
+    inputs: PropertyAliases, directiveIndex: number, attrs: TAttributes): InitialInputs|null {
   let inputsToStore: InitialInputs|null = null;
   let i = 0;
   while (i < attrs.length) {
@@ -1511,7 +1537,13 @@ function generateInitialInputs(inputs: {[key: string]: string}, attrs: TAttribut
 
     if (inputs.hasOwnProperty(attrName as string)) {
       if (inputsToStore === null) inputsToStore = [];
-      inputsToStore.push(attrName as string, inputs[attrName as string], attrs[i + 1] as string);
+
+      const inputConfig = inputs[attrName as string];
+      for (let j = 1; j < inputConfig.length; j += 2) {
+        if (inputConfig[j - 1] === directiveIndex) {
+          inputsToStore.push(attrName as string, inputConfig[j] as string, attrs[i + 1] as string);
+        }
+      }
     }
 
     i += 2;

@@ -8,6 +8,7 @@
 
 import {OnChanges} from '../../interface/lifecycle_hooks';
 import {SimpleChange, SimpleChanges} from '../../interface/simple_change';
+import {assertString} from '../../util/assert';
 import {EMPTY_OBJ} from '../../util/empty';
 import {DirectiveDef, DirectiveDefFeature} from '../interfaces/definition';
 
@@ -87,8 +88,8 @@ function ngOnChangesSetInput<T>(
       setSimpleChangesStore(instance, {previous: EMPTY_OBJ, current: null});
   const current = simpleChangesStore.current || (simpleChangesStore.current = {});
   const previous = simpleChangesStore.previous;
-
   const declaredName = (this.declaredInputs as {[key: string]: string})[publicName];
+  ngDevMode && assertString(declaredName, 'Name of input in ngOnChanges has to be a string');
   const previousChange = previous[declaredName];
   current[declaredName] = new SimpleChange(
       previousChange && previousChange.currentValue, value, previous === EMPTY_OBJ);
