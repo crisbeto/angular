@@ -15,6 +15,7 @@ import {ClassPropertyMapping, HostDirectiveMeta} from '../../../metadata';
 import {DynamicValue, EnumValue, PartialEvaluator, ResolvedValue} from '../../../partial_evaluator';
 import {ClassDeclaration, ClassMember, ClassMemberKind, Decorator, filterToMembersWithDecorator, isNamedClassDeclaration, ReflectionHost, reflectObjectLiteral} from '../../../reflection';
 import {HandlerFlags} from '../../../transform';
+import {getModifiers} from '../../../ts_compatibility';
 import {createSourceSpan, createValueHasWrongTypeError, forwardRefResolver, getConstructorDependencies, toR3Reference, tryUnwrapForwardRef, unwrapConstructorDependencies, unwrapExpression, validateConstructorDependencies, wrapFunctionExpressionsInParens, wrapTypeReference} from '../../common';
 
 const EMPTY_OBJECT: {[key: string]: string} = {};
@@ -76,17 +77,19 @@ export function extractDirectiveMetadata(
   // Construct the map of inputs both from the @Directive/@Component
   // decorator, and the decorated
   // fields.
-  const inputsFromMeta = parseFieldToPropertyMapping(directive, 'inputs', evaluator);
+  const inputsFromMeta =
+      parseFieldToPropertyMapping(directive, 'inputs', evaluator, members, validateInput);
   const inputsFromFields = parseDecoratedFields(
-      filterToMembersWithDecorator(decoratedElements, 'Input', coreModule), evaluator,
-      resolveInput);
+      filterToMembersWithDecorator(decoratedElements, 'Input', coreModule), evaluator, resolveInput,
+      validateInput);
 
   // And outputs.
-  const outputsFromMeta = parseFieldToPropertyMapping(directive, 'outputs', evaluator);
+  const outputsFromMeta =
+      parseFieldToPropertyMapping(directive, 'outputs', evaluator, members, validateOutput);
   const outputsFromFields =
       parseDecoratedFields(
           filterToMembersWithDecorator(decoratedElements, 'Output', coreModule), evaluator,
-          resolveOutput) as {[field: string]: string};
+          resolveOutput, validateOutput) as {[field: string]: string};
   // Construct the list of queries.
   const contentChildFromFields = queriesFromFields(
       filterToMembersWithDecorator(decoratedElements, 'ContentChild', coreModule), reflector,
@@ -517,10 +520,30 @@ function isPropertyTypeMember(member: ClassMember): boolean {
  * correctly shaped metadata object.
  */
 function parseFieldToPropertyMapping(
-    directive: Map<string, ts.Expression>, field: string,
-    evaluator: PartialEvaluator): {[field: string]: string} {
+    directive: Map<string, ts.Expression>, field: string, evaluator: PartialEvaluator,
+    members: ClassMember[],
+    fieldValidator: (member: ClassMember, errorNode: ts.Node) => void): {[field: string]: string} {
   const metaValues = parseFieldArrayValue(directive, field, evaluator);
-  return metaValues ? parseInputOutputMappingArray(metaValues) : EMPTY_OBJECT;
+
+  if (!metaValues) {
+    return EMPTY_OBJECT;
+  }
+
+  const mapping = parseInputOutputMappingArray(metaValues);
+  const errorNode = directive.get(field)!;
+
+  for (const key in mapping) {
+    if (mapping.hasOwnProperty(key)) {
+      const member = members.find(member => member.name === key);
+
+      if (member) {
+        // Don't validate if we couldn't match the field to a member since it may be inherited.
+        fieldValidator(member, errorNode);
+      }
+    }
+  }
+
+  return mapping;
 }
 
 function parseInputOutputMappingArray(values: string[]) {
@@ -543,10 +566,11 @@ function parseInputOutputMappingArray(values: string[]) {
  */
 function parseDecoratedFields(
     fields: {member: ClassMember, decorators: Decorator[]}[], evaluator: PartialEvaluator,
-    mapValueResolver: (publicName: string, internalName: string) =>
-        string | [string, string]): {[field: string]: string|[string, string]} {
+    mapValueResolver: (publicName: string, internalName: string) => string | [string, string],
+    fieldValidator: (member: ClassMember) => void): {[field: string]: string|[string, string]} {
   return fields.reduce((results, field) => {
     const fieldName = field.member.name;
+    fieldValidator(field.member);
     field.decorators.forEach(decorator => {
       // The decorator either doesn't have an argument (@Input()) in which case the property
       // name is used, or it has one argument (@Output('named')).
@@ -570,6 +594,49 @@ function parseDecoratedFields(
     });
     return results;
   }, {} as {[field: string]: string | [string, string]});
+}
+
+function validateInput(member: ClassMember, errorNode?: ts.Node) {
+  if (!member.node) {
+    return;
+  }
+
+  const modifiers = getModifiers(member.node);
+  errorNode = errorNode || member.node;
+
+  if (modifiers) {
+    for (const modifier of modifiers) {
+      switch (modifier.kind) {
+        case ts.SyntaxKind.ReadonlyKeyword:
+          throw new FatalDiagnosticError(
+              ErrorCode.FIELD_UNEXPECTED_MODIFIER, errorNode,
+              `Input ${member.name} cannot be readonly`);
+        case ts.SyntaxKind.PrivateKeyword:
+          throw new FatalDiagnosticError(
+              ErrorCode.FIELD_UNEXPECTED_MODIFIER, errorNode,
+              `Input ${member.name} cannot be private`);
+      }
+    }
+  }
+}
+
+function validateOutput(member: ClassMember, errorNode?: ts.Node) {
+  if (!member.node) {
+    return;
+  }
+
+  const modifiers = getModifiers(member.node);
+  errorNode = errorNode || member.node;
+
+  if (modifiers) {
+    for (const modifier of modifiers) {
+      if (modifier.kind === ts.SyntaxKind.PrivateKeyword) {
+        throw new FatalDiagnosticError(
+            ErrorCode.FIELD_UNEXPECTED_MODIFIER, errorNode,
+            `Output ${member.name} cannot be private`);
+      }
+    }
+  }
 }
 
 function resolveInput(publicName: string, internalName: string): [string, string] {

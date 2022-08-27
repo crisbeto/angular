@@ -7629,6 +7629,156 @@ function allTests(os: string) {
         });
       });
 
+      describe('input/output modifier errors', () => {
+        it('should throw if a field with an Input decorator is readonly', () => {
+          env.write('test.ts', `
+            import {Directive, Input} from '@angular/core';
+
+            @Directive({selector: '[not-valid]'})
+            export class TestDir {
+              @Input() readonly test: string;
+            }
+          `);
+
+          const diags = env.driveDiagnostics();
+
+          expect(diags.length).toBe(1);
+          expect(diags[0].messageText).toBe('Input test cannot be readonly');
+        });
+
+        it('should throw if a field with an Input decorator is private', () => {
+          env.write('test.ts', `
+            import {Directive, Input} from '@angular/core';
+
+            @Directive({selector: '[not-valid]'})
+            export class TestDir {
+              @Input() private test: string;
+            }
+          `);
+
+          const diags = env.driveDiagnostics();
+
+          expect(diags.length).toBe(1);
+          expect(diags[0].messageText).toBe('Input test cannot be private');
+        });
+
+        it('should throw if a field with an Output decorator is private', () => {
+          env.write('test.ts', `
+            import {Directive, Output, EventEmitter} from '@angular/core';
+
+            @Directive({selector: '[not-valid]'})
+            export class TestDir {
+              @Output() private test = new EventEmitter();
+            }
+          `);
+
+          const diags = env.driveDiagnostics();
+
+          expect(diags.length).toBe(1);
+          expect(diags[0].messageText).toBe('Output test cannot be private');
+        });
+
+        it('should throw if a field in the `inputs` array is readonly', () => {
+          env.write('test.ts', `
+            import {Component} from '@angular/core';
+
+            @Component({
+              selector: 'not-valid',
+              template: '',
+              inputs: ['test']
+            })
+            export class TestComp {
+              readonly test: string;
+            }
+          `);
+
+          const diags = env.driveDiagnostics();
+
+          expect(diags.length).toBe(1);
+          expect(diags[0].messageText).toBe('Input test cannot be readonly');
+        });
+
+        it('should throw if a field in the `inputs` array is private', () => {
+          env.write('test.ts', `
+            import {Component} from '@angular/core';
+
+            @Component({
+              selector: 'not-valid',
+              template: '',
+              inputs: ['test']
+            })
+            export class TestComp {
+              private test: string;
+            }
+          `);
+
+          const diags = env.driveDiagnostics();
+
+          expect(diags.length).toBe(1);
+          expect(diags[0].messageText).toBe('Input test cannot be private');
+        });
+
+        it('should throw if an aliased field in the `inputs` array is readonly', () => {
+          env.write('test.ts', `
+            import {Component} from '@angular/core';
+
+            @Component({
+              selector: 'not-valid',
+              template: '',
+              inputs: ['test: testAlias']
+            })
+            export class TestComp {
+              readonly test: string;
+            }
+          `);
+
+          const diags = env.driveDiagnostics();
+
+          expect(diags.length).toBe(1);
+          expect(diags[0].messageText).toBe('Input test cannot be readonly');
+        });
+
+        it('should throw if a field in the `outputs` array is private', () => {
+          env.write('test.ts', `
+            import {Component, Output, EventEmitter} from '@angular/core';
+
+            @Component({
+              selector: 'not-valid',
+              template: '',
+              outputs: ['test']
+            })
+            export class TestComp {
+              private test: string;
+            }
+          `);
+
+          const diags = env.driveDiagnostics();
+
+          expect(diags.length).toBe(1);
+          expect(diags[0].messageText).toBe('Output test cannot be private');
+        });
+
+        it('should throw if an aliased field in the `outputs` array is private', () => {
+          env.write('test.ts', `
+            import {Component, Output, EventEmitter} from '@angular/core';
+
+            @Component({
+              selector: 'not-valid',
+              template: '',
+              outputs: ['test: testAlias']
+            })
+            export class TestComp {
+              private test: string;
+            }
+          `);
+
+          const diags = env.driveDiagnostics();
+
+          expect(diags.length).toBe(1);
+          expect(diags[0].messageText).toBe('Output test cannot be private');
+        });
+      });
+
       describe('i18n errors', () => {
         it('reports a diagnostics on nested i18n sections', () => {
           env.write('test.ts', `
