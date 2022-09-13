@@ -1045,27 +1045,42 @@ export function setNgReflectProperties(
 /**
  * Instantiate a root component.
  */
-export function instantiateRootComponent<T>(tView: TView, lView: LView, def: ComponentDef<T>): T {
-  const rootTNode = getCurrentTNode()!;
+export function instantiateRootComponent<T>(
+    tView: TView, lView: LView, allDirectives: DirectiveDef<any>[],
+    hostDirectiveMappings: WeakMap<DirectiveDef<unknown>, HostDirectiveDef>|null): T {
+  const rootTNode = getCurrentTNode() as TElementNode;
   if (tView.firstCreatePass) {
-    if (def.providersResolver) def.providersResolver(def);
-    const directiveIndex = allocExpando(tView, lView, 1, null);
+    // Needs to be run before we allocate the expando or the directive indexes will be wrong.
+    for (const def of allDirectives) {
+      if (def.providersResolver) def.providersResolver(def);
+    }
+
+    const directiveStart = allocExpando(tView, lView, allDirectives.length, null);
     ngDevMode &&
         assertEqual(
-            directiveIndex, rootTNode.directiveStart,
+            directiveStart, rootTNode.directiveStart,
             'Because this is a root component the allocated expando should match the TNode component.');
-    configureViewWithDirective(tView, rootTNode, lView, directiveIndex, def);
-    // TODO: probably needs to run `applyHostDirectives` here as well.
-    initializeInputAndOutputAliases(tView, rootTNode, null);
+
+    // We need to configure the directive and instantiate it in two passes so that
+    // the host directives and the root component are able to inject each other.
+    for (let i = 0; i < allDirectives.length; i++) {
+      configureViewWithDirective(tView, rootTNode, lView, directiveStart + i, allDirectives[i]);
+    }
+
+    for (let i = 0; i < allDirectives.length; i++) {
+      const directiveInstance = getNodeInjectable(lView, tView, directiveStart + i, rootTNode);
+      attachPatchData(directiveInstance, lView);
+    }
+
+    const native = getNativeByTNode(rootTNode, lView);
+    if (native) {
+      attachPatchData(native, lView);
+    }
+
+    initializeInputAndOutputAliases(tView, rootTNode, hostDirectiveMappings);
   }
-  const directive =
-      getNodeInjectable(lView, tView, rootTNode.directiveStart, rootTNode as TElementNode);
-  attachPatchData(directive, lView);
-  const native = getNativeByTNode(rootTNode, lView);
-  if (native) {
-    attachPatchData(native, lView);
-  }
-  return directive;
+
+  return getNodeInjectable(lView, tView, rootTNode.directiveEnd - 1, rootTNode);
 }
 
 /**
