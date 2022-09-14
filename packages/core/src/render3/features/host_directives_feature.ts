@@ -9,6 +9,7 @@ import {resolveForwardRef} from '../../di';
 import {Type} from '../../interface/type';
 import {EMPTY_OBJ} from '../../util/empty';
 import {getDirectiveDef} from '../definition';
+import {diPublicInInjector, getOrCreateNodeInjectorForNode} from '../di';
 import {DirectiveDef} from '../interfaces/definition';
 import {TContainerNode, TElementContainerNode, TElementNode} from '../interfaces/node';
 import {LView, TView} from '../interfaces/view';
@@ -65,6 +66,10 @@ function applyHostDirectives(
       const hostDirectiveDef = getDirectiveDef(hostDirectiveConfig.directive)!;
 
       // TODO(crisbeto): assert that the def exists.
+
+      // Allows for the directive to be injected by the host.
+      diPublicInInjector(
+          getOrCreateNodeInjectorForNode(tNode, viewData), tView, hostDirectiveDef.type);
 
       // Host directives execute before the host so that its host bindings can be overwritten.
       applyHostDirectives(matches, hostDirectiveDef, tView, viewData, tNode);
