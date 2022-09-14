@@ -25,7 +25,7 @@ import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} f
 import {throwMultipleComponentError} from '../errors';
 import {executeCheckHooks, executeInitAndCheckHooks, incrementInitPhaseFlags} from '../hooks';
 import {CONTAINER_HEADER_OFFSET, HAS_TRANSPLANTED_VIEWS, LContainer, MOVED_VIEWS} from '../interfaces/container';
-import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, HostBindingsFunction, PipeDefListOrFactory, RenderFlags, ViewQueriesFunction} from '../interfaces/definition';
+import {ComponentDef, ComponentTemplate, DirectiveDef, DirectiveDefListOrFactory, HostBindingsFunction, HostDirectiveDefinitionMap, PipeDefListOrFactory, RenderFlags, ViewQueriesFunction} from '../interfaces/definition';
 import {NodeInjectorFactory} from '../interfaces/injector';
 import {getUniqueLViewId} from '../interfaces/lview_tracking';
 import {AttributeMarker, InitialInputData, InitialInputs, LocalRefExtractor, PropertyAliases, PropertyAliasValue, TAttributes, TConstantsOrFactory, TContainerNode, TDirectiveHostNode, TElementContainerNode, TElementNode, TIcuContainerNode, TNode, TNodeFlags, TNodeType, TProjectionNode} from '../interfaces/node';
@@ -861,28 +861,39 @@ export function createTNode(
 
 
 function generatePropertyAliases(
-    inputAliasMap: {[publicName: string]: string}, directiveDefIdx: number,
-    propStore: PropertyAliases|null): PropertyAliases|null {
+    inputAliasMap: {[publicName: string]: string}, directiveIndex: number,
+    propStore: PropertyAliases|null,
+    aliasMap: {[internalName: string]: string}|null): PropertyAliases|null {
   for (let publicName in inputAliasMap) {
     if (inputAliasMap.hasOwnProperty(publicName)) {
       propStore = propStore === null ? {} : propStore;
       const internalName = inputAliasMap[publicName];
 
-      if (propStore.hasOwnProperty(publicName)) {
-        propStore[publicName].push(directiveDefIdx, internalName);
-      } else {
-        (propStore[publicName] = [directiveDefIdx, internalName]);
+      if (aliasMap === null) {
+        addToPropStore(propStore, directiveIndex, publicName, internalName);
+      } else if (aliasMap.hasOwnProperty(publicName)) {
+        addToPropStore(propStore, directiveIndex, aliasMap[publicName], internalName);
       }
     }
   }
   return propStore;
 }
 
+function addToPropStore(
+    propStore: PropertyAliases, directiveIndex: number, publicName: string, internalName: string) {
+  if (propStore.hasOwnProperty(publicName)) {
+    propStore[publicName].push(directiveIndex, internalName);
+  } else {
+    (propStore[publicName] = [directiveIndex, internalName]);
+  }
+}
+
 /**
  * Initializes data structures required to work with directive inputs and outputs.
  * Initialization is done for all directives matched on a given TNode.
  */
-export function initializeInputAndOutputAliases(tView: TView, tNode: TNode): void {
+export function initializeInputAndOutputAliases(
+    tView: TView, tNode: TNode, hostDirectiveDefinitionMap: HostDirectiveDefinitionMap|null): void {
   ngDevMode && assertFirstCreatePass(tView);
 
   const start = tNode.directiveStart;
@@ -896,8 +907,13 @@ export function initializeInputAndOutputAliases(tView: TView, tNode: TNode): voi
 
   for (let i = start; i < end; i++) {
     const directiveDef = tViewData[i] as DirectiveDef<any>;
-    inputsStore = generatePropertyAliases(directiveDef.inputs, i, inputsStore);
-    outputsStore = generatePropertyAliases(directiveDef.outputs, i, outputsStore);
+    const aliasData =
+        hostDirectiveDefinitionMap ? hostDirectiveDefinitionMap.get(directiveDef) : null;
+    const aliasedInputs = aliasData ? aliasData.inputs : null;
+    const aliasedOutputs = aliasData ? aliasData.outputs : null;
+
+    inputsStore = generatePropertyAliases(directiveDef.inputs, i, inputsStore, aliasedInputs);
+    outputsStore = generatePropertyAliases(directiveDef.outputs, i, outputsStore, aliasedOutputs);
     // Do not use unbound attributes as inputs to structural directives, since structural
     // directive inputs can only be set using microsyntax (e.g. `<div *dir="exp">`).
     // TODO(FW-1930): microsyntax expressions may also contain unbound/static attributes, which
@@ -1038,7 +1054,8 @@ export function instantiateRootComponent<T>(tView: TView, lView: LView, def: Com
             directiveIndex, rootTNode.directiveStart,
             'Because this is a root component the allocated expando should match the TNode component.');
     configureViewWithDirective(tView, rootTNode, lView, directiveIndex, def);
-    initializeInputAndOutputAliases(tView, rootTNode);
+    // TODO(crisbeto): pass in the host directive definition map.
+    initializeInputAndOutputAliases(tView, rootTNode, null);
   }
   const directive =
       getNodeInjectable(lView, tView, rootTNode.directiveStart, rootTNode as TElementNode);
@@ -1063,8 +1080,13 @@ export function resolveDirectives(
   let hasDirectives = false;
   if (getBindingsEnabled()) {
     const selectorMatches = findDirectiveDefMatches(tView, lView, tNode);
-    const directiveDefs =
-        selectorMatches ? applyHostDirectives(selectorMatches, tView, lView, tNode) : null;
+    let directiveDefs: DirectiveDef<unknown>[]|null = null;
+    let definitionMap: HostDirectiveDefinitionMap|null = null;
+
+    if (selectorMatches !== null) {
+      [directiveDefs, definitionMap] = applyHostDirectives(selectorMatches, tView, lView, tNode);
+    }
+
     const exportsMap: ({[key: string]: number}|null) = localRefs === null ? null : {'': -1};
 
     if (directiveDefs !== null) {
@@ -1121,7 +1143,7 @@ export function resolveDirectives(
         directiveIdx++;
       }
 
-      initializeInputAndOutputAliases(tView, tNode);
+      initializeInputAndOutputAliases(tView, tNode, definitionMap);
     }
     if (exportsMap) cacheMatchingLocalNames(tNode, localRefs, exportsMap);
   }
@@ -1318,18 +1340,24 @@ export function markAsComponentHost(tView: TView, hostTNode: TNode): void {
  */
 function applyHostDirectives(
     selectorMatches: DirectiveDef<unknown>[], tView: TView, lView: LView,
-    tNode: TElementNode|TContainerNode|TElementContainerNode): DirectiveDef<unknown>[] {
+    tNode: TElementNode|TContainerNode|TElementContainerNode):
+    [matches: DirectiveDef<unknown>[], definitionMap: HostDirectiveDefinitionMap|null] {
   const matches: DirectiveDef<unknown>[] = [];
+  let definitionMap: HostDirectiveDefinitionMap|null = null;
 
   for (const def of selectorMatches) {
     if (def.applyHostDirectives === null) {
       matches.push(def);
     } else {
-      def.applyHostDirectives(matches, def, tView, lView, tNode);
+      if (definitionMap === null) {
+        definitionMap = new Map();
+      }
+
+      def.applyHostDirectives(matches, definitionMap, def, tView, lView, tNode);
     }
   }
 
-  return matches;
+  return [matches, definitionMap];
 }
 
 /** Caches local names and their matching directive indices for query and template lookups. */

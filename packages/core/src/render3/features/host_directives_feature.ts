@@ -10,7 +10,7 @@ import {Type} from '../../interface/type';
 import {EMPTY_OBJ} from '../../util/empty';
 import {getDirectiveDef} from '../definition';
 import {diPublicInInjector, getOrCreateNodeInjectorForNode} from '../di';
-import {DirectiveDef} from '../interfaces/definition';
+import {DirectiveDef, HostDirectiveBindingMap, HostDirectiveDefinitionMap} from '../interfaces/definition';
 import {TContainerNode, TElementContainerNode, TElementNode} from '../interfaces/node';
 import {LView, TView} from '../interfaces/view';
 
@@ -59,7 +59,8 @@ export function ɵɵHostDirectivesFeature(rawHostDirectives: HostDirectiveConfig
 }
 
 function applyHostDirectives(
-    matches: DirectiveDef<unknown>[], def: DirectiveDef<unknown>, tView: TView, viewData: LView,
+    matches: DirectiveDef<unknown>[], definitionMap: HostDirectiveDefinitionMap,
+    def: DirectiveDef<unknown>, tView: TView, viewData: LView,
     tNode: TElementNode|TContainerNode|TElementContainerNode): void {
   if (def.hostDirectives !== null) {
     for (const hostDirectiveConfig of def.hostDirectives) {
@@ -72,7 +73,8 @@ function applyHostDirectives(
           getOrCreateNodeInjectorForNode(tNode, viewData), tView, hostDirectiveDef.type);
 
       // Host directives execute before the host so that its host bindings can be overwritten.
-      applyHostDirectives(matches, hostDirectiveDef, tView, viewData, tNode);
+      applyHostDirectives(matches, definitionMap, hostDirectiveDef, tView, viewData, tNode);
+      definitionMap.set(hostDirectiveDef, hostDirectiveConfig);
     }
   }
 
@@ -84,12 +86,12 @@ function applyHostDirectives(
  * Converts an array in the form of `['publicName', 'alias', 'otherPublicName', 'otherAlias']` into
  * a map in the form of `{publicName: 'alias', otherPublicName: 'otherAlias'}`.
  */
-function bindingArrayToMap(bindings: string[]|undefined) {
+function bindingArrayToMap(bindings: string[]|undefined): HostDirectiveBindingMap {
   if (bindings === undefined || bindings.length === 0) {
     return EMPTY_OBJ;
   }
 
-  const result: {[publicName: string]: string} = {};
+  const result: HostDirectiveBindingMap = {};
 
   for (let i = 0; i < bindings.length; i += 2) {
     result[bindings[i]] = bindings[i + 1];

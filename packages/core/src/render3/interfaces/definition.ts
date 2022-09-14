@@ -207,11 +207,12 @@ export interface DirectiveDef<T> {
   readonly features: DirectiveDefFeature[]|null;
 
   /**
-   * Function that will apply the host directives to the list of matches during directive matching.
-   * Patched onto the definition by the `HostDirectivesFeature`.
+   * Function that will apply the host directives to the list of matches during directive
+   * matching. Patched onto the definition by the `HostDirectivesFeature`.
    */
   applyHostDirectives:
-      ((matches: DirectiveDef<unknown>[], def: DirectiveDef<unknown>, tView: TView, viewData: LView,
+      ((matches: DirectiveDef<unknown>[], definitionMap: HostDirectiveDefinitionMap,
+        def: DirectiveDef<unknown>, tView: TView, viewData: LView,
         tNode: TElementNode|TContainerNode|TElementContainerNode) => void)|null;
 
   /** Additional directives to be applied whenever the directive has been matched. */
@@ -412,11 +413,26 @@ export interface HostDirectiveDef<T = unknown> {
   directive: Type<T>;
 
   /** Directive inputs that have been exposed. */
-  inputs: {[publicName: string]: string};
+  inputs: HostDirectiveBindingMap;
 
   /** Directive outputs that have been exposed. */
-  outputs: {[publicName: string]: string};
+  outputs: HostDirectiveBindingMap;
 }
+
+/**
+ * Mapping between the public aliases of directive bindings and the underlying inputs/outputs that
+ * they represent. Also serves as an allowlist of the inputs/outputs from the host directive that
+ * the author has decided to expose.
+ */
+export type HostDirectiveBindingMap = {
+  [publicName: string]: string
+};
+
+/**
+ * Mapping between a directive that was used as a host directive
+ * and the configuration that was used to define it as such.
+ */
+export type HostDirectiveDefinitionMap = Map<DirectiveDef<unknown>, HostDirectiveDef>;
 
 export interface ComponentDefFeature {
   <T>(componentDef: ComponentDef<T>): void;
