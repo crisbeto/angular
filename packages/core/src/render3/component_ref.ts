@@ -31,7 +31,7 @@ import {throwProviderNotFoundError} from './errors_di';
 import {registerPostOrderHooks} from './hooks';
 import {reportUnknownPropertyError} from './instructions/element_validation';
 import {addToViewTree, allocExpando, configureViewWithDirective, createLView, createTView, getOrCreateComponentTView, getOrCreateTNode, initializeInputAndOutputAliases, initTNodeFlags, invokeHostBindingsInCreationMode, locateHostElement, markAsComponentHost, markDirtyIfOnPush, registerHostBindingOpCodes, renderView, setInputsForProperty} from './instructions/shared';
-import {ComponentDef, DirectiveDef, RenderFlags} from './interfaces/definition';
+import {ComponentDef, DirectiveDef, HostDirectiveDefinitionMap, RenderFlags} from './interfaces/definition';
 import {PropertyAliasValue, TContainerNode, TElementContainerNode, TElementNode, TNode, TNodeType} from './interfaces/node';
 import {Renderer, RendererFactory} from './interfaces/renderer';
 import {RElement, RNode} from './interfaces/renderer_dom';
@@ -192,8 +192,20 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
     let tElementNode: TElementNode;
 
     try {
-      const rootDirectives = [this.componentDef];
       const hostTNode = createRootComponentTNode(rootLView, hostRNode);
+      let rootDirectives: DirectiveDef<unknown>[]|null = null;
+      let hostDirectivesDefinitionMap: HostDirectiveDefinitionMap|null = null;
+
+      if (this.componentDef.applyHostDirectives === null) {
+        rootDirectives = [this.componentDef];
+      } else {
+        rootDirectives = [];
+        hostDirectivesDefinitionMap = new Map();
+        this.componentDef.applyHostDirectives(
+            rootDirectives, hostDirectivesDefinitionMap, this.componentDef, rootLView[TVIEW],
+            rootLView, hostTNode);
+      }
+
       const componentView = createRootComponentView(
           hostTNode, hostRNode, this.componentDef, rootDirectives, rootLView, rendererFactory,
           hostRenderer);
@@ -215,7 +227,8 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
       // executed here?
       // Angular 5 reference: https://stackblitz.com/edit/lifecycle-hooks-vcref
       component = createRootComponent(
-          componentView, this.componentDef, rootDirectives, rootLView, [LifecycleHooksFeature]);
+          componentView, this.componentDef, rootDirectives, rootLView, hostDirectivesDefinitionMap,
+          [LifecycleHooksFeature]);
       renderView(rootTView, rootLView, null);
     } finally {
       leaveView();
@@ -384,12 +397,14 @@ function applyRootComponentStyling(
  */
 function createRootComponent<T>(
     componentView: LView, rootComponentDef: ComponentDef<T>, rootDirectives: DirectiveDef<any>[],
-    rootLView: LView, hostFeatures: HostFeature[]|null): any {
+    rootLView: LView, hostDirectivesDefinitionMap: HostDirectiveDefinitionMap|null,
+    hostFeatures: HostFeature[]|null): any {
   const tView = rootLView[TVIEW];
   const rootTNode = getCurrentTNode() as TElementNode;
   ngDevMode && assertDefined(rootTNode, 'tNode should have been already created');
 
-  instantiateRootDirectives(rootTNode, tView, rootLView, rootDirectives);
+  instantiateRootDirectives(
+      rootTNode, tView, rootLView, rootDirectives, hostDirectivesDefinitionMap);
 
   // The root component instance will always be last in the directive range.
   const component = getNodeInjectable(rootLView, tView, rootTNode.directiveEnd - 1, rootTNode);
@@ -443,8 +458,8 @@ function setRootNodeAttributes(
 
 /** Instantiates all of the directives on the root component. */
 function instantiateRootDirectives(
-    rootTNode: TElementNode, tView: TView, lView: LView,
-    rootDirectives: DirectiveDef<any>[]): void {
+    rootTNode: TElementNode, tView: TView, lView: LView, rootDirectives: DirectiveDef<any>[],
+    hostDirectivesDefinitionMap: HostDirectiveDefinitionMap|null): void {
   if (!tView.firstCreatePass) {
     return;
   }
@@ -486,8 +501,7 @@ function instantiateRootDirectives(
     attachPatchData(native, lView);
   }
 
-  // TODO(crisbeto): pass in the input/output aliases.
-  initializeInputAndOutputAliases(tView, rootTNode, null);
+  initializeInputAndOutputAliases(tView, rootTNode, hostDirectivesDefinitionMap);
 }
 
 /** Projects the `projectableNodes` that were specified when creating a root component. */
