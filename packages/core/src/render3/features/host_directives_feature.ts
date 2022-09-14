@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import {resolveForwardRef} from '../../di';
+import {RuntimeError, RuntimeErrorCode} from '../../errors';
 import {Type} from '../../interface/type';
 import {EMPTY_OBJ} from '../../util/empty';
-import {getDirectiveDef} from '../definition';
+import {getComponentDef, getDirectiveDef} from '../definition';
 import {diPublicInInjector, getOrCreateNodeInjectorForNode} from '../di';
 import {DirectiveDef, HostDirectiveBindingMap, HostDirectiveDefinitionMap} from '../interfaces/definition';
 import {TContainerNode, TElementContainerNode, TElementNode} from '../interfaces/node';
@@ -64,9 +65,17 @@ function applyHostDirectives(
     tNode: TElementNode|TContainerNode|TElementContainerNode): void {
   if (def.hostDirectives !== null) {
     for (const hostDirectiveConfig of def.hostDirectives) {
-      const hostDirectiveDef = getDirectiveDef(hostDirectiveConfig.directive)!;
+      const {
+        directive: hostDirectiveReference,
+        inputs: exposedInputs,
+        outputs: exposedOutputs,
+      } = hostDirectiveConfig;
+      const hostDirectiveDef = getDirectiveDef(hostDirectiveReference)!;
 
-      // TODO(crisbeto): assert that the def exists.
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        validateHostDirective(
+            hostDirectiveReference, hostDirectiveDef, exposedInputs, exposedOutputs, matches);
+      }
 
       // Allows for the directive to be injected by the host.
       diPublicInInjector(
@@ -98,4 +107,79 @@ function bindingArrayToMap(bindings: string[]|undefined): HostDirectiveBindingMa
   }
 
   return result;
+}
+
+/**
+ * Verifies that the host directive has been configured correctly.
+ * @param type Reference to the class that defines the host directive.
+ * @param def Directive definition of the host directive.
+ * @param exposedInputs Inputs that have been exposed on the host.
+ * @param exposedOutputs Outputs that have been exposed on the host.
+ * @param matches Directives that have been matched so far.
+ */
+function validateHostDirective(
+    type: Type<unknown>, def: DirectiveDef<any>|null, exposedInputs: HostDirectiveBindingMap,
+    exposedOutputs: HostDirectiveBindingMap,
+    matches: DirectiveDef<unknown>[]): asserts def is DirectiveDef<unknown> {
+  if (def === null) {
+    if (getComponentDef(type) !== null) {
+      throw new RuntimeError(
+          RuntimeErrorCode.HOST_DIRECTIVE_COMPONENT,
+          `Host directive ${type.name} cannot be a component.`);
+    }
+
+    throw new RuntimeError(
+        RuntimeErrorCode.HOST_DIRECTIVE_UNRESOLVABLE,
+        `Could not resolve metadata for host directive ${type.name}.`);
+  }
+
+  if (!def.standalone) {
+    throw new RuntimeError(
+        RuntimeErrorCode.HOST_DIRECTIVE_NOT_STANDALONE,
+        `Host directive ${def.type.name} must be standalone.`);
+  }
+
+  if (matches.indexOf(def) > -1) {
+    throw new RuntimeError(
+        RuntimeErrorCode.DUPLICATE_DIRECTITVE,
+        `Directive ${def.type.name} matches multiple times on the same element. ` +
+            `Directives can only match an element once.`);
+  }
+
+  validateMappings('input', def, exposedInputs);
+  validateMappings('output', def, exposedOutputs);
+}
+
+/**
+ * Checks that the host directive inputs/outputs configuration is valid.
+ * @param type Kind of binding that is being validated. Used in the error message.
+ * @param def Definition of the host directive that is being validated against.
+ * @param hostDirectiveMappings Host directive mapping object that shold be validated.
+ */
+function validateMappings(
+    type: 'input'|'output', def: DirectiveDef<unknown>,
+    hostDirectiveMappings: HostDirectiveBindingMap) {
+  const className = def.type.name;
+  const bindings: Record<string, string> = type === 'input' ? def.inputs : def.outputs;
+
+  for (const publicName in hostDirectiveMappings) {
+    if (hostDirectiveMappings.hasOwnProperty(publicName)) {
+      if (!bindings.hasOwnProperty(publicName)) {
+        throw new RuntimeError(
+            RuntimeErrorCode.HOST_DIRECTIVE_UNDEFINED_BINDING,
+            `Directive ${className} does not have an ${type} with a public name of ${publicName}.`);
+      }
+
+      const remappedPublicName = hostDirectiveMappings[publicName];
+
+      if (bindings.hasOwnProperty(remappedPublicName) &&
+          bindings[remappedPublicName] !== publicName) {
+        throw new RuntimeError(
+            RuntimeErrorCode.HOST_DIRECTIVE_CONFLICTING_ALIAS,
+            `Cannot alias ${type} ${publicName} of host directive ${className} to ${
+                remappedPublicName}, because it already has a different ${
+                type} with the same public name.`);
+      }
+    }
+  }
 }
