@@ -436,6 +436,89 @@ describe('host directives', () => {
   });
 
   describe('dependency injection', () => {
+    it('should allow the host to inject its host directives', () => {
+      let hostInstance!: Host;
+      let firstHostDirInstance!: FirstHostDir;
+      let secondHostDirInstance!: SecondHostDir;
+
+      @Directive({standalone: true})
+      class SecondHostDir {
+        constructor() {
+          secondHostDirInstance = this;
+        }
+      }
+
+      @Directive({standalone: true, hostDirectives: [SecondHostDir]} as HostDirectiveAny)
+      class FirstHostDir {
+        constructor() {
+          firstHostDirInstance = this;
+        }
+      }
+
+      @Directive({selector: '[dir]', hostDirectives: [FirstHostDir]} as HostDirectiveAny)
+      class Host {
+        firstHostDir = inject(FirstHostDir);
+        secondHostDir = inject(SecondHostDir);
+
+        constructor() {
+          hostInstance = this;
+        }
+      }
+
+      @Component({template: '<div dir></div>'})
+      class App {
+      }
+
+      TestBed.configureTestingModule({declarations: [App, Host]});
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+
+      expect(hostInstance instanceof Host).toBe(true);
+      expect(firstHostDirInstance instanceof FirstHostDir).toBe(true);
+      expect(secondHostDirInstance instanceof SecondHostDir).toBe(true);
+
+      expect(hostInstance.firstHostDir).toBe(firstHostDirInstance);
+      expect(hostInstance.secondHostDir).toBe(secondHostDirInstance);
+    });
+
+    it('should be able to inject a host directive into a child component', () => {
+      let hostDirectiveInstance!: HostDir;
+
+      @Component({selector: 'child', template: ''})
+      class Child {
+        hostDir = inject(HostDir);
+      }
+
+      @Directive({standalone: true})
+      class HostDir {
+        constructor() {
+          hostDirectiveInstance = this;
+        }
+      }
+
+      @Component({
+        selector: 'host',
+        template: '<child></child>',
+        hostDirectives: [HostDir],
+      } as HostDirectiveAny)
+      class Host {
+        @ViewChild(Child) child!: Child;
+      }
+
+      @Component({template: '<host></host>'})
+      class App {
+        @ViewChild(Host) host!: Host;
+      }
+
+      TestBed.configureTestingModule({declarations: [App, Host, Child]});
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const injectedInstance = fixture.componentInstance.host.child.hostDir;
+
+      expect(injectedInstance instanceof HostDir).toBe(true);
+      expect(injectedInstance).toBe(hostDirectiveInstance);
+    });
+
     it('should allow the host directives to inject their host', () => {
       let hostInstance!: Host;
       let firstHostDirInstance!: FirstHostDir;
@@ -642,5 +725,26 @@ describe('host directives', () => {
 
       expect(tokenValue).toBe(null);
     });
+
+    it('should throw a circular dependency error if a host and a host directive inject each other',
+       () => {
+         @Directive({standalone: true})
+         class HostDir {
+           host = inject(Host);
+         }
+
+         @Directive({selector: '[dir]', hostDirectives: [HostDir]} as HostDirectiveAny)
+         class Host {
+           hostDir = inject(HostDir);
+         }
+
+         @Component({template: '<div dir></div>'})
+         class App {
+         }
+
+         TestBed.configureTestingModule({declarations: [App, Host]});
+         expect(() => TestBed.createComponent(App))
+             .toThrowError(/NG0200: Circular dependency in DI detected for HostDir/);
+       });
   });
 });
