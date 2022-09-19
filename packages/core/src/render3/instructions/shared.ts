@@ -1289,13 +1289,10 @@ function findDirectiveDefMatches(
             }
           }
           markAsComponentHost(tView, tNode);
-          // The component is always stored first with directives after.
-          matches.unshift(def);
-        } else {
-          matches.push(def);
         }
 
         def.findHostDirectiveDefs?.(matches, def, tView, viewData, tNode);
+        matches.push(def);
       }
     }
   }
