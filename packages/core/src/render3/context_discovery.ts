@@ -306,15 +306,31 @@ export function getDirectivesAtNodeIndex(
   const tNode = lView[TVIEW].data[nodeIndex] as TNode;
   let directiveStartIndex = tNode.directiveStart;
   if (directiveStartIndex == 0) return EMPTY_ARRAY;
-  const directiveEndIndex = tNode.directiveEnd;
-  if (!includeComponents && tNode.flags & TNodeFlags.isComponentHost) directiveStartIndex++;
-  return lView.slice(directiveStartIndex, directiveEndIndex);
+  const results: any[] = [];
+
+  for (let i = tNode.directiveStart; i < tNode.directiveEnd; i++) {
+    if (isComponentInstance(lView[i])) {
+      includeComponents && results.push(lView[i]);
+    } else {
+      results.push(lView[i]);
+    }
+  }
+
+  return results;
 }
 
 export function getComponentAtNodeIndex(nodeIndex: number, lView: LView): {}|null {
   const tNode = lView[TVIEW].data[nodeIndex] as TNode;
-  let directiveStartIndex = tNode.directiveStart;
-  return tNode.flags & TNodeFlags.isComponentHost ? lView[directiveStartIndex] : null;
+
+  if (tNode.flags & TNodeFlags.isComponentHost) {
+    for (let i = tNode.directiveStart; i < tNode.directiveEnd; i++) {
+      if (isComponentInstance(lView[i])) {
+        return lView[i];
+      }
+    }
+  }
+
+  return null;
 }
 
 /**

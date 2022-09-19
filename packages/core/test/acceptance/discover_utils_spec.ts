@@ -314,7 +314,7 @@ describe('discovery utils', () => {
     it('should retrieve tokens', () => {
       expect(getInjectionTokens(fixture.nativeElement)).toEqual([MyApp]);
       expect(getInjectionTokens(child[0])).toEqual([String, Child]);
-      expect(getInjectionTokens(child[1])).toEqual([String, Child, DirectiveA]);
+      expect(getInjectionTokens(child[1])).toEqual([String, DirectiveA, Child]);
     });
     it('should retrieve tokens from destroyed node', () => {
       expect(getInjectionTokens(span[0])).toEqual([]);

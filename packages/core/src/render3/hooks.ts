@@ -8,11 +8,13 @@
 
 import {AfterContentChecked, AfterContentInit, AfterViewChecked, AfterViewInit, DoCheck, OnChanges, OnDestroy, OnInit} from '../interface/lifecycle_hooks';
 import {assertDefined, assertEqual, assertNotEqual} from '../util/assert';
+
 import {assertFirstCreatePass} from './assert';
 import {NgOnChangesFeatureImpl} from './features/ng_onchanges_feature';
 import {DirectiveDef} from './interfaces/definition';
 import {TNode} from './interfaces/node';
-import {FLAGS, HookData, InitPhaseState, LView, LViewFlags, PREORDER_HOOK_FLAGS, PreOrderHookFlags, TView} from './interfaces/view';
+import {isComponentDef} from './interfaces/type_checks';
+import {DestroyHookData, FLAGS, HookData, HookFn, InitPhaseState, LView, LViewFlags, PREORDER_HOOK_FLAGS, PreOrderHookFlags, TView} from './interfaces/view';
 import {profiler, ProfilerEvent} from './profiler';
 import {isInCheckNoChangesMode} from './state';
 
@@ -73,43 +75,65 @@ export function registerPreOrderHooks(
  */
 export function registerPostOrderHooks(tView: TView, tNode: TNode): void {
   ngDevMode && assertFirstCreatePass(tView);
-  // It's necessary to loop through the directives at elementEnd() (rather than processing in
-  // directiveCreate) so we can preserve the current hook order. Content, view, and destroy
-  // hooks for projected components and directives must be called *before* their hosts.
-  for (let i = tNode.directiveStart, end = tNode.directiveEnd; i < end; i++) {
+
+  for (let i = tNode.directiveStart; i < tNode.directiveEnd; i++) {
     const directiveDef = tView.data[i] as DirectiveDef<any>;
     ngDevMode && assertDefined(directiveDef, 'Expecting DirectiveDef');
-    const lifecycleHooks: AfterContentInit&AfterContentChecked&AfterViewInit&AfterViewChecked&
-        OnDestroy = directiveDef.type.prototype;
-    const {
-      ngAfterContentInit,
-      ngAfterContentChecked,
-      ngAfterViewInit,
-      ngAfterViewChecked,
-      ngOnDestroy
-    } = lifecycleHooks;
 
-    if (ngAfterContentInit) {
-      (tView.contentHooks || (tView.contentHooks = [])).push(-i, ngAfterContentInit);
+    if (isComponentDef(directiveDef)) {
+      ffs(tView, i, directiveDef, true);
     }
+  }
 
-    if (ngAfterContentChecked) {
-      (tView.contentHooks || (tView.contentHooks = [])).push(i, ngAfterContentChecked);
-      (tView.contentCheckHooks || (tView.contentCheckHooks = [])).push(i, ngAfterContentChecked);
-    }
+  for (let i = tNode.directiveStart; i < tNode.directiveEnd; i++) {
+    const directiveDef = tView.data[i] as DirectiveDef<any>;
+    ngDevMode && assertDefined(directiveDef, 'Expecting DirectiveDef');
 
-    if (ngAfterViewInit) {
-      (tView.viewHooks || (tView.viewHooks = [])).push(-i, ngAfterViewInit);
+    if (!isComponentDef(directiveDef)) {
+      ffs(tView, i, directiveDef, false);
     }
+  }
+}
 
-    if (ngAfterViewChecked) {
-      (tView.viewHooks || (tView.viewHooks = [])).push(i, ngAfterViewChecked);
-      (tView.viewCheckHooks || (tView.viewCheckHooks = [])).push(i, ngAfterViewChecked);
-    }
+function ffs(tView: TView, index: number, directiveDef: DirectiveDef<any>, prepend: boolean): void {
+  const lifecycleHooks: AfterContentInit&AfterContentChecked&AfterViewInit&AfterViewChecked&
+      OnDestroy = directiveDef.type.prototype;
+  const {
+    ngAfterContentInit,
+    ngAfterContentChecked,
+    ngAfterViewInit,
+    ngAfterViewChecked,
+    ngOnDestroy
+  } = lifecycleHooks;
 
-    if (ngOnDestroy != null) {
-      (tView.destroyHooks || (tView.destroyHooks = [])).push(i, ngOnDestroy);
-    }
+  if (ngAfterContentInit) {
+    // TODO: ewww
+    (tView.contentHooks || (tView.contentHooks = []))[prepend ? 'unshift' : 'push'](
+        -index, ngAfterContentInit);
+  }
+
+  if (ngAfterContentChecked) {
+    (tView.contentHooks || (tView.contentHooks = []))[prepend ? 'unshift' : 'push'](
+        index, ngAfterContentChecked);
+    (tView.contentCheckHooks || (tView.contentCheckHooks = []))[prepend ? 'unshift' : 'push'](
+        index, ngAfterContentChecked);
+  }
+
+  if (ngAfterViewInit) {
+    (tView.viewHooks || (tView.viewHooks = []))[prepend ? 'unshift' : 'push'](
+        -index, ngAfterViewInit);
+  }
+
+  if (ngAfterViewChecked) {
+    (tView.viewHooks || (tView.viewHooks = []))[prepend ? 'unshift' : 'push'](
+        index, ngAfterViewChecked);
+    (tView.viewCheckHooks || (tView.viewCheckHooks = []))[prepend ? 'unshift' : 'push'](
+        index, ngAfterViewChecked);
+  }
+
+  if (ngOnDestroy != null) {
+    (tView.destroyHooks || (tView.destroyHooks = []))[prepend ? 'unshift' : 'push'](
+        index, ngOnDestroy);
   }
 }
 
