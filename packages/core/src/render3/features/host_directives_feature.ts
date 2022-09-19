@@ -9,7 +9,6 @@ import {resolveForwardRef} from '../../di';
 import {Type} from '../../interface/type';
 import {EMPTY_OBJ} from '../../util/empty';
 import {getDirectiveDef} from '../definition';
-import {diPublicInInjector, getOrCreateNodeInjectorForNode} from '../di';
 import {DirectiveDef} from '../interfaces/definition';
 import {TContainerNode, TElementContainerNode, TElementNode} from '../interfaces/node';
 import {LView, TView} from '../interfaces/view';
@@ -62,22 +61,17 @@ function findHostDirectiveDefs(
     matches: DirectiveDef<unknown>[], def: DirectiveDef<unknown>, tView: TView, lView: LView,
     tNode: TElementNode|TContainerNode|TElementContainerNode): void {
   if (def.hostDirectives !== null) {
-    for (const hostDirectiveConfig of def.hostDirectives) {
+    // Iterate in reverse so the directive that declares
+    // the host directives preserves its original order.
+    for (let i = def.hostDirectives.length - 1; i > -1; i--) {
+      const hostDirectiveConfig = def.hostDirectives[i];
       const hostDirectiveDef = getDirectiveDef(hostDirectiveConfig.directive)!;
 
-      // TODO(crisbeto): assert that the def exists.
-
-      // Allows for the directive to be injected by the host.
-      diPublicInInjector(
-          getOrCreateNodeInjectorForNode(tNode, lView), tView, hostDirectiveDef.type);
-
       // Host directives execute before the host so that its host bindings can be overwritten.
+      matches.unshift(hostDirectiveDef);
       findHostDirectiveDefs(matches, hostDirectiveDef, tView, lView, tNode);
     }
   }
-
-  // Push the def itself at the end since it needs to execute after the host directives.
-  matches.push(def);
 }
 
 /**
