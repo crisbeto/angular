@@ -6,11 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {state, style, transition, trigger} from '@angular/animations';
+import {animate, state, style, transition, trigger} from '@angular/animations';
 import {CommonModule} from '@angular/common';
 import {AfterContentInit, Component, ComponentFactoryResolver, ComponentRef, ContentChildren, Directive, DoCheck, HostBinding, HostListener, Injectable, Input, NgModule, OnChanges, OnInit, QueryList, ViewChild, ViewChildren, ViewContainerRef} from '@angular/core';
 import {bypassSanitizationTrustHtml, bypassSanitizationTrustStyle, bypassSanitizationTrustUrl} from '@angular/core/src/sanitization/bypass';
-import {TestBed} from '@angular/core/testing';
+import {fakeAsync, flush, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 
@@ -43,6 +43,33 @@ describe('host bindings', () => {
     expect(element.classList.contains('foo')).toBeFalsy();
     expect(element.classList.contains('bar')).toBeTruthy();
   });
+
+  fit('', fakeAsync(() => {
+        @Component({template: 'hello', selector: 'app-root'})
+        class AppRoot {
+          @HostBinding('style.--height') height = '100px';
+        }
+
+        @Component({
+          template: '<app-root [@test]="animationState"></app-root>',
+          animations: [trigger(
+              'test',
+              [
+                state('enter', style({opacity: 1})),
+                transition('void => enter', [style({opacity: 0}), animate('300ms linear')]),
+              ])],
+        })
+        class MyApp {
+          animationState = 'enter';
+        }
+
+        TestBed.configureTestingModule({declarations: [MyApp, AppRoot]});
+        const fixture = TestBed.createComponent(MyApp);
+        fixture.detectChanges();
+        flush();
+
+        console.log(fixture.nativeElement.innerHTML);
+      }));
 
   describe('defined in @Component', () => {
     it('should combine the inherited static classes of a parent and child component', () => {

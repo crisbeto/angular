@@ -147,62 +147,72 @@ export function copyStyles(
   return destination;
 }
 
-function getStyleAttributeString(element: any, key: string, value: string) {
-  // Return the key-value pair string to be added to the style attribute for the
-  // given CSS style key.
-  if (value) {
-    return key + ':' + value + ';';
-  } else {
-    return '';
-  }
-}
+function writeStylesToAttribute(element: any, styles: ɵStyleDataMap) {
+  const styleMap: ɵStyleDataMap = new Map();
+  const styleAttribute = element.getAttribute('style');
 
-function writeStyleAttribute(element: any) {
-  // Read the style property of the element and manually reflect it to the
-  // style attribute. This is needed because Domino on platform-server doesn't
-  // understand the full set of allowed CSS properties and doesn't reflect some
-  // of them automatically.
-  let styleAttrValue = '';
-  for (let i = 0; i < element.style.length; i++) {
-    const key = element.style.item(i);
-    styleAttrValue += getStyleAttributeString(element, key, element.style.getPropertyValue(key));
-  }
-  for (const key in element.style) {
-    // Skip internal Domino properties that don't need to be reflected.
-    if (!element.style.hasOwnProperty(key) || key.startsWith('_')) {
-      continue;
+  if (styleAttribute) {
+    const styleList = styleAttribute.split(/;+/g);
+    for (let i = 0; i < styleList.length; i++) {
+      const style = styleList[i].trim();
+      if (style.length > 0) {
+        const colonIndex = style.indexOf(':');
+        if (colonIndex === -1) {
+          throw new Error(`Invalid CSS style: ${style}`);
+        }
+        const name = style.slice(0, colonIndex).trim();
+        styleMap.set(name, style.slice(colonIndex + 1).trim());
+      }
     }
-    const dashKey = camelCaseToDashCase(key);
-    styleAttrValue += getStyleAttributeString(element, dashKey, element.style[key]);
   }
+
+  styles.forEach((value, key) => styleMap.set(key, value));
+
+  let styleAttrValue = '';
+  styleMap.forEach((value, key) => {
+    if (value != null && value !== '') {
+      styleAttrValue += `${key}:${value};`;
+    }
+  });
   element.setAttribute('style', styleAttrValue);
 }
 
 export function setStyles(element: any, styles: ɵStyleDataMap, formerStyles?: ɵStyleDataMap) {
   if (element['style']) {
-    styles.forEach((val, prop) => {
-      const camelProp = dashCaseToCamelCase(prop);
-      if (formerStyles && !formerStyles.has(prop)) {
-        formerStyles.set(prop, element.style[camelProp]);
-      }
-      element.style[camelProp] = val;
-    });
-    // On the server set the 'style' attribute since it's not automatically reflected.
+    // In a node environment we need to write to the attribute instead of the style declaration.
     if (isNode()) {
-      writeStyleAttribute(element);
+      if (formerStyles) {
+        styles.forEach((value, key) => {
+          if (!formerStyles.has(key)) {
+            formerStyles.set(key, value);
+          }
+        });
+      }
+      writeStylesToAttribute(element, styles);
+    } else {
+      styles.forEach((val, prop) => {
+        const camelProp = dashCaseToCamelCase(prop);
+        if (formerStyles && !formerStyles.has(prop)) {
+          formerStyles.set(prop, element.style[camelProp]);
+        }
+        element.style[camelProp] = val;
+      });
     }
   }
 }
 
 export function eraseStyles(element: any, styles: ɵStyleDataMap) {
   if (element['style']) {
-    styles.forEach((_, prop) => {
-      const camelProp = dashCaseToCamelCase(prop);
-      element.style[camelProp] = '';
-    });
-    // On the server set the 'style' attribute since it's not automatically reflected.
+    // In a node environment we need to write to the attribute instead of the style declaration.
     if (isNode()) {
-      writeStyleAttribute(element);
+      const blankStyles: ɵStyleDataMap = new Map();
+      styles.forEach((_, key) => blankStyles.set(key, ''));
+      writeStylesToAttribute(element, blankStyles);
+    } else {
+      styles.forEach((_, prop) => {
+        const camelProp = dashCaseToCamelCase(prop);
+        element.style[camelProp] = '';
+      });
     }
   }
 }
