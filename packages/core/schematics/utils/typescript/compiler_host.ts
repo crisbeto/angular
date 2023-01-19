@@ -8,9 +8,10 @@
 import {Tree} from '@angular-devkit/schematics';
 import {dirname, relative, resolve} from 'path';
 import ts from 'typescript';
+
 import {parseTsconfigFile} from './parse_tsconfig';
 
-export type FakeReadFileFn = (fileName: string) => string|undefined;
+type FakeReadFileFn = (fileName: string) => string|undefined;
 
 /**
  * Creates a TypeScript program instance for a TypeScript project within
@@ -25,18 +26,24 @@ export type FakeReadFileFn = (fileName: string) => string|undefined;
 export function createMigrationProgram(
     tree: Tree, tsconfigPath: string, basePath: string, fakeFileRead?: FakeReadFileFn,
     additionalFiles?: string[]) {
+  const {rootNames, options, host} =
+      createProgramOptions(tree, tsconfigPath, basePath, fakeFileRead, additionalFiles);
+  return ts.createProgram(rootNames, options, host);
+}
+
+export function createProgramOptions(
+    tree: Tree, tsconfigPath: string, basePath: string, fakeFileRead?: FakeReadFileFn,
+    additionalFiles?: string[]) {
   // Resolve the tsconfig path to an absolute path. This is needed as TypeScript otherwise
   // is not able to resolve root directories in the given tsconfig. More details can be found
   // in the following issue: https://github.com/microsoft/TypeScript/issues/37731.
   tsconfigPath = resolve(basePath, tsconfigPath);
   const parsed = parseTsconfigFile(tsconfigPath, dirname(tsconfigPath));
   const host = createMigrationCompilerHost(tree, parsed.options, basePath, fakeFileRead);
-  const program =
-      ts.createProgram(parsed.fileNames.concat(additionalFiles || []), parsed.options, host);
-  return {parsed, host, program};
+  return {rootNames: parsed.fileNames.concat(additionalFiles || []), options: parsed.options, host};
 }
 
-export function createMigrationCompilerHost(
+function createMigrationCompilerHost(
     tree: Tree, options: ts.CompilerOptions, basePath: string,
     fakeRead?: FakeReadFileFn): ts.CompilerHost {
   const host = ts.createCompilerHost(options, true);
