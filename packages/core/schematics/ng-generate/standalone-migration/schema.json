@@ -19,6 +19,10 @@
           {
             "value": "prune-ng-modules",
             "label": "Remove unnecessary NgModule classes"
+          },
+          {
+            "value": "standalone-bootstrap",
+            "label": "Bootstrap the application using standalone APIs"
           }
         ]
       }
