@@ -15,6 +15,10 @@
           {
             "value": "convert-to-standalone",
             "label": "Convert all components, directives and pipes to standalone"
+          },
+          {
+            "value": "prune-ng-modules",
+            "label": "Remove unnecessary NgModule classes"
           }
         ]
       }
