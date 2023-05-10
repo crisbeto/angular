@@ -18,7 +18,7 @@ import {initNgDevMode} from '../util/ng_dev_mode';
 import {stringify} from '../util/stringify';
 
 import {NG_COMP_DEF, NG_DIR_DEF, NG_MOD_DEF, NG_PIPE_DEF} from './fields';
-import {ComponentDef, ComponentDefFeature, ComponentTemplate, ComponentType, ContentQueriesFunction, DependencyTypeList, DirectiveDef, DirectiveDefFeature, DirectiveDefListOrFactory, HostBindingsFunction, PipeDef, PipeDefListOrFactory, TypeOrFactory, ViewQueriesFunction} from './interfaces/definition';
+import {ComponentDef, ComponentDefFeature, ComponentTemplate, ComponentType, ContentQueriesFunction, DependencyTypeList, DirectiveDef, DirectiveDefFeature, DirectiveDefListOrFactory, HostBindingsFunction, InputTransformFunction, PipeDef, PipeDefListOrFactory, TypeOrFactory, ViewQueriesFunction} from './interfaces/definition';
 import {TAttributes, TConstantsOrFactory} from './interfaces/node';
 import {CssSelectorList} from './interfaces/projection';
 import {stringifyCSSSelectorList} from './node_selector_matcher';
@@ -35,7 +35,7 @@ interface DirectiveDefinition<T> {
   /**
    * A map of input names.
    *
-   * The format is in: `{[actualPropertyName: string]:(string|[string, string])}`.
+   * The format is in: `{[actualPropertyName: string]:(string|[string, string, Function])}`.
    *
    * Given:
    * ```
@@ -45,6 +45,9 @@ interface DirectiveDefinition<T> {
    *
    *   @Input('publicInput2')
    *   declaredInput2: string;
+   *
+   *   @Input({transform: (value: boolean) => value ? 1 : 0})
+   *   transformedInput3: number;
    * }
    * ```
    *
@@ -53,6 +56,11 @@ interface DirectiveDefinition<T> {
    * {
    *   publicInput1: 'publicInput1',
    *   declaredInput2: ['declaredInput2', 'publicInput2'],
+   *   transformedInput3: [
+   *     'transformedInput3',
+   *     'transformedInput3',
+   *     (value: boolean) => value ? 1 : 0
+   *   ]
    * }
    * ```
    *
@@ -61,6 +69,11 @@ interface DirectiveDefinition<T> {
    * {
    *   minifiedPublicInput1: 'publicInput1',
    *   minifiedDeclaredInput2: [ 'publicInput2', 'declaredInput2'],
+   *   minifiedTransformedInput3: [
+   *     'transformedInput3',
+   *     'transformedInput3',
+   *     (value: boolean) => value ? 1 : 0
+   *   ]
    * }
    * ```
    *
@@ -75,7 +88,7 @@ interface DirectiveDefinition<T> {
    *    this reason `NgOnChanges` will be deprecated and removed in future version and this
    *    API will be simplified to be consistent with `output`.
    */
-  inputs?: {[P in keyof T]?: string|[string, string]};
+  inputs?: {[P in keyof T]?: string|[string, string, InputTransformFunction?]};
 
   /**
    * A map of output names.
@@ -484,21 +497,26 @@ export function ɵɵsetNgModuleScope(type: any, scope: {
 
  */
 function invertObject<T>(
-    obj?: {[P in keyof T]?: string|[string, string]},
-    secondary?: {[key: string]: string}): {[P in keyof T]: string} {
+    obj?: {[P in keyof T]?: string|[string, string, InputTransformFunction?]}, secondary?: Record<string, string>,
+    transforms?: Record<string, InputTransformFunction>): {[P in keyof T]: string} {
   if (obj == null) return EMPTY_OBJ as any;
   const newLookup: any = {};
   for (const minifiedKey in obj) {
     if (obj.hasOwnProperty(minifiedKey)) {
-      let publicName: string|[string, string] = obj[minifiedKey]!;
+      let publicName: string|[string, string, InputTransformFunction?] = obj[minifiedKey]!;
       let declaredName = publicName;
+      let transformFunction: InputTransformFunction|undefined;
       if (Array.isArray(publicName)) {
+        transformFunction = publicName[2];
         declaredName = publicName[1];
         publicName = publicName[0];
       }
       newLookup[publicName] = minifiedKey;
       if (secondary) {
         (secondary[publicName] = declaredName as string);
+      }
+      if (transforms && transformFunction) {
+        transforms[declaredName as string] = transformFunction;
       }
     }
   }
@@ -616,6 +634,7 @@ export function getNgModuleDef<T>(type: any, throwNotFound?: boolean): NgModuleD
 function getNgDirectiveDef<T>(directiveDefinition: DirectiveDefinition<T>):
     Mutable<DirectiveDef<unknown>, keyof DirectiveDef<unknown>> {
   const declaredInputs: Record<string, string> = {};
+  const inputTransforms: Record<string, InputTransformFunction> = {};
 
   return {
     type: directiveDefinition.type,
@@ -626,6 +645,7 @@ function getNgDirectiveDef<T>(directiveDefinition: DirectiveDefinition<T>):
     hostAttrs: directiveDefinition.hostAttrs || null,
     contentQueries: directiveDefinition.contentQueries || null,
     declaredInputs,
+    inputTransforms,
     exportAs: directiveDefinition.exportAs || null,
     standalone: directiveDefinition.standalone === true,
     signals: directiveDefinition.signals === true,
@@ -635,7 +655,7 @@ function getNgDirectiveDef<T>(directiveDefinition: DirectiveDefinition<T>):
     setInput: null,
     findHostDirectiveDefs: null,
     hostDirectives: null,
-    inputs: invertObject(directiveDefinition.inputs, declaredInputs),
+    inputs: invertObject(directiveDefinition.inputs, declaredInputs, inputTransforms),
     outputs: invertObject(directiveDefinition.outputs),
   };
 }

@@ -42,6 +42,7 @@ export {createComponent, reflectComponentType, ComponentMirror} from './render3/
 export {isStandalone} from './render3/definition';
 export {ApplicationConfig, mergeApplicationConfig} from './application_config';
 export {makeStateKey, StateKey, TransferState} from './transfer_state';
+export * from './util/coercion';
 
 import {global} from './util/global';
 if (typeof ngDevMode !== 'undefined' && ngDevMode) {
