@@ -7,9 +7,10 @@
  */
 import ts from 'typescript';
 
-import {absoluteFrom, AbsoluteFsPath, getFileSystem, getSourceFileOrError, LogicalFileSystem, NgtscCompilerHost} from '../../file_system';
+import {absoluteFrom, getFileSystem, getSourceFileOrError, LogicalFileSystem, NgtscCompilerHost} from '../../file_system';
 import {runInEachFileSystem, TestFile} from '../../file_system/testing';
 import {AbsoluteModuleStrategy, LocalIdentifierStrategy, LogicalProjectStrategy, ModuleResolver, Reference, ReferenceEmitter} from '../../imports';
+import {ClassPropertyMapping, InputMapping} from '../../metadata';
 import {NOOP_PERF_RECORDER} from '../../perf';
 import {TsCreateProgramDriver, UpdateMode} from '../../program_driver';
 import {isNamedClassDeclaration, TypeScriptReflectionHost} from '../../reflection';
@@ -83,8 +84,7 @@ TestClass.ngTypeCtor({value: 'test'});
               fnName: 'ngTypeCtor',
               body: true,
               fields: {
-                inputs: ['value'],
-                outputs: [],
+                inputs: ClassPropertyMapping.fromMappedObject<InputMapping>({value: 'value'}),
                 queries: [],
               },
               coercedInputFields: new Set(),
@@ -121,8 +121,7 @@ TestClass.ngTypeCtor({value: 'test'});
               fnName: 'ngTypeCtor',
               body: true,
               fields: {
-                inputs: ['value'],
-                outputs: [],
+                inputs: ClassPropertyMapping.fromMappedObject<InputMapping>({value: 'value'}),
                 queries: ['queryField'],
               },
               coercedInputFields: new Set(),
@@ -166,11 +165,25 @@ TestClass.ngTypeCtor({value: 'test'});
               fnName: 'ngTypeCtor',
               body: true,
               fields: {
-                inputs: ['foo', 'bar'],
-                outputs: [],
+                inputs: ClassPropertyMapping.fromMappedObject<InputMapping>({
+                  foo: 'foo',
+                  bar: 'bar',
+                  baz: {
+                    classPropertyName: 'baz',
+                    bindingPropertyName: 'baz',
+                    required: false,
+                    transform: {
+                      type: ts.factory.createUnionTypeNode([
+                        ts.factory.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword),
+                        ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
+                      ]),
+                      node: ts.factory.createFunctionDeclaration(undefined, undefined, undefined, undefined, [], undefined, undefined)
+                    }
+                  }
+                }),
                 queries: [],
               },
-              coercedInputFields: new Set(['bar']),
+              coercedInputFields: new Set(['bar', 'baz']),
             });
         const programStrategy = new TsCreateProgramDriver(program, host, options, []);
         programStrategy.updateFiles(ctx.finalize(), UpdateMode.Complete);
@@ -179,7 +192,7 @@ TestClass.ngTypeCtor({value: 'test'});
         const typeCtor = TestClassWithCtor.members.find(isTypeCtor)!;
         const ctorText = typeCtor.getText().replace(/[ \r\n]+/g, ' ');
         expect(ctorText).toContain(
-            'init: Pick<TestClass, "foo"> & { bar: typeof TestClass.ngAcceptInputType_bar; }');
+            'init: Pick<TestClass, "foo"> & { bar: typeof TestClass.ngAcceptInputType_bar; baz: boolean | string; }');
       });
     });
   });
