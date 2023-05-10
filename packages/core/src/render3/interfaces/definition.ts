@@ -105,6 +105,13 @@ export interface DirectiveDef<T> {
   readonly inputs: {[P in keyof T]: string};
 
   /**
+   * A dictionary mapping the private names of inputs to their transformation functions.
+   * Note: the private names are used for the keys, rather than the public ones, because public
+   * names can be re-aliased in host directives which would invalidate the lookup.
+   */
+  readonly inputTransforms: {[classPropertyName: string]: InputTransformFunction};
+
+  /**
    * @deprecated This is only here because `NgOnChanges` incorrectly uses declared name instead of
    * public or minified name.
    */
@@ -459,6 +466,8 @@ export interface ComponentDefFeature {
   ngInherit?: true;
 }
 
+/** Function that can be used to transform incoming input values. */
+export type InputTransformFunction = (value: any) => any;
 
 /**
  * Type used for directiveDefs on component definition.

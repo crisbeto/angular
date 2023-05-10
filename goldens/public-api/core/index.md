@@ -481,6 +481,7 @@ export interface Directive {
         name: string;
         alias?: string;
         required?: boolean;
+        transform?: (value: any) => any;
     } | string)[];
     jit?: true;
     outputs?: string[];
@@ -822,6 +823,7 @@ export interface InjectorType<T> extends Type<T> {
 export interface Input {
     alias?: string;
     required?: boolean;
+    transform?: (value: any) => any;
 }
 
 // @public (undocumented)

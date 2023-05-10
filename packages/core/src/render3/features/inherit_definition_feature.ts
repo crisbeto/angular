@@ -59,6 +59,7 @@ export function ɵɵInheritDefinitionFeature(definition: DirectiveDef<any>|Compo
         // would've justified object creation. Unwrap them if necessary.
         const writeableDef = definition as WritableDef;
         writeableDef.inputs = maybeUnwrapEmpty(definition.inputs);
+        writeableDef.inputTransforms = maybeUnwrapEmpty(definition.inputTransforms);
         writeableDef.declaredInputs = maybeUnwrapEmpty(definition.declaredInputs);
         writeableDef.outputs = maybeUnwrapEmpty(definition.outputs);
 
@@ -74,6 +75,7 @@ export function ɵɵInheritDefinitionFeature(definition: DirectiveDef<any>|Compo
 
         // Merge inputs and outputs
         fillProperties(definition.inputs, superDef.inputs);
+        fillProperties(definition.inputTransforms, superDef.inputTransforms);
         fillProperties(definition.declaredInputs, superDef.declaredInputs);
         fillProperties(definition.outputs, superDef.outputs);
 

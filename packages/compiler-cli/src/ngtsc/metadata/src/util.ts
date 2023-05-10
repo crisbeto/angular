@@ -121,15 +121,14 @@ export function extractDirectiveTypeCheckMeta(
   const hasNgTemplateContextGuard = staticMembers.some(
       member => member.kind === ClassMemberKind.Method && member.name === 'ngTemplateContextGuard');
 
+  const restrictedInputFields = new Set<ClassPropertyName>();
+  const stringLiteralInputFields = new Set<ClassPropertyName>();
+  const undeclaredInputFields = new Set<ClassPropertyName>();
   const coercedInputFields =
       new Set(staticMembers.map(extractCoercedInput)
                   .filter((inputName): inputName is ClassPropertyName => inputName !== null));
 
-  const restrictedInputFields = new Set<ClassPropertyName>();
-  const stringLiteralInputFields = new Set<ClassPropertyName>();
-  const undeclaredInputFields = new Set<ClassPropertyName>();
-
-  for (const classPropertyName of inputs.classPropertyNames) {
+  for (const {classPropertyName, transform} of inputs) {
     const field = members.find(member => member.name === classPropertyName);
     if (field === undefined || field.node === null) {
       undeclaredInputFields.add(classPropertyName);
@@ -140,6 +139,9 @@ export function extractDirectiveTypeCheckMeta(
     }
     if (field.nameNode !== null && ts.isStringLiteral(field.nameNode)) {
       stringLiteralInputFields.add(classPropertyName);
+    }
+    if (transform !== null) {
+      coercedInputFields.add(classPropertyName);
     }
   }
 
