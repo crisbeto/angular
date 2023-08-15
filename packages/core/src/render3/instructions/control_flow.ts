@@ -24,9 +24,11 @@ import {addLViewToLContainer, createAndRenderEmbeddedLView, getLViewFromLContain
  *     conditional views should be inserted.
  * @param matchingTemplateIndex index of a template TNode representing a conditional view to be
  *     inserted; -1 represents a special case when there is no view to insert.
+ * @param context additional context object to assign to the embedded view.
  * @codeGenApi
  */
-export function ɵɵconditional<T>(containerIndex: number, matchingTemplateIndex: number, value?: T) {
+export function ɵɵconditional<T>(
+    containerIndex: number, matchingTemplateIndex: number, context?: T) {
   const hostLView = getLView();
   const bindingIndex = nextBindingIndex();
   const lContainer = getLContainer(hostLView, HEADER_OFFSET + containerIndex);
@@ -41,7 +43,7 @@ export function ɵɵconditional<T>(containerIndex: number, matchingTemplateIndex
     // a truthy value and as the consequence we've got no view to show.
     if (matchingTemplateIndex !== -1) {
       const templateTNode = getExistingTNode(hostLView[TVIEW], matchingTemplateIndex);
-      const embeddedLView = createAndRenderEmbeddedLView(hostLView, templateTNode, value);
+      const embeddedLView = createAndRenderEmbeddedLView(hostLView, templateTNode, context);
 
       addLViewToLContainer(lContainer, embeddedLView, viewInContainerIdx);
     }
@@ -50,7 +52,7 @@ export function ɵɵconditional<T>(containerIndex: number, matchingTemplateIndex
     // changed - re-bind in context.
     const lView = getLViewFromLContainer<T|undefined>(lContainer, viewInContainerIdx);
     if (lView !== undefined) {
-      lView[CONTEXT] = value;
+      lView[CONTEXT] = context;
     }
   }
 }
