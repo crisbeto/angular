@@ -84,6 +84,195 @@
         }
       ],
       "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should generate a basic if block",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "basic_if.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "basic_if_template.js",
+              "generated": "basic_if.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should generate a basic if/else block",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "basic_if_else.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "basic_if_else_template.js",
+              "generated": "basic_if_else.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should generate a basic if/else if block",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "basic_if_else_if.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "basic_if_else_if_template.js",
+              "generated": "basic_if_else_if.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should generate a nested if block",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "nested_if.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "nested_if_template.js",
+              "generated": "nested_if.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should generate an if block using pipes in its conditions",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "if_with_pipe.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "if_with_pipe_template.js",
+              "generated": "if_with_pipe.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should generate an if/else block with an aliased expression",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "if_else_with_context.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "if_else_with_context_template.js",
+              "generated": "if_else_with_context.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should generate an if/else if block with an aliased expression at the top level",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "if_else_if_with_top_level_context.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "if_else_if_with_top_level_context_template.js",
+              "generated": "if_else_if_with_top_level_context.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should reset the `as` context in the subsequent branch in an `if` block",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "if_context_reset.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "if_context_reset_template.js",
+              "generated": "if_context_reset.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
+    },
+    {
+      "description": "should expose the context to nested conditional blocks",
+      "angularCompilerOptions": {
+        "_enabledBlockTypes": ["if"]
+      },
+      "inputFiles": [
+        "if_nested_context.ts"
+      ],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "if_nested_context_template.js",
+              "generated": "if_nested_context.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ],
+      "skipForTemplatePipeline": true
     }
   ]
 }

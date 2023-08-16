@@ -21,7 +21,7 @@ import {isI18nAttribute} from './i18n/util';
 /**
  * Checks whether an object key contains potentially unsafe chars, thus the key should be wrapped in
  * quotes. Note: we do not wrap all keys into quotes, as it may have impact on minification and may
- * bot work in some cases when object keys are mangled by minifier.
+ * not work in some cases when object keys are mangled by a minifier.
  *
  * TODO(FW-1136): this is a temporary solution, we need to come up with a better way of working with
  * inputs that contain potentially unsafe chars.
@@ -208,7 +208,7 @@ export function conditionallyCreateDirectiveBindingLiteral(
     return {
       key: minifiedName,
       // put quotes around keys that contain potentially unsafe characters
-      quoted: UNSAFE_OBJECT_KEY_NAME_REGEXP.test(minifiedName),
+      quoted: isUnsafeObjectKey(minifiedName),
       value: expressionValue,
     };
   }));
@@ -360,4 +360,9 @@ export function getInstructionStatements(instructions: Instruction[]): o.Stateme
   }
 
   return statements;
+}
+
+/** Checks if a key is safe to use directly in a read expression or it needs to be quoted. */
+export function isUnsafeObjectKey(name: string): boolean {
+  return UNSAFE_OBJECT_KEY_NAME_REGEXP.test(name);
 }

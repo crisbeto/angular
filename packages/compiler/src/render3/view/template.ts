@@ -40,7 +40,7 @@ import {createLocalizeStatements} from './i18n/localize_utils';
 import {I18nMetaVisitor} from './i18n/meta';
 import {assembleBoundTextPlaceholders, assembleI18nBoundString, declareI18nVariable, formatI18nPlaceholderNamesInMap, getTranslationConstPrefix, hasI18nMeta, I18N_ICU_MAPPING_PREFIX, icuFromI18nMessage, isI18nRootNode, isSingleI18nIcu, placeholdersToParams, TRANSLATION_VAR_PREFIX, wrapI18nPlaceholder} from './i18n/util';
 import {StylingBuilder, StylingInstruction} from './styling_builder';
-import {asLiteral, CONTEXT_NAME, getInstructionStatements, getInterpolationArgsLength, IMPLICIT_REFERENCE, Instruction, InstructionParams, invalid, invokeInstruction, NON_BINDABLE_ATTR, REFERENCE_PREFIX, RENDER_FLAGS, RESTORED_VIEW_CONTEXT_NAME, trimTrailingNulls} from './util';
+import {asLiteral, CONTEXT_NAME, getInstructionStatements, getInterpolationArgsLength, IMPLICIT_REFERENCE, Instruction, InstructionParams, invalid, invokeInstruction, isUnsafeObjectKey, NON_BINDABLE_ATTR, REFERENCE_PREFIX, RENDER_FLAGS, RESTORED_VIEW_CONTEXT_NAME, trimTrailingNulls} from './util';
 
 
 
@@ -1008,6 +1008,7 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
   readonly visitDeferredBlockError = invalid;
   readonly visitDeferredBlockLoading = invalid;
   readonly visitDeferredBlockPlaceholder = invalid;
+  readonly visitIfBlockBranch = invalid;
   readonly visitSwitchBlockCase = invalid;
 
   visitBoundText(text: t.BoundText) {
@@ -1094,6 +1095,120 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
       this.i18nEnd(null, true);
     }
     return null;
+  }
+
+  visitIfBlock(block: t.IfBlock): void {
+    // We have to process the block in two steps: once here and again in the update instruction
+    // callback in order to generate the correct expressions when pipes or pure functions are
+    // used inside the branch expressions.
+    const branchData = this.preprocessIfBlock(block);
+    // Use the index of the first block as the index for the entire container.
+    const containerIndex = branchData[0].index;
+    const paramsCallback = () => {
+      let contextVariable: o.ReadVarExpr|null = null;
+      const generateBranch = (branchIndex: number, prevAlias: string|null): o.Expression => {
+        // If we've gone beyond the last branch, return the special -1 value which means that no
+        // view will be rendered. Note that we don't need to reset the context here, because -1
+        // won't render a view so the passed-in context won't be captured.
+        if (branchIndex > branchData.length - 1) {
+          return o.literal(-1);
+        }
+
+        const {index, expression, alias} = branchData[branchIndex];
+
+        // If the branch has no expression, it means that it's the final `else`.
+        // Return its index and stop the recursion. Assumes that there's only one
+        // `else` condition and that it's the last branch.
+        if (expression === null) {
+          if (prevAlias === null) {
+            return o.literal(index);
+          }
+          contextVariable = this.allocateControlFlowTempVariable();
+          return contextVariable.set(o.literal(undefined)).or(o.literal(index));
+        }
+
+        let comparisonTarget: o.Expression;
+
+        if (alias) {
+          // If the branch is aliased, we need to assign the expression value to the temporary
+          // variable and then access it through the returned object. E.g. for the expression:
+          // `{#if foo; as alias}...{/if}` we have to generate:
+          // ```
+          // let temp;
+          // conditional(0, (temp = pureFunction1(1, _pureFn, ctx.foo)).alias ? 0 : -1, temp);
+          // ```
+          // At runtime the `temp` variable will be `{alias: ctx.foo}`.
+          contextVariable = this.allocateControlFlowTempVariable();
+          const assignment = contextVariable.set(this.convertPropertyBinding(expression));
+          comparisonTarget =
+              // If the alias contains unsafe characters, we have to use a keyed read.
+              isUnsafeObjectKey(alias) ? assignment.key(o.literal(alias)) : assignment.prop(alias);
+        } else if (prevAlias !== null) {
+          // If the previous branch had an alias, we have to reset the temporary variable so the
+          // context doesn't leak into the other branches:
+          // `conditional(0, (temp = pureFunction1(1, _pureFn, ctx.foo)).alias ? (temp = undefined)
+          // || ctx.bar ? 1 : 2 : -1, temp);`
+          contextVariable = this.allocateControlFlowTempVariable();
+          comparisonTarget =
+              contextVariable.set(o.literal(undefined)).or(this.convertPropertyBinding(expression));
+        } else {
+          comparisonTarget = this.convertPropertyBinding(expression);
+        }
+
+        return comparisonTarget.conditional(
+            o.literal(index), generateBranch(branchIndex + 1, alias));
+      };
+
+      const params = [o.literal(containerIndex), generateBranch(0, null)];
+
+      if (contextVariable !== null) {
+        params.push(contextVariable);
+      }
+
+      return params;
+    };
+
+    this.updateInstructionWithAdvance(
+        containerIndex, block.branches[0].sourceSpan, R3.conditional, paramsCallback);
+  }
+
+  /**
+   * Makes the initial processing pass over an `if` block to capture binding slots
+   * and generate the template instructions for the different branches.
+   */
+  private preprocessIfBlock(block: t.IfBlock) {
+    return block.branches.map(({expression, expressionAlias, children, sourceSpan}) => {
+      let processedExpression: AST|null = null;
+      let variables: t.Variable[]|undefined = undefined;
+
+      if (expression !== null) {
+        let rawExpression: AST;
+
+        if (expressionAlias === null) {
+          rawExpression = expression;
+        } else {
+          // If the branch has an alias, we need to pass an object literal with the alias and
+          // the expression value to the instruction. Since we don't want to recreate the object
+          // literal for each invocation, we have to leverage the existing pure function
+          // instructions. We do so by wrapping the alias an object with a shape of
+          // `{[aliasName]: valueAst}` and registering the alias as a template variable. Further
+          // down the value converter will turn the object literal into a pure function call.
+          rawExpression = new LiteralMap(
+              expression.span, expression.sourceSpan,
+              [{key: expressionAlias, quoted: isUnsafeObjectKey(expressionAlias)}], [expression]);
+          variables = [new t.Variable(expressionAlias, expressionAlias, sourceSpan, sourceSpan)];
+        }
+
+        processedExpression = rawExpression.visit(this._valueConverter);
+        this.allocateBindingSlots(processedExpression);
+      }
+
+      return {
+        index: this.createEmbeddedTemplateFn(null, children, '_Conditional', sourceSpan, variables),
+        expression: processedExpression,
+        alias: expressionAlias
+      };
+    });
   }
 
   visitSwitchBlock(block: t.SwitchBlock): void {
@@ -1300,11 +1415,9 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
     return this._dataIndex++;
   }
 
-  // TODO: implement control flow instructions
+  // TODO: implement for loop instructions
   visitForLoopBlock(block: t.ForLoopBlock): void {}
   visitForLoopBlockEmpty(block: t.ForLoopBlockEmpty): void {}
-  visitIfBlock(block: t.IfBlock): void {}
-  visitIfBlockBranch(block: t.IfBlockBranch): void {}
 
   getConstCount() {
     return this._dataIndex;
