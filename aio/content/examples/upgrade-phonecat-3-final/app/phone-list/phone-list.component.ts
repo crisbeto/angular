@@ -2,10 +2,19 @@
 import { Component } from '@angular/core';
 
 import { Phone, PhoneData } from '../core/phone/phone.service';
+import { RouterLink } from '@angular/router';
+import { NgFor } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'phone-list',
-  templateUrl: './phone-list.template.html',
+    selector: 'phone-list',
+    templateUrl: './phone-list.template.html',
+    standalone: true,
+    imports: [
+        FormsModule,
+        NgFor,
+        RouterLink,
+    ],
 })
 export class PhoneListComponent {
   phones: PhoneData[];

@@ -12,8 +12,8 @@ describe('BannerComponent (external files)', () => {
     // #docregion setup-may-fail
     beforeEach(async () => {
       await TestBed.configureTestingModule({
-        declarations: [ BannerComponent ],
-      }); // missing call to compileComponents()
+    imports: [BannerComponent],
+}); // missing call to compileComponents()
       fixture = TestBed.createComponent(BannerComponent);
     });
     // #enddocregion setup-may-fail
@@ -27,8 +27,8 @@ describe('BannerComponent (external files)', () => {
     // #docregion async-before-each
     beforeEach(async () => {
       await TestBed.configureTestingModule({
-        declarations: [ BannerComponent ],
-      }).compileComponents();  // compile template and css
+    imports: [BannerComponent],
+}).compileComponents();  // compile template and css
     });
     // #enddocregion async-before-each
 
@@ -48,8 +48,8 @@ describe('BannerComponent (external files)', () => {
     // #docregion one-before-each
     beforeEach(async () => {
       await TestBed.configureTestingModule({
-        declarations: [ BannerComponent ],
-      }).compileComponents();
+    imports: [BannerComponent],
+}).compileComponents();
       fixture = TestBed.createComponent(BannerComponent);
       component = fixture.componentInstance;
       h1 = fixture.nativeElement.querySelector('h1');

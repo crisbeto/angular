@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
 
 import { LoggerService } from './logger.service';
+import { NgFor } from '@angular/common';
+import { MyCounterComponent } from './counter.component';
 
 @Component({
-  selector: 'counter-parent',
-  template: `
+    selector: 'counter-parent',
+    template: `
   <h2>Counter Spy</h2>
 
   <button type="button" (click)="updateCounter()">Update counter</button>
@@ -17,7 +19,9 @@ import { LoggerService } from './logger.service';
     <div *ngFor="let msg of spyLog" class="log">{{msg}}</div>
   </div>
   `,
-  providers: [LoggerService]
+    providers: [LoggerService],
+    standalone: true,
+    imports: [MyCounterComponent, NgFor]
 })
 export class CounterParentComponent {
   value = 0;

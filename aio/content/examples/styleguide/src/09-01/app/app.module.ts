@@ -5,13 +5,11 @@ import { AppComponent } from './app.component';
 import { HeroButtonComponent } from './heroes';
 
 @NgModule({
-  imports: [
-    RouterModule.forChild([{ path: '09-01', component: AppComponent }])
-  ],
-  declarations: [
-    AppComponent,
-    HeroButtonComponent
-  ],
-  exports: [ AppComponent ]
+    imports: [
+        RouterModule.forChild([{ path: '09-01', component: AppComponent }]),
+        AppComponent,
+        HeroButtonComponent
+    ],
+    exports: [AppComponent]
 })
 export class AppModule {}

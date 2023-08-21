@@ -2,14 +2,18 @@ import { Component, OnInit } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { Item, ItemService } from './items.service';
+import { RouterLink } from '@angular/router';
+import { NgFor, AsyncPipe } from '@angular/common';
 
 @Component({
-  template: `
+    template: `
     <h3 highlight>Items List</h3>
     <div *ngFor='let item of items | async'>
       <a routerLink="{{'../' + item.id}}">{{item.id}} - {{item.name}}</a>
     </div>
-  `
+  `,
+    standalone: true,
+    imports: [NgFor, RouterLink, AsyncPipe]
 })
 export class ItemsListComponent {
   items: Observable<Item[]>;

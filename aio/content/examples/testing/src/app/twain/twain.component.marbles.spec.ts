@@ -29,11 +29,11 @@ describe('TwainComponent (marbles)', () => {
     getQuoteSpy = twainService.getQuote;
 
     TestBed.configureTestingModule({
-      declarations: [ TwainComponent ],
-      providers:    [
+    declarations: [TwainComponent],
+    providers: [
         { provide: TwainService, useValue: twainService }
-      ]
-    });
+    ]
+});
 
     fixture = TestBed.createComponent(TwainComponent);
     component = fixture.componentInstance;

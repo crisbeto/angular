@@ -3,11 +3,11 @@ import { FlowerService } from '../flower.service';
 
 // #docregion self-component
 @Component({
-  selector: 'app-self',
-  templateUrl: './self.component.html',
-  styleUrls: ['./self.component.css'],
-  providers: [{ provide: FlowerService, useValue: { emoji: '🌷' } }]
-
+    selector: 'app-self',
+    templateUrl: './self.component.html',
+    styleUrls: ['./self.component.css'],
+    providers: [{ provide: FlowerService, useValue: { emoji: '🌷' } }],
+    standalone: true
 })
 export class SelfComponent {
   constructor(@Self() public flower: FlowerService) {}

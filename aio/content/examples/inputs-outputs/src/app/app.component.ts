@@ -2,11 +2,20 @@
 // #docplaster
 
 import { Component } from '@angular/core';
+import { AliasingComponent } from './aliasing/aliasing.component';
+import { InTheMetadataComponent } from './in-the-metadata/in-the-metadata.component';
+import { InputOutputComponent } from './input-output/input-output.component';
+import { NgFor } from '@angular/common';
+import { ItemOutputComponent } from './item-output/item-output.component';
+import { ItemDetailMetadataComponent } from './item-details-metadata/item-details-metadata.component';
+import { ItemDetailComponent } from './item-detail/item-detail.component';
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    standalone: true,
+    imports: [ItemDetailComponent, ItemDetailMetadataComponent, ItemOutputComponent, NgFor, InputOutputComponent, InTheMetadataComponent, AliasingComponent]
 })
 
 // #docregion parent-property

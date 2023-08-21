@@ -4,12 +4,13 @@ import { Component, Input } from '@angular/core';
 import { AdComponent } from './ad.component';
 
 @Component({
-  template: `
+    template: `
     <div class="job-ad">
       <h4>{{data.headline}}</h4>
       {{data.body}}
     </div>
-  `
+  `,
+    standalone: true
 })
 export class HeroJobAdComponent implements AdComponent {
   @Input() data: any;

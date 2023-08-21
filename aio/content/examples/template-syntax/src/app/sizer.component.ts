@@ -2,13 +2,14 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
-  selector: 'app-sizer',
-  template: `
+    selector: 'app-sizer',
+    template: `
   <div>
     <button type="button" (click)="dec()" title="smaller">-</button>
     <button type="button" (click)="inc()" title="bigger">+</button>
     <span [style.font-size.px]="size">FontSize: {{size}}px</span>
-  </div>`
+  </div>`,
+    standalone: true
 })
 export class SizerComponent {
   @Input()  size!: number | string;

@@ -2,7 +2,10 @@ import { Directive, Input, TemplateRef, ViewContainerRef } from '@angular/core';
 
 import { Loaded, LoadingState } from './loading-state';
 
-@Directive({ selector: '[appIfLoaded]' })
+@Directive({
+    selector: '[appIfLoaded]',
+    standalone: true
+})
 export class IfLoadedDirective<T> {
   private isViewCreated = false;
 

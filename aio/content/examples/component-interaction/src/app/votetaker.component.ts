@@ -1,9 +1,11 @@
 // #docregion
 import { Component } from '@angular/core';
+import { VoterComponent } from './voter.component';
+import { NgFor } from '@angular/common';
 
 @Component({
-  selector: 'app-vote-taker',
-  template: `
+    selector: 'app-vote-taker',
+    template: `
     <h2>Should mankind colonize the Universe?</h2>
     <h3>Agree: {{agreed}}, Disagree: {{disagreed}}</h3>
 
@@ -12,7 +14,9 @@ import { Component } from '@angular/core';
       [name]="voter"
       (voted)="onVoted($event)">
     </app-voter>
-  `
+  `,
+    standalone: true,
+    imports: [NgFor, VoterComponent]
 })
 export class VoteTakerComponent {
   agreed = 0;

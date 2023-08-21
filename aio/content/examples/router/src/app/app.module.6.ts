@@ -12,18 +12,15 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  imports: [
-    BrowserModule,
-    FormsModule,
-    RouterModule.forRoot(routes, { useHash: true })  // .../#/crisis-center/
-  ],
-  declarations: [
-    AppComponent,
-    PageNotFoundComponent
-  ],
-  providers: [
-
-  ],
-  bootstrap: [ AppComponent ]
+    imports: [
+        BrowserModule,
+        FormsModule,
+        RouterModule.forRoot(routes, { useHash: true }) // .../#/crisis-center/
+        ,
+        PageNotFoundComponent
+    ],
+    declarations: [AppComponent],
+    providers: [],
+    bootstrap: [AppComponent]
 })
 export class AppModule { }

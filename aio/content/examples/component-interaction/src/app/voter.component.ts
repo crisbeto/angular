@@ -2,12 +2,13 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
-  selector: 'app-voter',
-  template: `
+    selector: 'app-voter',
+    template: `
     <h4>{{name}}</h4>
     <button type="button" (click)="vote(true)"  [disabled]="didVote">Agree</button>
     <button type="button" (click)="vote(false)" [disabled]="didVote">Disagree</button>
-  `
+  `,
+    standalone: true
 })
 export class VoterComponent {
   @Input()  name = '';

@@ -14,20 +14,18 @@ import { CrisisCenterModule } from './crisis-center/crisis-center.module';
 import { AuthModule } from './auth/auth.module';
 
 @NgModule({
-  imports: [
-    BrowserModule,
-    FormsModule,
-    HeroesModule,
-    CrisisCenterModule,
-    AuthModule,
-    AppRoutingModule
-  ],
-  declarations: [
-    AppComponent,
-    ComposeMessageComponent,
-    PageNotFoundComponent
-  ],
-  bootstrap: [ AppComponent ]
+    imports: [
+        BrowserModule,
+        FormsModule,
+        HeroesModule,
+        CrisisCenterModule,
+        AuthModule,
+        AppRoutingModule,
+        ComposeMessageComponent,
+        PageNotFoundComponent
+    ],
+    declarations: [AppComponent],
+    bootstrap: [AppComponent]
 })
 // #docregion inspect-config
 export class AppModule {

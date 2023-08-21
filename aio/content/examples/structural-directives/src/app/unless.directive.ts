@@ -24,7 +24,10 @@ import { Directive, Input, TemplateRef, ViewContainerRef } from '@angular/core';
 // #docregion no-docs
  */
 // #docregion skeleton
-@Directive({ selector: '[appUnless]'})
+@Directive({
+    selector: '[appUnless]',
+    standalone: true
+})
 export class UnlessDirective {
   // #enddocregion skeleton
   private hasView = false;

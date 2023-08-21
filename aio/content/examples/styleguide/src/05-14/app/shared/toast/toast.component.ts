@@ -2,8 +2,9 @@
 import { Component, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'toh-toast',
-  template: `...`
+    selector: 'toh-toast',
+    template: `...`,
+    standalone: true
 })
 // #docregion example
 export class ToastComponent implements OnInit {

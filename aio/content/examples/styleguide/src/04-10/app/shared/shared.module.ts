@@ -8,17 +8,14 @@ import { FilterTextService } from './filter-text/filter-text.service';
 import { InitCapsPipe } from './init-caps.pipe';
 
 @NgModule({
-  imports: [CommonModule, FormsModule],
-  declarations: [
-    FilterTextComponent,
-    InitCapsPipe
-  ],
-  providers: [FilterTextService],
-  exports: [
-    CommonModule,
-    FormsModule,
-    FilterTextComponent,
-    InitCapsPipe
-  ]
+    imports: [CommonModule, FormsModule, FilterTextComponent,
+        InitCapsPipe],
+    providers: [FilterTextService],
+    exports: [
+        CommonModule,
+        FormsModule,
+        FilterTextComponent,
+        InitCapsPipe
+    ]
 })
 export class SharedModule { }

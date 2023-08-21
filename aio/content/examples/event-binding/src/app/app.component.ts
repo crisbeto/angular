@@ -1,10 +1,14 @@
 import { Component } from '@angular/core';
 import { Item } from './item';
+import { ItemDetailComponent } from './item-detail/item-detail.component';
+import { ClickDirective } from './click.directive';
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    standalone: true,
+    imports: [ClickDirective, ItemDetailComponent]
 })
 export class AppComponent {
 

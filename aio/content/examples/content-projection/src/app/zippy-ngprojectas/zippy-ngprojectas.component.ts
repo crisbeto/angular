@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-zippy-ngprojectas',
-  template: `
+    selector: 'app-zippy-ngprojectas',
+    template: `
     <h2>Content projection with ngProjectAs</h2>
 
     Default:
@@ -10,6 +10,7 @@ import { Component } from '@angular/core';
 
     Question:
     <ng-content select="[question]"></ng-content>
-  `
+  `,
+    standalone: true
 })
 export class ZippyNgprojectasComponent {}

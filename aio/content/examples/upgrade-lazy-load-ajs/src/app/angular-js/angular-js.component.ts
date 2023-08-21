@@ -2,8 +2,9 @@ import { Component, OnInit, OnDestroy, ElementRef } from '@angular/core';
 import { LazyLoaderService } from '../lazy-loader.service';
 
 @Component({
-  selector: 'app-angular-js',
-  template: '<div ng-view></div>'
+    selector: 'app-angular-js',
+    template: '<div ng-view></div>',
+    standalone: true
 })
 export class AngularJSComponent implements OnInit, OnDestroy {
   constructor(

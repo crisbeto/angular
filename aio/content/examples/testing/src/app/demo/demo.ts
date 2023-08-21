@@ -44,7 +44,10 @@ export class MasterService {
 /*
  * Reverse the input string.
 */
-@Pipe({ name: 'reverse' })
+@Pipe({
+    name: 'reverse',
+    standalone: true
+})
 export class ReversePipe implements PipeTransform {
   transform(s: string) {
     let r = '';
@@ -55,11 +58,12 @@ export class ReversePipe implements PipeTransform {
 
 //////////// Components /////////////
 @Component({
-  selector: 'bank-account',
-  template: `
+    selector: 'bank-account',
+    template: `
    Bank Name: {{bank}}
    Account Id: {{id}}
- `
+ `,
+    standalone: true
 })
 export class BankAccountComponent {
   @Input() bank = '';
@@ -73,8 +77,8 @@ export class BankAccountComponent {
 
 /** A component with attributes, styles, classes, and property setting */
 @Component({
-  selector: 'bank-account-parent',
-  template: `
+    selector: 'bank-account-parent',
+    template: `
    <bank-account
       bank="RBC"
       account="4747"
@@ -83,7 +87,9 @@ export class BankAccountComponent {
       [class.closed]="isClosed"
       [class.open]="!isClosed">
    </bank-account>
- `
+ `,
+    standalone: true,
+    imports: [BankAccountComponent]
 })
 export class BankAccountParentComponent {
   width = 200;
@@ -93,10 +99,11 @@ export class BankAccountParentComponent {
 
 // #docregion LightswitchComp
 @Component({
-  selector: 'lightswitch-comp',
-  template: `
+    selector: 'lightswitch-comp',
+    template: `
     <button type="button" (click)="clicked()">Click me!</button>
-    <span>{{message}}</span>`
+    <span>{{message}}</span>`,
+    standalone: true
 })
 export class LightswitchComponent {
   isOn = false;
@@ -106,32 +113,37 @@ export class LightswitchComponent {
 // #enddocregion LightswitchComp
 
 @Component({
-  selector: 'child-1',
-  template: '<span>Child-1({{text}})</span>'
+    selector: 'child-1',
+    template: '<span>Child-1({{text}})</span>',
+    standalone: true
 })
 export class Child1Component {
   @Input() text = 'Original';
 }
 
 @Component({
-  selector: 'child-2',
-  template: '<div>Child-2({{text}})</div>'
+    selector: 'child-2',
+    template: '<div>Child-2({{text}})</div>',
+    standalone: true
 })
 export class Child2Component {
   @Input() text = '';
 }
 
 @Component({
-  selector: 'child-3',
-  template: '<div>Child-3({{text}})</div>'
+    selector: 'child-3',
+    template: '<div>Child-3({{text}})</div>',
+    standalone: true
 })
 export class Child3Component {
   @Input() text = '';
 }
 
 @Component({
-  selector: 'input-comp',
-  template: '<input [(ngModel)]="name">'
+    selector: 'input-comp',
+    template: '<input [(ngModel)]="name">',
+    standalone: true,
+    imports: [FormsModule]
 })
 export class InputComponent {
   name = 'John';
@@ -153,7 +165,10 @@ export class InputComponent {
 // }
 
 // As the styleguide recommends
-@Directive({ selector: 'input[value]' })
+@Directive({
+    selector: 'input[value]',
+    standalone: true
+})
 export class InputValueBinderDirective {
   @HostBinding()
   @Input()
@@ -167,24 +182,29 @@ export class InputValueBinderDirective {
 }
 
 @Component({
-  selector: 'input-value-comp',
-  template: `
+    selector: 'input-value-comp',
+    template: `
     Name: <input [(value)]="name"> {{name}}
-  `
+  `,
+    standalone: true,
+    imports: [InputValueBinderDirective]
 })
 export class InputValueBinderComponent {
   name = 'Sally'; // initial value
 }
 
 @Component({
-  selector: 'parent-comp',
-  template: 'Parent(<child-1></child-1>)'
+    selector: 'parent-comp',
+    template: 'Parent(<child-1></child-1>)',
+    standalone: true,
+    imports: [Child1Component]
 })
 export class ParentComponent { }
 
 @Component({
-  selector: 'io-comp',
-  template: '<button type="button" class="hero" (click)="click()">Original {{hero.name}}</button>'
+    selector: 'io-comp',
+    template: '<button type="button" class="hero" (click)="click()">Original {{hero.name}}</button>',
+    standalone: true
 })
 export class IoComponent {
   @Input() hero!: Hero;
@@ -193,8 +213,8 @@ export class IoComponent {
 }
 
 @Component({
-  selector: 'io-parent-comp',
-  template: `
+    selector: 'io-parent-comp',
+    template: `
   <p *ngIf="!selectedHero"><i>Click to select a hero</i></p>
   <p *ngIf="selectedHero">The selected hero is {{selectedHero.name}}</p>
   <io-comp
@@ -202,7 +222,9 @@ export class IoComponent {
     [hero]=hero
     (selected)="onSelect($event)">
   </io-comp>
-  `
+  `,
+    standalone: true,
+    imports: [NgIf, NgFor, IoComponent]
 })
 export class IoParentComponent {
   heroes: Hero[] = [ {name: 'Bob'}, {name: 'Carol'}, {name: 'Ted'}, {name: 'Alice'} ];
@@ -211,17 +233,20 @@ export class IoParentComponent {
 }
 
 @Component({
-  selector: 'my-if-comp',
-  template: 'MyIf(<span *ngIf="showMore">More</span>)'
+    selector: 'my-if-comp',
+    template: 'MyIf(<span *ngIf="showMore">More</span>)',
+    standalone: true,
+    imports: [NgIf]
 })
 export class MyIfComponent {
   showMore = false;
 }
 
 @Component({
-  selector: 'my-service-comp',
-  template: 'injected value: {{valueService.value}}',
-  providers: [ValueService]
+    selector: 'my-service-comp',
+    template: 'injected value: {{valueService.value}}',
+    providers: [ValueService],
+    standalone: true
 })
 export class TestProvidersComponent {
   constructor(public valueService: ValueService) {}
@@ -229,17 +254,19 @@ export class TestProvidersComponent {
 
 
 @Component({
-  selector: 'my-service-comp',
-  template: 'injected value: {{valueService.value}}',
-  viewProviders: [ValueService]
+    selector: 'my-service-comp',
+    template: 'injected value: {{valueService.value}}',
+    viewProviders: [ValueService],
+    standalone: true
 })
 export class TestViewProvidersComponent {
   constructor(public valueService: ValueService) {}
 }
 
 @Component({
-  selector: 'external-template-comp',
-  templateUrl: './demo-external-template.html'
+    selector: 'external-template-comp',
+    templateUrl: './demo-external-template.html',
+    standalone: true
 })
 export class ExternalTemplateComponent implements OnInit {
   serviceValue = '';
@@ -252,15 +279,20 @@ export class ExternalTemplateComponent implements OnInit {
 }
 
 @Component({
-  selector: 'comp-w-ext-comp',
-  template: `
+    selector: 'comp-w-ext-comp',
+    template: `
   <h3>comp-w-ext-comp</h3>
   <external-template-comp></external-template-comp>
-  `
+  `,
+    standalone: true,
+    imports: [ExternalTemplateComponent]
 })
 export class InnerCompWithExternalTemplateComponent { }
 
-@Component({selector: 'needs-content', template: '<ng-content></ng-content>'})
+@Component({
+    selector: 'needs-content', template: '<ng-content></ng-content>',
+    standalone: true
+})
 export class NeedsContentComponent {
   // children with #content local variable
   @ContentChildren('content') children: any;
@@ -268,15 +300,16 @@ export class NeedsContentComponent {
 
 ///////// MyIfChildComp ////////
 @Component({
-  selector: 'my-if-child-1',
-
-  template: `
+    selector: 'my-if-child-1',
+    template: `
     <h4>MyIfChildComp</h4>
     <div>
       <label for="child-value">Child value: <input id="child-value" [(ngModel)]="childValue"> </label>
     </div>
     <p><i>Change log:</i></p>
-    <div *ngFor="let log of changeLog; let i=index">{{i + 1}} - {{log}}</div>`
+    <div *ngFor="let log of changeLog; let i=index">{{i + 1}} - {{log}}</div>`,
+    standalone: true,
+    imports: [FormsModule, NgFor]
 })
 export class MyIfChildComponent implements OnInit, OnChanges, OnDestroy {
   @Input() value = '';
@@ -319,8 +352,8 @@ export class MyIfChildComponent implements OnInit, OnChanges, OnDestroy {
 ///////// MyIfParentComp ////////
 
 @Component({
-  selector: 'my-if-parent-comp',
-  template: `
+    selector: 'my-if-parent-comp',
+    template: `
     <h3>MyIfParentComp</h3>
     <label for="parent">Parent value:
       <input id="parent" [(ngModel)]="parentValue">
@@ -330,7 +363,9 @@ export class MyIfChildComponent implements OnInit, OnChanges, OnDestroy {
          style="margin: 4px; padding: 4px; background-color: aliceblue;">
       <my-if-child-1  [(value)]="parentValue"></my-if-child-1>
     </div>
-  `
+  `,
+    standalone: true,
+    imports: [FormsModule, NgIf, MyIfChildComponent]
 })
 export class MyIfParentComponent implements OnInit {
   ngOnInitCalled = false;
@@ -351,17 +386,22 @@ export class MyIfParentComponent implements OnInit {
 
 
 @Component({
-  selector: 'reverse-pipe-comp',
-  template: `
+    selector: 'reverse-pipe-comp',
+    template: `
     <input [(ngModel)]="text">
     <span>{{text | reverse}}</span>
-  `
+  `,
+    standalone: true,
+    imports: [FormsModule, ReversePipe]
 })
 export class ReversePipeComponent {
   text = 'my dog has fleas.';
 }
 
-@Component({template: '<div>Replace Me</div>'})
+@Component({
+    template: '<div>Replace Me</div>',
+    standalone: true
+})
 export class ShellComponent { }
 
 @Component({
@@ -423,12 +463,7 @@ export const demoProviders = [MasterService, ValueService];
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
+import { NgIf, NgFor } from '@angular/common';
 
-@NgModule({
-  imports: [BrowserModule, FormsModule],
-  declarations: demoDeclarations,
-  providers:    demoProviders,
-  bootstrap:       [DemoComponent]
-})
-export class DemoModule { }
+
 

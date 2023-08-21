@@ -35,9 +35,9 @@ describe('TwainComponent', () => {
     // #enddocregion spy
 
     TestBed.configureTestingModule({
-      declarations: [TwainComponent],
-      providers: [{provide: TwainService, useValue: twainService}]
-    });
+    declarations: [TwainComponent],
+    providers: [{ provide: TwainService, useValue: twainService }]
+});
 
     fixture = TestBed.createComponent(TwainComponent);
     component = fixture.componentInstance;

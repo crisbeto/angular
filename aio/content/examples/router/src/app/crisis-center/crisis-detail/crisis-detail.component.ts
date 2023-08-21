@@ -6,11 +6,15 @@ import { Observable } from 'rxjs';
 
 import { Crisis } from '../crisis';
 import { DialogService } from '../../dialog.service';
+import { FormsModule } from '@angular/forms';
+import { NgIf } from '@angular/common';
 
 @Component({
-  selector: 'app-crisis-detail',
-  templateUrl: './crisis-detail.component.html',
-  styleUrls: ['./crisis-detail.component.css']
+    selector: 'app-crisis-detail',
+    templateUrl: './crisis-detail.component.html',
+    styleUrls: ['./crisis-detail.component.css'],
+    standalone: true,
+    imports: [NgIf, FormsModule]
 })
 export class CrisisDetailComponent implements OnInit {
   crisis!: Crisis;

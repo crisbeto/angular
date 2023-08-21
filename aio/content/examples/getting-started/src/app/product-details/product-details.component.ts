@@ -5,12 +5,15 @@ import { ActivatedRoute } from '@angular/router';
 
 import { Product, products } from '../products';
 import { CartService } from '../cart.service';
+import { NgIf, CurrencyPipe } from '@angular/common';
 // #enddocregion cart-service
 
 @Component({
-  selector: 'app-product-details',
-  templateUrl: './product-details.component.html',
-  styleUrls: ['./product-details.component.css']
+    selector: 'app-product-details',
+    templateUrl: './product-details.component.html',
+    styleUrls: ['./product-details.component.css'],
+    standalone: true,
+    imports: [NgIf, CurrencyPipe]
 })
 // #docregion inject-cart-service, add-to-cart
 export class ProductDetailsComponent implements OnInit {

@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
 
-@Component ({
-  selector: 'hello-world-interpolation',
-  templateUrl: './hello-world-interpolation.component.html'
+@Component({
+    selector: 'hello-world-interpolation',
+    templateUrl: './hello-world-interpolation.component.html',
+    standalone: true
 })
 export class HelloWorldInterpolationComponent {
     message = 'Hello, World!';

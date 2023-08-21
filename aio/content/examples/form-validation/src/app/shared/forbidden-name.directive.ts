@@ -14,10 +14,12 @@ export function forbiddenNameValidator(nameRe: RegExp): ValidatorFn {
 
 // #docregion directive
 @Directive({
-  selector: '[appForbiddenName]',
-  // #docregion directive-providers
-  providers: [{provide: NG_VALIDATORS, useExisting: ForbiddenValidatorDirective, multi: true}]
-  // #enddocregion directive-providers
+    selector: '[appForbiddenName]',
+    // #docregion directive-providers
+    providers: [{ provide: NG_VALIDATORS, useExisting: ForbiddenValidatorDirective, multi: true }]
+    // #enddocregion directive-providers
+    ,
+    standalone: true
 })
 export class ForbiddenValidatorDirective implements Validator {
   @Input('appForbiddenName') forbiddenName = '';

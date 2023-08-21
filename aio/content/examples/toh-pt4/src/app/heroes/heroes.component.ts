@@ -7,11 +7,15 @@ import { Hero } from '../hero';
 import { HeroService } from '../hero.service';
 // #enddocregion hero-service-import
 import { MessageService } from '../message.service';
+import { HeroDetailComponent } from '../hero-detail/hero-detail.component';
+import { NgFor } from '@angular/common';
 
 @Component({
-  selector: 'app-heroes',
-  templateUrl: './heroes.component.html',
-  styleUrls: ['./heroes.component.css']
+    selector: 'app-heroes',
+    templateUrl: './heroes.component.html',
+    styleUrls: ['./heroes.component.css'],
+    standalone: true,
+    imports: [NgFor, HeroDetailComponent]
 })
 export class HeroesComponent implements OnInit {
 

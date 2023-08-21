@@ -19,7 +19,8 @@ import { PLATFORM_ID, APP_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 
-@NgModule({
+@NgModule(/* TODO(standalone-migration): clean up removed NgModule class manually.
+{
   imports: [
     BrowserModule,
     FormsModule,
@@ -42,7 +43,7 @@ import { isPlatformBrowser } from '@angular/common';
     HeroSearchComponent
   ],
   bootstrap: [ AppComponent ]
-})
+} */)
 export class AppModule {
   constructor(
     // eslint-disable-next-line @typescript-eslint/ban-types

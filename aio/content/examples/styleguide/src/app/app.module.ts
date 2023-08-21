@@ -33,6 +33,7 @@ import * as s0701 from '../07-01/app/app.module';
 import * as s0704 from '../07-04/app/app.module';
 import * as s0901 from '../09-01/app/app.module';
 
+/* TODO(standalone-migration): clean up removed NgModule class manually. */
 @NgModule({
   imports: [
     BrowserModule,

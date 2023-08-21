@@ -1,15 +1,19 @@
 // #docplaster
 // #docregion imports
 import { Component } from '@angular/core';
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { CartService } from '../cart.service';
+import { NgFor, CurrencyPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 // #enddocregion imports
 
 @Component({
-  selector: 'app-cart',
-  templateUrl: './cart.component.html',
-  styleUrls: ['./cart.component.css']
+    selector: 'app-cart',
+    templateUrl: './cart.component.html',
+    styleUrls: ['./cart.component.css'],
+    standalone: true,
+    imports: [RouterLink, NgFor, FormsModule, ReactiveFormsModule, CurrencyPipe]
 })
 // #docregion inject-form-builder, checkout-form-group
 export class CartComponent {

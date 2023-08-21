@@ -6,14 +6,12 @@ import { HeroComponent } from './heroes';
 import { UsersComponent } from './users';
 
 @NgModule({
-  imports: [
-    RouterModule.forChild([{ path: '02-07', component: AppComponent }])
-  ],
-  declarations: [
-    AppComponent,
-    HeroComponent,
-    UsersComponent
-  ],
-  exports: [ AppComponent ]
+    imports: [
+        RouterModule.forChild([{ path: '02-07', component: AppComponent }]),
+        AppComponent,
+        HeroComponent,
+        UsersComponent
+    ],
+    exports: [AppComponent]
 })
 export class AppModule {}

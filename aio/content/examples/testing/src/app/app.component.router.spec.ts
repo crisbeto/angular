@@ -13,7 +13,7 @@ import {asyncData, click} from '../testing';
 import {AboutComponent} from './about/about.component';
 import {routes} from './app-routing.module';
 import {AppComponent} from './app.component';
-import {AppModule} from './app.module';
+
 import {DashboardComponent} from './dashboard/dashboard.component';
 import {HeroService, TestHeroService} from './model/testing/test-hero.service';
 import {TwainService} from './twain/twain.service';
@@ -29,9 +29,8 @@ describe('AppComponent & router testing', () => {
     TestBed
         .configureTestingModule({
           imports: [
-            AppModule,
-            RouterModule.forRoot(routes),
-          ],
+    RouterModule.forRoot(routes),
+],
           providers: [{provide: HeroService, useClass: TestHeroService}, provideLocationMocks()]
         })
         .compileComponents();
@@ -82,9 +81,7 @@ xdescribe('AppComponent & Lazy Loading (not working yet)', () => {
   beforeEach(waitForAsync(() => {
     TestBed
         .configureTestingModule({
-          imports: [
-            AppModule,
-          ],
+          imports: [],
           providers: [
             provideRouter(routes),
           ]

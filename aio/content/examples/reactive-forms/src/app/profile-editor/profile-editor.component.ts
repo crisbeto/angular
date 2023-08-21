@@ -1,15 +1,18 @@
 // #docplaster
 import { Component } from '@angular/core';
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 // #docregion validator-imports
 import { Validators } from '@angular/forms';
 // #enddocregion validator-imports
 import { FormArray } from '@angular/forms';
+import { NgFor, JsonPipe } from '@angular/common';
 
 @Component({
-  selector: 'app-profile-editor',
-  templateUrl: './profile-editor.component.html',
-  styleUrls: ['./profile-editor.component.css']
+    selector: 'app-profile-editor',
+    templateUrl: './profile-editor.component.html',
+    styleUrls: ['./profile-editor.component.css'],
+    standalone: true,
+    imports: [FormsModule, ReactiveFormsModule, NgFor, JsonPipe]
 })
 export class ProfileEditorComponent {
 // #docregion required-validator, aliases

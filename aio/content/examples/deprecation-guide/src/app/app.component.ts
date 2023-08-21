@@ -1,12 +1,13 @@
 // #docplaster
 import { Component, ContentChild, Input, OnInit, TemplateRef } from '@angular/core';
-import {
-  FormControl,
-} from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { NgFor } from '@angular/common';
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    standalone: true,
+    imports: [FormsModule, ReactiveFormsModule, NgFor]
 })
 export class AppComponent implements OnInit {
   title = 'example';

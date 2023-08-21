@@ -6,7 +6,8 @@ import { Input } from '@angular/core';
 // #docregion
 
 @Directive({
-  selector: '[appHighlight]'
+    selector: '[appHighlight]',
+    standalone: true
 })
 export class HighlightDirective {
 

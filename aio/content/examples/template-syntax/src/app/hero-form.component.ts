@@ -1,15 +1,17 @@
 import { Component, Input, ViewChild } from '@angular/core';
-import { NgForm } from '@angular/forms';
+import { NgForm, FormsModule } from '@angular/forms';
 
 import { Hero } from './hero';
 
 @Component({
-  selector: 'app-hero-form',
-  templateUrl: './hero-form.component.html',
-  styles: [`
+    selector: 'app-hero-form',
+    templateUrl: './hero-form.component.html',
+    styles: [`
     button { margin: 6px 0; }
     #heroForm { border: 1px solid black; margin: 20px 0; padding: 8px; max-width: 350px; }
-  `]
+  `],
+    standalone: true,
+    imports: [FormsModule]
 })
 export class HeroFormComponent {
   @Input() hero!: Hero;

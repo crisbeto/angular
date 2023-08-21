@@ -1,14 +1,22 @@
 // #docregion
 import { Component, OnInit } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { FormControl, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { forbiddenNameValidator } from '../shared/forbidden-name.directive';
 import { identityRevealedValidator } from '../shared/identity-revealed.directive';
 import { UniqueAlterEgoValidator } from '../shared/alter-ego.directive';
+import { NgIf, NgFor } from '@angular/common';
 
 @Component({
-  selector: 'app-hero-form-reactive',
-  templateUrl: './hero-form-reactive.component.html',
-  styleUrls: ['./hero-form-reactive.component.css'],
+    selector: 'app-hero-form-reactive',
+    templateUrl: './hero-form-reactive.component.html',
+    styleUrls: ['./hero-form-reactive.component.css'],
+    standalone: true,
+    imports: [
+        FormsModule,
+        ReactiveFormsModule,
+        NgIf,
+        NgFor,
+    ],
 })
 export class HeroFormReactiveComponent implements OnInit {
 

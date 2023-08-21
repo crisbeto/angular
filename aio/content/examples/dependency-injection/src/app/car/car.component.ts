@@ -13,8 +13,8 @@ import { useInjector } from './car-injector';
 
 
 @Component({
-  selector: 'app-car',
-  template: `
+    selector: 'app-car',
+    template: `
   <h2>Cars</h2>
   <div id="di">{{car.drive()}}</div>
   <div id="nodi">{{noDiCar.drive()}}</div>
@@ -24,7 +24,8 @@ import { useInjector } from './car-injector';
   <div id="super">{{superCar.drive()}}</div>
   <div id="test">{{testCar.drive()}}</div>
   `,
-  providers: [Car, Engine, Tires]
+    providers: [Car, Engine, Tires],
+    standalone: true
 })
 export class CarComponent {
   factoryCar  = (new CarFactory()).createCar();

@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 
-import { SharedModule } from '../shared/shared.module';
+
 
 import { CustomersComponent } from './customers.component';
 import { CustomersDetailComponent } from './customers-detail.component';
@@ -10,10 +10,7 @@ import { CustomersService } from './customers.service';
 
 
 @NgModule({
-  imports: [ SharedModule, CustomersRoutingModule ],
-  declarations: [
-    CustomersComponent, CustomersDetailComponent, CustomersListComponent,
-  ],
-  providers: [CustomersService]
+    imports: [CustomersRoutingModule, CustomersComponent, CustomersDetailComponent, CustomersListComponent],
+    providers: [CustomersService]
 })
 export class CustomersModule { }

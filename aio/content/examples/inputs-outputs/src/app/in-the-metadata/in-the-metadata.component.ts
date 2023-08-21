@@ -2,11 +2,12 @@
 import { Component, EventEmitter } from '@angular/core';
 
 @Component({
-  selector: 'app-in-the-metadata',
-  templateUrl: './in-the-metadata.component.html',
-  styleUrls: ['./in-the-metadata.component.css'],
-  inputs: ['clearanceItem'],
-  outputs: ['buyEvent']
+    selector: 'app-in-the-metadata',
+    templateUrl: './in-the-metadata.component.html',
+    styleUrls: ['./in-the-metadata.component.css'],
+    inputs: ['clearanceItem'],
+    outputs: ['buyEvent'],
+    standalone: true
 })
 export class InTheMetadataComponent  {
 

@@ -4,13 +4,17 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { Hero } from '../model/hero';
 import { HeroDetailService } from './hero-detail.service';
+import { FormsModule } from '@angular/forms';
+import { NgIf, TitleCasePipe } from '@angular/common';
 
 // #docregion prototype
 @Component({
-  selector:    'app-hero-detail',
-  templateUrl: './hero-detail.component.html',
-  styleUrls:  ['./hero-detail.component.css' ],
-  providers:  [ HeroDetailService ]
+    selector: 'app-hero-detail',
+    templateUrl: './hero-detail.component.html',
+    styleUrls: ['./hero-detail.component.css'],
+    providers: [HeroDetailService],
+    standalone: true,
+    imports: [NgIf, FormsModule, TitleCasePipe]
 })
 export class HeroDetailComponent implements OnInit {
   // #docregion ctor

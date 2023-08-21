@@ -1,8 +1,9 @@
 import { Component, HostBinding } from '@angular/core';
 
 @Component({
-  selector: 'comp-with-host-binding',
-  template: 'I am a component!',
+    selector: 'comp-with-host-binding',
+    template: 'I am a component!',
+    standalone: true,
 })
 export class CompWithHostBindingComponent {
   @HostBinding('class.special')

@@ -2,14 +2,14 @@
 /* eslint-disable @angular-eslint/no-output-native */
 // #docregion
 import { Component, Output, OnInit, EventEmitter, NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, AsyncPipe } from '@angular/common';
 import { Observable } from 'rxjs';
 
 // #docregion eventemitter
 
 @Component({
-  selector: 'app-zippy',
-  template: `
+    selector: 'app-zippy',
+    template: `
     <div class="zippy">
       <button type="button" (click)="toggle()">Toggle</button>
       <div [hidden]="!visible">
@@ -17,6 +17,7 @@ import { Observable } from 'rxjs';
       </div>
     </div>
   `,
+    standalone: true,
 })
 export class ZippyComponent {
   visible = true;
@@ -38,9 +39,11 @@ export class ZippyComponent {
 // #docregion pipe
 
 @Component({
-  selector: 'async-observable-pipe',
-  template: `<div><code>observable|async</code>:
-       Time: {{ time | async }}</div>`
+    selector: 'async-observable-pipe',
+    template: `<div><code>observable|async</code>:
+       Time: {{ time | async }}</div>`,
+    standalone: true,
+    imports: [AsyncPipe]
 })
 export class AsyncObservablePipeComponent {
   time = new Observable<string>(observer => {
@@ -56,8 +59,9 @@ import { Router, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-routable',
-  template: 'Routable1Component template'
+    selector: 'app-routable',
+    template: 'Routable1Component template',
+    standalone: true
 })
 export class Routable1Component implements OnInit {
 
@@ -83,8 +87,9 @@ export class Routable1Component implements OnInit {
 import { ActivatedRoute } from '@angular/router';
 
 @Component({
-  selector: 'app-routable',
-  template: 'Routable2Component template'
+    selector: 'app-routable',
+    template: 'Routable2Component template',
+    standalone: true
 })
 export class Routable2Component implements OnInit {
   constructor(private activatedRoute: ActivatedRoute) {}
@@ -103,8 +108,9 @@ export class Routable2Component implements OnInit {
 import { FormGroup } from '@angular/forms';
 
 @Component({
-  selector: 'my-component',
-  template: 'MyComponent Template'
+    selector: 'my-component',
+    template: 'MyComponent Template',
+    standalone: true
 })
 export class MyComponent implements OnInit {
   nameChangeLog: string[] = [];
@@ -125,10 +131,4 @@ export class MyComponent implements OnInit {
 
 
 
-@NgModule({
-  imports: [CommonModule],
-  declarations:
-      [ZippyComponent, AsyncObservablePipeComponent, Routable1Component, Routable2Component, MyComponent]
-})
-export class AppModule {
-}
+

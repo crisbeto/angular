@@ -3,11 +3,12 @@
 import { Directive } from '@angular/core';
 
 @Directive({
-  selector: '[tohValidator2]',
-  host: {
-    '[attr.role]': 'role',
-    '(mouseenter)': 'onMouseEnter()'
-  }
+    selector: '[tohValidator2]',
+    host: {
+        '[attr.role]': 'role',
+        '(mouseenter)': 'onMouseEnter()'
+    },
+    standalone: true
 })
 export class Validator2Directive {
   role = 'button';

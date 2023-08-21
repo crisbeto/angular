@@ -5,7 +5,10 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 import { Hero } from './heroes';
 
-@Pipe({ name: 'flyingHeroes' })
+@Pipe({
+    name: 'flyingHeroes',
+    standalone: true
+})
 export class FlyingHeroesPipe implements PipeTransform {
   transform(allHeroes: Hero[]) {
     // #docregion filter
@@ -19,8 +22,9 @@ export class FlyingHeroesPipe implements PipeTransform {
 // #docregion impure
 // #docregion pipe-decorator
 @Pipe({
-  name: 'flyingHeroesImpure',
-  pure: false
+    name: 'flyingHeroesImpure',
+    pure: false,
+    standalone: true
 })
 // #enddocregion pipe-decorator
 export class FlyingHeroesImpurePipe extends FlyingHeroesPipe {}

@@ -1,19 +1,5 @@
 // #docplaster
-import {
-  DemoModule,
-  BankAccountComponent, BankAccountParentComponent,
-  LightswitchComponent,
-  Child1Component, Child2Component, Child3Component,
-  MasterService,
-  ValueService,
-  ExternalTemplateComponent,
-  InputComponent,
-  IoComponent, IoParentComponent,
-  MyIfComponent, MyIfChildComponent, MyIfParentComponent,
-  NeedsContentComponent, ParentComponent,
-  TestProvidersComponent, TestViewProvidersComponent,
-  ReversePipeComponent, ShellComponent
-} from './demo';
+import { BankAccountComponent, BankAccountParentComponent, LightswitchComponent, Child1Component, Child2Component, Child3Component, MasterService, ValueService, ExternalTemplateComponent, InputComponent, IoComponent, IoParentComponent, MyIfComponent, MyIfChildComponent, MyIfParentComponent, NeedsContentComponent, ParentComponent, TestProvidersComponent, TestViewProvidersComponent, ReversePipeComponent, ShellComponent } from './demo';
 
 import { By } from '@angular/platform-browser';
 import { Component,
@@ -167,7 +153,7 @@ describe('demo (with TestBed):', () => {
     beforeEach(waitForAsync(() => {
       TestBed
         .configureTestingModule({
-          imports: [DemoModule],
+          imports: [],
         })
         // Compile everything in DemoModule
         .compileComponents();
@@ -434,8 +420,8 @@ describe('demo (with TestBed):', () => {
     it("should override ChildComp's template", () => {
 
       const fixture = TestBed.configureTestingModule({
-        declarations: [Child1Component],
-      })
+    imports: [Child1Component],
+})
         .overrideComponent(Child1Component, {
           set: { template: '<span>Fake</span>' }
         })
@@ -447,8 +433,8 @@ describe('demo (with TestBed):', () => {
 
     it("should override TestProvidersComp's ValueService provider", () => {
       const fixture = TestBed.configureTestingModule({
-        declarations: [TestProvidersComponent],
-      })
+    imports: [TestProvidersComponent],
+})
         .overrideComponent(TestProvidersComponent, {
           remove: { providers: [ValueService] },
           add: { providers: [{ provide: ValueService, useClass: FakeValueService }] },
@@ -476,8 +462,8 @@ describe('demo (with TestBed):', () => {
 
     it("should override TestViewProvidersComp's ValueService viewProvider", () => {
       const fixture = TestBed.configureTestingModule({
-        declarations: [TestViewProvidersComponent],
-      })
+    imports: [TestViewProvidersComponent],
+})
         .overrideComponent(TestViewProvidersComponent, {
           // remove: { viewProviders: [ValueService]},
           // add:    { viewProviders: [{ provide: ValueService, useClass: FakeValueService }] },
@@ -494,14 +480,17 @@ describe('demo (with TestBed):', () => {
     it("injected provider should not be same as component's provider", () => {
 
       // TestComponent is parent of TestProvidersComponent
-      @Component({ template: '<my-service-comp></my-service-comp>' })
+      @Component({
+    template: '<my-service-comp></my-service-comp>',
+    standalone: true
+})
       class TestComponent { }
 
       // 3 levels of ValueService provider: module, TestComponent, TestProvidersComponent
       const fixture = TestBed.configureTestingModule({
-        declarations: [TestComponent, TestProvidersComponent],
-        providers: [ValueService]
-      })
+    imports: [TestComponent, TestProvidersComponent],
+    providers: [ValueService]
+})
         .overrideComponent(TestComponent, {
           set: { providers: [{ provide: ValueService, useValue: {} }] }
         })
@@ -537,8 +526,8 @@ describe('demo (with TestBed):', () => {
 
     it('can access template local variables as references', () => {
       const fixture = TestBed.configureTestingModule({
-        declarations: [ShellComponent, NeedsContentComponent, Child1Component, Child2Component, Child3Component],
-      })
+    imports: [ShellComponent, NeedsContentComponent, Child1Component, Child2Component, Child3Component],
+})
         .overrideComponent(ShellComponent, {
           set: {
             selector: 'test-shell',
@@ -584,8 +573,8 @@ describe('demo (with TestBed):', () => {
 
     beforeEach(() => {
       TestBed.configureTestingModule({
-        declarations: [ParentComponent, FakeChildComponent]
-      });
+    imports: [ParentComponent, FakeChildComponent]
+});
     });
 
     it('ParentComp should use Fake Child component', () => {
@@ -599,8 +588,8 @@ describe('demo (with TestBed):', () => {
 
     beforeEach(() => {
       TestBed.configureTestingModule({
-        declarations: [ParentComponent, FakeChildWithGrandchildComponent, FakeGrandchildComponent]
-      });
+    imports: [ParentComponent, FakeChildWithGrandchildComponent, FakeGrandchildComponent]
+});
     });
 
     it('should use Fake Grandchild component', () => {
@@ -617,9 +606,8 @@ describe('demo (with TestBed):', () => {
 
     beforeEach(() => {
       TestBed.configureTestingModule({
-        imports: [FormsModule],
-        declarations: [MyIfChildComponent, MyIfParentComponent]
-      });
+    imports: [FormsModule, MyIfChildComponent, MyIfParentComponent]
+});
 
       fixture = TestBed.createComponent(MyIfParentComponent);
       parent = fixture.componentInstance;
@@ -746,20 +734,23 @@ describe('demo (with TestBed):', () => {
 ////////// Fakes ///////////
 
 @Component({
-  selector: 'child-1',
-  template: 'Fake Child'
+    selector: 'child-1',
+    template: 'Fake Child',
+    standalone: true
 })
 class FakeChildComponent { }
 
 @Component({
-  selector: 'child-1',
-  template: 'Fake Child(<grandchild-1></grandchild-1>)'
+    selector: 'child-1',
+    template: 'Fake Child(<grandchild-1></grandchild-1>)',
+    standalone: true
 })
 class FakeChildWithGrandchildComponent { }
 
 @Component({
-  selector: 'grandchild-1',
-  template: 'Fake Grandchild'
+    selector: 'grandchild-1',
+    template: 'Fake Grandchild',
+    standalone: true
 })
 class FakeGrandchildComponent { }
 

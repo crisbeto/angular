@@ -3,9 +3,10 @@ import { Component, OnInit, Input } from '@angular/core';
 // import { ITEMS } from '../mock-items';
 
 @Component({
-  selector: 'app-item-detail',
-  templateUrl: './item-detail.component.html',
-  styleUrls: ['./item-detail.component.css']
+    selector: 'app-item-detail',
+    templateUrl: './item-detail.component.html',
+    styleUrls: ['./item-detail.component.css'],
+    standalone: true
 })
 export class ItemDetailComponent {
 

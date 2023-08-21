@@ -3,7 +3,8 @@ import { Directive } from '@angular/core';
 
 // #docregion example
 @Directive({
-  selector: '[tohValidate]'
+    selector: '[tohValidate]',
+    standalone: true
 })
 export class ValidateDirective {}
 // #enddocregion example

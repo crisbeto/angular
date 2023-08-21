@@ -1,7 +1,9 @@
 import { Component, Directive, Input, TemplateRef, ContentChild, HostBinding, HostListener } from '@angular/core';
+import { NgIf, NgTemplateOutlet } from '@angular/common';
 
 @Directive({
-  selector: 'button[appExampleZippyToggle]',
+    selector: 'button[appExampleZippyToggle]',
+    standalone: true,
 })
 export class ZippyToggleDirective {
   @HostBinding('attr.aria-expanded') ariaExpanded = this.zippy.expanded;
@@ -16,7 +18,8 @@ let nextId = 0;
 
 // #docregion zippycontentdirective
 @Directive({
-  selector: '[appExampleZippyContent]'
+    selector: '[appExampleZippyContent]',
+    standalone: true
 })
 export class ZippyContentDirective {
   constructor(public templateRef: TemplateRef<unknown>) {}
@@ -24,8 +27,10 @@ export class ZippyContentDirective {
 // #enddocregion zippycontentdirective
 
 @Component({
-  selector: 'app-example-zippy',
-  templateUrl: 'example-zippy.template.html',
+    selector: 'app-example-zippy',
+    templateUrl: 'example-zippy.template.html',
+    standalone: true,
+    imports: [NgIf, NgTemplateOutlet],
 })
 export class ZippyComponent {
   contentId = `zippy-${nextId++}`;

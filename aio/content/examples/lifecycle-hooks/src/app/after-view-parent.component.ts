@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
 
 import { LoggerService } from './logger.service';
+import { AfterViewComponent } from './after-view.component';
+import { NgIf, NgFor } from '@angular/common';
 
 @Component({
-  selector: 'after-view-parent',
-  template: `
+    selector: 'after-view-parent',
+    template: `
   <h2>AfterView</h2>
 
   <after-view  *ngIf="show"></after-view>
@@ -15,7 +17,9 @@ import { LoggerService } from './logger.service';
     <div *ngFor="let msg of logger.logs" class="log">{{msg}}</div>
   </div>
   `,
-  providers: [LoggerService]
+    providers: [LoggerService],
+    standalone: true,
+    imports: [NgIf, AfterViewComponent, NgFor]
 })
 export class AfterViewParentComponent {
   show = true;

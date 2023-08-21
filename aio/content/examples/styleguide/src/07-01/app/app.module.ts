@@ -5,13 +5,11 @@ import { RouterModule } from '@angular/router';
 import { AppComponent } from './app.component';
 
 @NgModule({
-  imports: [
-    BrowserModule,
-    RouterModule.forChild([{ path: '07-01', component: AppComponent }])
-  ],
-  declarations: [
-    AppComponent
-  ],
-  exports: [ AppComponent ]
+    imports: [
+        BrowserModule,
+        RouterModule.forChild([{ path: '07-01', component: AppComponent }]),
+        AppComponent
+    ],
+    exports: [AppComponent]
 })
 export class AppModule {}

@@ -2,7 +2,8 @@
 import { Directive, HostBinding, HostListener } from '@angular/core';
 
 @Directive({
-  selector: '[tohValidator]'
+    selector: '[tohValidator]',
+    standalone: true
 })
 export class ValidatorDirective {
   @HostBinding('attr.role') role = 'button';

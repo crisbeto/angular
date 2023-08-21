@@ -18,24 +18,22 @@ import { AdminModule } from './admin/admin.module';
 // #docregion crisis-center-module
 
 @NgModule({
-  imports: [
-    CommonModule,
-    FormsModule,
-    HeroesModule,
-    CrisisCenterModule,
-// #enddocregion crisis-center-module
-    AdminModule,
-// #docregion crisis-center-module
-    AppRoutingModule
-  ],
-  declarations: [
-    AppComponent,
-// #enddocregion crisis-center-module
-    ComposeMessageComponent,
-// #docregion crisis-center-module
-    PageNotFoundComponent
-  ],
-  bootstrap: [ AppComponent ]
+    imports: [
+        CommonModule,
+        FormsModule,
+        HeroesModule,
+        CrisisCenterModule,
+        // #enddocregion crisis-center-module
+        AdminModule,
+        // #docregion crisis-center-module
+        AppRoutingModule,
+        // #enddocregion crisis-center-module
+        ComposeMessageComponent,
+        // #docregion crisis-center-module
+        PageNotFoundComponent
+    ],
+    declarations: [AppComponent],
+    bootstrap: [AppComponent]
 })
 export class AppModule { }
 // #enddocregion

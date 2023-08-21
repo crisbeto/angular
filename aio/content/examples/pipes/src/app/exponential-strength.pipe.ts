@@ -9,7 +9,10 @@ import { Pipe, PipeTransform } from '@angular/core';
  *   {{ 2 | exponentialStrength:10 }}
  *   formats to: 1024
 */
-@Pipe({name: 'exponentialStrength'})
+@Pipe({
+    name: 'exponentialStrength',
+    standalone: true
+})
 export class ExponentialStrengthPipe implements PipeTransform {
   transform(value: number, exponent = 1): number {
     return Math.pow(value, exponent);

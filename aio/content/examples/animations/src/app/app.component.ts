@@ -11,22 +11,24 @@ import {
 } from '@angular/animations';
 
 // #enddocregion imports
-import { ChildrenOutletContexts, RouterOutlet } from '@angular/router';
+import { ChildrenOutletContexts, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { slideInAnimation } from './animations';
 
 // #docregion decorator, toggle-app-animations, define
 @Component({
-  selector: 'app-root',
-  templateUrl: 'app.component.html',
-  styleUrls: ['app.component.css'],
-  animations: [
-// #enddocregion decorator
-    slideInAnimation
-// #docregion decorator
-// #enddocregion toggle-app-animations, define
-    // animation triggers go here
-// #docregion toggle-app-animations, define
-  ]
+    selector: 'app-root',
+    templateUrl: 'app.component.html',
+    styleUrls: ['app.component.css'],
+    animations: [
+        // #enddocregion decorator
+        slideInAnimation
+        // #docregion decorator
+        // #enddocregion toggle-app-animations, define
+        // animation triggers go here
+        // #docregion toggle-app-animations, define
+    ],
+    standalone: true,
+    imports: [RouterLink, RouterLinkActive, RouterOutlet]
 })
 // #enddocregion decorator, define
 export class AppComponent {

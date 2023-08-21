@@ -5,11 +5,11 @@ import { MovieService } from './movie.service';
 
 // #docregion component
 @Component({
-  selector: 'app-movie-list',
-  templateUrl: './movie-list.component.html',
-// #docregion style-url
-  styleUrls: [ './movie-list.component.css' ],
-// #enddocregion style-url
+    selector: 'app-movie-list',
+    templateUrl: './movie-list.component.html',
+    // #docregion style-url
+    styleUrls: ['./movie-list.component.css'],
+    standalone: true,
 })
 // #enddocregion component
 // #docregion class

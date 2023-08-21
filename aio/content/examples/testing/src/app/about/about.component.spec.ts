@@ -10,9 +10,10 @@ describe('AboutComponent (highlightDirective)', () => {
   // #docregion tests
   beforeEach(() => {
     fixture = TestBed.configureTestingModule({
-      declarations: [ AboutComponent, HighlightDirective ],
-      schemas:      [ CUSTOM_ELEMENTS_SCHEMA ]
-    })
+    imports: [HighlightDirective],
+    declarations: [AboutComponent],
+    schemas: [CUSTOM_ELEMENTS_SCHEMA]
+})
     .createComponent(AboutComponent);
     fixture.detectChanges(); // initial binding
   });

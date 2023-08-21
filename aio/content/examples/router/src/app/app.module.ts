@@ -19,28 +19,26 @@ import { HeroesModule } from './heroes/heroes.module';
 import { AuthModule } from './auth/auth.module';
 
 // #docregion animations-module
-@NgModule({
-  imports: [
+@NgModule(/* TODO(standalone-migration): clean up removed NgModule class manually.
+{
+    imports: [
+        // #enddocregion animations-module
+        BrowserModule,
+        // #docregion animations-module
+        BrowserAnimationsModule,
+        // #enddocregion animations-module
+        FormsModule,
+        HeroesModule,
+        AuthModule,
+        AppRoutingModule,
+        ComposeMessageComponent,
+        PageNotFoundComponent,
+    ],
     // #enddocregion animations-module
-    BrowserModule,
+    declarations: [AppComponent],
+    bootstrap: [AppComponent]
     // #docregion animations-module
-    BrowserAnimationsModule,
-    // #enddocregion animations-module
-    FormsModule,
-    HeroesModule,
-    AuthModule,
-    AppRoutingModule,
-    // #docregion animations-module
-  ],
-  // #enddocregion animations-module
-  declarations: [
-    AppComponent,
-    ComposeMessageComponent,
-    PageNotFoundComponent
-  ],
-  bootstrap: [ AppComponent ]
-// #docregion animations-module
-})
+} */)
 // #enddocregion animations-module
 export class AppModule {
 // #enddocregion preload, auth

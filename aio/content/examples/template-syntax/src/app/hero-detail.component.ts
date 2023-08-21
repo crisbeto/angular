@@ -2,20 +2,22 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 import { Hero } from './hero';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 
 @Component({
-  selector: 'app-hero-detail',
-  inputs: ['hero'],
-  outputs: ['deleteRequest'],
-  styles: ['button {margin-left: 8px} div {margin: 8px 0} img {height:24px}'],
-  template: `
+    selector: 'app-hero-detail',
+    inputs: ['hero'],
+    outputs: ['deleteRequest'],
+    styles: ['button {margin-left: 8px} div {margin: 8px 0} img {height:24px}'],
+    template: `
   <div>
     <img src="{{heroImageUrl}}" alt="{{hero.name}}">
     <span [style.text-decoration]="lineThrough">
       {{prefix}} {{hero.name}}
     </span>
     <button type="button" (click)="delete()">Delete</button>
-  </div>`
+  </div>`,
+    standalone: true
 })
 export class HeroDetailComponent {
   hero = new Hero(-1, '', 'Zzzzzzzz'); // default sleeping hero
@@ -35,8 +37,8 @@ export class HeroDetailComponent {
 }
 
 @Component({
-  selector: 'app-big-hero-detail',
-  template: `
+    selector: 'app-big-hero-detail',
+    template: `
   <div class="detail">
     <img src="{{heroImageUrl}}" alt="{{hero.name}}">
     <div><b>{{hero.name}}</b></div>
@@ -49,10 +51,12 @@ export class HeroDetailComponent {
     <button type="button" (click)="delete()">Delete</button>
   </div>
   `,
-  styles: [`
+    styles: [`
     .detail { border: 1px solid black; padding: 4px; max-width: 450px; }
     img     { float: left; margin-right: 8px; height: 100px; }
-  `]
+  `],
+    standalone: true,
+    imports: [CurrencyPipe, DatePipe]
 })
 export class BigHeroDetailComponent extends HeroDetailComponent {
 

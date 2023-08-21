@@ -1,6 +1,14 @@
 import { AfterViewInit, Component, ElementRef, OnInit, QueryList, ViewChildren } from '@angular/core';
 
 import { Hero } from './hero';
+import { SvgComponent } from './svg.component';
+import { HeroFormComponent } from './hero-form.component';
+import { HappyHeroComponent, SadHeroComponent, ConfusedHeroComponent, UnknownHeroComponent } from './hero-switch.components';
+import { SizerComponent } from './sizer.component';
+import { ClickDirective } from './click.directive';
+import { HeroDetailComponent, BigHeroDetailComponent } from './hero-detail.component';
+import { FormsModule } from '@angular/forms';
+import { NgFor, NgClass, NgStyle, NgIf, NgSwitch, NgSwitchCase, NgSwitchDefault, UpperCasePipe, LowerCasePipe, JsonPipe, CurrencyPipe, DatePipe } from '@angular/common';
 
 export enum Color {Red, Green, Blue}
 
@@ -8,9 +16,11 @@ export enum Color {Red, Green, Blue}
  * Giant grab bag of stuff to drive the chapter
  */
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: [ './app.component.css' ]
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    standalone: true,
+    imports: [NgFor, FormsModule, HeroDetailComponent, NgClass, ClickDirective, BigHeroDetailComponent, SizerComponent, NgStyle, NgIf, NgSwitch, NgSwitchCase, HappyHeroComponent, SadHeroComponent, ConfusedHeroComponent, NgSwitchDefault, UnknownHeroComponent, HeroFormComponent, SvgComponent, UpperCasePipe, LowerCasePipe, JsonPipe, CurrencyPipe, DatePipe]
 })
 export class AppComponent implements AfterViewInit, OnInit {
 

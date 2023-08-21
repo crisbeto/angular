@@ -13,10 +13,11 @@ import {
 } from '@angular/animations';
 
 import { Hero } from './hero';
+import { NgFor } from '@angular/common';
 
 @Component({
-  selector: 'app-hero-list-enter-leave',
-  template: `
+    selector: 'app-hero-list-enter-leave',
+    template: `
     <ul class="heroes">
       <li *ngFor="let hero of heroes"
           [@flyInOut]="'in'">
@@ -27,21 +28,24 @@ import { Hero } from './hero';
       </li>
     </ul>
   `,
-  styleUrls: ['./hero-list-page.component.css'],
-  // #docregion animationdef
-  animations: [
-    trigger('flyInOut', [
-      state('in', style({ transform: 'translateX(0)' })),
-      transition('void => *', [
-        style({ transform: 'translateX(-100%)' }),
-        animate(100)
-      ]),
-      transition('* => void', [
-        animate(100, style({ transform: 'translateX(100%)' }))
-      ])
-    ])
-  ]
-  // #enddocregion animationdef
+    styleUrls: ['./hero-list-page.component.css'],
+    // #docregion animationdef
+    animations: [
+        trigger('flyInOut', [
+            state('in', style({ transform: 'translateX(0)' })),
+            transition('void => *', [
+                style({ transform: 'translateX(-100%)' }),
+                animate(100)
+            ]),
+            transition('* => void', [
+                animate(100, style({ transform: 'translateX(100%)' }))
+            ])
+        ])
+    ]
+    // #enddocregion animationdef
+    ,
+    standalone: true,
+    imports: [NgFor]
 })
 export class HeroListEnterLeaveComponent {
   @Input() heroes: Hero[] = [];

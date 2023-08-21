@@ -3,8 +3,8 @@ import { Hero } from './hero';
 
 // #docregion inlinestyles
 @Component({
-  selector: 'app-hero-controls',
-  template: `
+    selector: 'app-hero-controls',
+    template: `
     <style>
       button {
         background-color: white;
@@ -13,7 +13,8 @@ import { Hero } from './hero';
     </style>
     <h3>Controls</h3>
     <button type="button" (click)="activate()">Activate</button>
-  `
+  `,
+    standalone: true
 })
 // #enddocregion inlinestyles
 export class HeroControlsComponent {

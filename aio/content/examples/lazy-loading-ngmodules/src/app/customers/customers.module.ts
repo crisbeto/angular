@@ -6,11 +6,11 @@ import { CustomersRoutingModule } from './customers-routing.module';
 import { CustomersComponent } from './customers.component';
 
 @NgModule({
-  imports: [
-    CommonModule,
-    CustomersRoutingModule
-  ],
-  declarations: [CustomersComponent]
+    imports: [
+        CommonModule,
+        CustomersRoutingModule,
+        CustomersComponent
+    ]
 })
 export class CustomersModule { }
 // #enddocregion customers-module

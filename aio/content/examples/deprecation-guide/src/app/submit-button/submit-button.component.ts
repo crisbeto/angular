@@ -2,12 +2,14 @@
 import { Component, Input } from '@angular/core';
 // #docregion submitButton, submitButtonNarrow
 @Component({
-  // #enddocregion submitButton, submitButtonNarrow
-// #docplaster
-  selector: 'app-submit-button',
-  templateUrl: './submit-button.component.html',
-  styleUrls: ['./submit-button.component.css']
-  // #docregion submitButton, submitButtonNarrow
+    // #enddocregion submitButton, submitButtonNarrow
+    // #docplaster
+    selector: 'app-submit-button',
+    templateUrl: './submit-button.component.html',
+    styleUrls: ['./submit-button.component.css']
+    // #docregion submitButton, submitButtonNarrow
+    ,
+    standalone: true
 })
 export class SubmitButtonComponent {
 // #enddocregion submitButtonNarrow

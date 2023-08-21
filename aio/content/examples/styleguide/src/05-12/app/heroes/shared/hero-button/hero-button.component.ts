@@ -3,8 +3,9 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 // #docregion example
 @Component({
-  selector: 'toh-hero-button',
-  template: `<button type="button">{{label}}</button>`
+    selector: 'toh-hero-button',
+    template: `<button type="button">{{label}}</button>`,
+    standalone: true
 })
 export class HeroButtonComponent {
   @Output() heroChange = new EventEmitter<any>();

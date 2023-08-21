@@ -35,7 +35,7 @@ describe('DashboardHeroComponent when tested directly', () => {
   beforeEach(waitForAsync(() => {
     // #docregion setup, config-testbed
     TestBed
-        .configureTestingModule({declarations: [DashboardHeroComponent]})
+        .configureTestingModule({ imports: [DashboardHeroComponent] })
         // #enddocregion setup, config-testbed
         .compileComponents();
   }));
@@ -120,7 +120,7 @@ describe('DashboardHeroComponent when inside a test host', () => {
   beforeEach(waitForAsync(() => {
     // #docregion test-host-setup
     TestBed
-        .configureTestingModule({declarations: [DashboardHeroComponent, TestHostComponent]})
+        .configureTestingModule({ imports: [DashboardHeroComponent, TestHostComponent] })
         // #enddocregion test-host-setup
         .compileComponents();
   }));
@@ -154,10 +154,11 @@ import { Component } from '@angular/core';
 
 // #docregion test-host
 @Component({
-  template: `
+    template: `
     <dashboard-hero
       [hero]="hero" (selected)="onSelected($event)">
-    </dashboard-hero>`
+    </dashboard-hero>`,
+    standalone: true
 })
 class TestHostComponent {
   hero: Hero = {id: 42, name: 'Test Name'};

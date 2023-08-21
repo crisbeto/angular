@@ -6,15 +6,18 @@ import { AdItem } from './ad-item';
 import { AdComponent } from './ad.component';
 
 @Component({
-  selector: 'app-ad-banner',
-  // #docregion ad-host
-  template: `
+    selector: 'app-ad-banner',
+    // #docregion ad-host
+    template: `
     <div class="ad-banner-example">
       <h3>Advertisements</h3>
       <ng-template adHost></ng-template>
     </div>
   `
-  // #enddocregion ad-host
+    // #enddocregion ad-host
+    ,
+    standalone: true,
+    imports: [AdDirective]
 })
 // #docregion class
 export class AdBannerComponent implements OnInit, OnDestroy {

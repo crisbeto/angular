@@ -1,10 +1,15 @@
 import { Component } from '@angular/core';
+import { ItemListComponent } from './item-list/item-list.component';
+import { ItemDetailComponent } from './item-detail/item-detail.component';
+import { NgClass } from '@angular/common';
 
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    standalone: true,
+    imports: [NgClass, ItemDetailComponent, ItemListComponent]
 })
 export class AppComponent {
   // #docregion item-image

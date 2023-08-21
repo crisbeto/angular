@@ -2,8 +2,9 @@ import { Component, Input } from '@angular/core';
 import { Item } from './item';
 
 @Component({
-  selector: 'app-stout-item',
-  template: "I'm a little {{item.name}}, short and stout!"
+    selector: 'app-stout-item',
+    template: "I'm a little {{item.name}}, short and stout!",
+    standalone: true
 })
 
 // #docregion input
@@ -14,32 +15,36 @@ export class StoutItemComponent {
 
 
 @Component({
-  selector: 'app-best-item',
-  template: 'This is the brightest {{item.name}} in town.'
+    selector: 'app-best-item',
+    template: 'This is the brightest {{item.name}} in town.',
+    standalone: true
 })
 export class BestItemComponent {
   @Input() item!: Item;
 }
 
 @Component({
-  selector: 'app-device-item',
-  template: 'Which is the slimmest {{item.name}}?'
+    selector: 'app-device-item',
+    template: 'Which is the slimmest {{item.name}}?',
+    standalone: true
 })
 export class DeviceItemComponent {
   @Input() item!: Item;
 }
 
 @Component({
-  selector: 'app-lost-item',
-  template: 'Has anyone seen my {{item.name}}?'
+    selector: 'app-lost-item',
+    template: 'Has anyone seen my {{item.name}}?',
+    standalone: true
 })
 export class LostItemComponent {
   @Input() item!: Item;
 }
 
 @Component({
-  selector: 'app-unknown-item',
-  template: '{{message}}'
+    selector: 'app-unknown-item',
+    template: '{{message}}',
+    standalone: true
 })
 export class UnknownItemComponent {
   @Input() item!: Item;

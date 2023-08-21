@@ -2,9 +2,10 @@ import { Component, Optional } from '@angular/core';
 import { OptionalService } from '../optional.service';
 
 @Component({
-  selector: 'app-optional',
-  templateUrl: './optional.component.html',
-  styleUrls: ['./optional.component.css']
+    selector: 'app-optional',
+    templateUrl: './optional.component.html',
+    styleUrls: ['./optional.component.css'],
+    standalone: true
 })
 
 // #docregion optional-component

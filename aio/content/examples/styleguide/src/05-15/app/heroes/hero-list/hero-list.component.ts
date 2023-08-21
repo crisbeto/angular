@@ -4,8 +4,9 @@ import { Component, OnInit } from '@angular/core';
 import { Hero, HeroService } from '../shared';
 
 @Component({
-  selector: 'toh-hero-list',
-  template: `...`
+    selector: 'toh-hero-list',
+    template: `...`,
+    standalone: true
 })
 export class HeroListComponent implements OnInit {
   heroes: Hero[] = [];

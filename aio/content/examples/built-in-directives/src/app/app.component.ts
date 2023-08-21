@@ -1,10 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { Item } from './item';
+import { StoutItemComponent, DeviceItemComponent, LostItemComponent, BestItemComponent, UnknownItemComponent } from './item-switch.component';
+import { ItemDetailComponent } from './item-detail/item-detail.component';
+import { NgClass, NgStyle, NgIf, NgFor, NgSwitch, NgSwitchCase, NgSwitchDefault, JsonPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    standalone: true,
+    imports: [FormsModule, NgClass, NgStyle, NgIf, ItemDetailComponent, NgFor, NgSwitch, NgSwitchCase, StoutItemComponent, DeviceItemComponent, LostItemComponent, BestItemComponent, NgSwitchDefault, UnknownItemComponent, JsonPipe]
 })
 export class AppComponent implements OnInit {
 

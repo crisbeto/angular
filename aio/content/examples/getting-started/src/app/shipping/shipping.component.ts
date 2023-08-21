@@ -4,12 +4,15 @@ import { Component, OnInit } from '@angular/core';
 
 import { Observable } from 'rxjs';
 import { CartService } from '../cart.service';
+import { NgFor, AsyncPipe, CurrencyPipe } from '@angular/common';
 // #enddocregion
 
 @Component({
-  selector: 'app-shipping',
-  templateUrl: './shipping.component.html',
-  styleUrls: ['./shipping.component.css']
+    selector: 'app-shipping',
+    templateUrl: './shipping.component.html',
+    styleUrls: ['./shipping.component.css'],
+    standalone: true,
+    imports: [NgFor, AsyncPipe, CurrencyPipe]
 })
 // #docregion props
 export class ShippingComponent implements OnInit {

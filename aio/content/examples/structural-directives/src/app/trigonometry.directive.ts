@@ -1,6 +1,9 @@
 import { Directive, Input, TemplateRef, ViewContainerRef } from '@angular/core';
 
-@Directive({ selector: '[appTrigonometry]' })
+@Directive({
+    selector: '[appTrigonometry]',
+    standalone: true
+})
 export class TrigonometryDirective {
   private isViewCreated = false;
   private readonly context = new TrigonometryContext();

@@ -2,10 +2,14 @@
 import { Component } from '@angular/core';
 
 import { FilterTextService } from '../shared/filter-text/filter-text.service';
+import { FilterTextComponent } from '../shared/filter-text/filter-text.component';
+import { NgFor } from '@angular/common';
 
 @Component({
-  selector: 'toh-heroes',
-  templateUrl: './heroes.component.html'
+    selector: 'toh-heroes',
+    templateUrl: './heroes.component.html',
+    standalone: true,
+    imports: [NgFor, FilterTextComponent]
 })
 export class HeroesComponent {
 

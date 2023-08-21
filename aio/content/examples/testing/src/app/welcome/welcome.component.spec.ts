@@ -72,13 +72,13 @@ describe('WelcomeComponent', () => {
 
     // #docregion config-test-module
     TestBed.configureTestingModule({
-       declarations: [ WelcomeComponent ],
+    declarations: [WelcomeComponent],
     // #enddocregion setup
     // providers: [ UserService ],  // NO! Don't provide the real service!
-                                    // Provide a test-double instead
+    // Provide a test-double instead
     // #docregion setup
-       providers: [ { provide: UserService, useValue: userServiceStub } ],
-    });
+    providers: [{ provide: UserService, useValue: userServiceStub }],
+});
     // #enddocregion config-test-module
 
     fixture = TestBed.createComponent(WelcomeComponent);

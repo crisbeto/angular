@@ -26,12 +26,12 @@ describe('PhoneDetailComponent', () => {
 
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
-      declarations: [ CheckmarkPipe, PhoneDetailComponent ],
-      providers: [
+    declarations: [CheckmarkPipe, PhoneDetailComponent],
+    providers: [
         { provide: Phone, useClass: MockPhone },
         { provide: ActivatedRoute, useValue: new ActivatedRouteMock({ params: { phoneId: 1 } }) }
-      ]
-    })
+    ]
+})
     .compileComponents();
   }));
 

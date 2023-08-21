@@ -4,13 +4,15 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-key-up1',
-// #docregion key-up-component-1-template
-  template: `
+    selector: 'app-key-up1',
+    // #docregion key-up-component-1-template
+    template: `
     <input (keyup)="onKey($event)">
     <p>{{values}}</p>
   `
-// #enddocregion key-up-component-1-template
+    // #enddocregion key-up-component-1-template
+    ,
+    standalone: true
 })
 // #docregion key-up-component-1-class, key-up-component-1-class-no-type
 export class KeyUpComponent_v1 {
@@ -37,11 +39,12 @@ export class KeyUpComponent_v1 {
 
 // #docregion key-up-component-2
 @Component({
-  selector: 'app-key-up2',
-  template: `
+    selector: 'app-key-up2',
+    template: `
     <input #box (keyup)="onKey(box.value)">
     <p>{{values}}</p>
-  `
+  `,
+    standalone: true
 })
 export class KeyUpComponent_v2 {
   values = '';
@@ -55,11 +58,12 @@ export class KeyUpComponent_v2 {
 
 // #docregion key-up-component-3
 @Component({
-  selector: 'app-key-up3',
-  template: `
+    selector: 'app-key-up3',
+    template: `
     <input #box (keyup.enter)="onEnter(box.value)">
     <p>{{value}}</p>
-  `
+  `,
+    standalone: true
 })
 export class KeyUpComponent_v3 {
   value = '';
@@ -71,14 +75,15 @@ export class KeyUpComponent_v3 {
 
 // #docregion key-up-component-4
 @Component({
-  selector: 'app-key-up4',
-  template: `
+    selector: 'app-key-up4',
+    template: `
     <input #box
       (keyup.enter)="update(box.value)"
       (blur)="update(box.value)">
 
     <p>{{value}}</p>
-  `
+  `,
+    standalone: true
 })
 export class KeyUpComponent_v4 {
   value = '';

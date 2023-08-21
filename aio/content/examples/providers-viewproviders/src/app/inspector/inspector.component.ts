@@ -3,9 +3,10 @@ import { FlowerService } from '../flower.service';
 import { AnimalService } from '../animal.service';
 
 @Component({
-  selector: 'app-inspector',
-  templateUrl: './inspector.component.html',
-  styleUrls: ['./inspector.component.css']
+    selector: 'app-inspector',
+    templateUrl: './inspector.component.html',
+    styleUrls: ['./inspector.component.css'],
+    standalone: true
 })
 // #docregion injection
 export class InspectorComponent {

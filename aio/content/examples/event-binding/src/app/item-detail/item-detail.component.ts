@@ -3,9 +3,10 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Item } from '../item';
 
 @Component({
-  selector: 'app-item-detail',
-  styleUrls: ['./item-detail.component.css'],
-  templateUrl: './item-detail.component.html'
+    selector: 'app-item-detail',
+    styleUrls: ['./item-detail.component.css'],
+    templateUrl: './item-detail.component.html',
+    standalone: true
 })
 export class ItemDetailComponent {
 

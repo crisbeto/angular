@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-root',
-  template: `
+    selector: 'app-root',
+    template: `
     <app-greeting></app-greeting>
     <nav>
       <a routerLink="contact" routerLinkActive="active" ariaCurrentWhenActive="page">Contact</a>
@@ -10,7 +10,8 @@ import { Component } from '@angular/core';
       <a routerLink="customers" routerLinkActive="active" ariaCurrentWhenActive="page">Customers</a>
     </nav>
     <router-outlet></router-outlet>
-  `
+  `,
+    standalone: true
 })
 export class AppComponent {
 }

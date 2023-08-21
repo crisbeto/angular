@@ -2,14 +2,18 @@ import { Component } from '@angular/core';
 import { Hero } from '../hero';
 // #docregion import-heroes
 import { HEROES } from '../mock-heroes';
+import { FormsModule } from '@angular/forms';
+import { NgFor, NgIf, UpperCasePipe } from '@angular/common';
 // #enddocregion import-heroes
 
 // #docplaster
 // #docregion metadata
 @Component({
-  selector: 'app-heroes',
-  templateUrl: './heroes.component.html',
-  styleUrls: ['./heroes.component.css']
+    selector: 'app-heroes',
+    templateUrl: './heroes.component.html',
+    styleUrls: ['./heroes.component.css'],
+    standalone: true,
+    imports: [NgFor, NgIf, FormsModule, UpperCasePipe]
 })
 // #enddocregion metadata
 

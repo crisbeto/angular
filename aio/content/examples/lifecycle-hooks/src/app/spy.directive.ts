@@ -8,7 +8,10 @@ let nextId = 1;
 
 // Spy on any element to which it is applied.
 // Usage: <div appSpy>...</div>
-@Directive({selector: '[appSpy]'})
+@Directive({
+    selector: '[appSpy]',
+    standalone: true
+})
 export class SpyDirective implements OnInit, OnDestroy {
   private id = nextId++;
 

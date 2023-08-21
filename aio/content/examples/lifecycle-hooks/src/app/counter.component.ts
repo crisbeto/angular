@@ -3,17 +3,21 @@ import {
   Component, Input,
   OnChanges, SimpleChanges,
 } from '@angular/core';
+import { SpyDirective } from './spy.directive';
+import { NgFor } from '@angular/common';
 
 @Component({
-  selector: 'app-counter',
-  template: `
+    selector: 'app-counter',
+    template: `
     <p>Counter = {{counter}}</p>
 
     <div class="info">
       <h3>Counter Change Log</h3>
       <div *ngFor="let chg of changeLog" appSpy class="log">{{chg}}</div>
     </div>
-  `
+  `,
+    standalone: true,
+    imports: [NgFor, SpyDirective]
 })
 export class MyCounterComponent implements OnChanges {
   @Input() counter = 0;

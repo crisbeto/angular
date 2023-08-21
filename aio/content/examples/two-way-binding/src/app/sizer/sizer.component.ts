@@ -1,9 +1,10 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 @Component({
-  selector: 'app-sizer',
-  templateUrl: './sizer.component.html',
-  styleUrls: ['./sizer.component.css']
+    selector: 'app-sizer',
+    templateUrl: './sizer.component.html',
+    styleUrls: ['./sizer.component.css'],
+    standalone: true
 })
 // #docregion sizer-component
 export class SizerComponent {

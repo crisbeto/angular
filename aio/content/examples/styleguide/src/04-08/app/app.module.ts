@@ -11,17 +11,16 @@ import { AppComponent } from './app.component';
 import { HeroesComponent } from './heroes/heroes.component';
 
 @NgModule({
-  imports: [
-    BrowserModule,
-// #enddocregion example
-    RouterModule.forChild([{ path: '04-08', component: AppComponent }])
-// #docregion example
-  ],
-  declarations: [
-    AppComponent,
-    HeroesComponent
-  ],
-  exports: [ AppComponent ]
+    imports: [
+        BrowserModule,
+        // #enddocregion example
+        RouterModule.forChild([{ path: '04-08', component: AppComponent }])
+        // #docregion example
+        ,
+        AppComponent,
+        HeroesComponent
+    ],
+    exports: [AppComponent]
 })
 export class AppModule {}
 // #enddocregion example

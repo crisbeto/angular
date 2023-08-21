@@ -16,19 +16,17 @@ import { PageNotFoundComponent } from './page-not-found/page-not-found.component
 import { AdminModule } from './admin/admin.module';
 
 @NgModule({
-  imports: [
-    CommonModule,
-    FormsModule,
-    HeroesModule,
-    CrisisCenterModule,
-    AdminModule,
-    AppRoutingModule
-  ],
-  declarations: [
-    AppComponent,
-    ComposeMessageComponent,
-    PageNotFoundComponent
-  ],
-  bootstrap: [ AppComponent ]
+    imports: [
+        CommonModule,
+        FormsModule,
+        HeroesModule,
+        CrisisCenterModule,
+        AdminModule,
+        AppRoutingModule,
+        ComposeMessageComponent,
+        PageNotFoundComponent
+    ],
+    declarations: [AppComponent],
+    bootstrap: [AppComponent]
 })
 export class AppModule { }

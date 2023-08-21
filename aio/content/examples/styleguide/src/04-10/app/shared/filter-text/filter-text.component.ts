@@ -1,9 +1,12 @@
 // #docregion
 import { Component, EventEmitter, Output } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'toh-filter-text',
-  template: '<input type="text" id="filterText" [(ngModel)]="filter" (keyup)="filterChanged($event)" />'
+    selector: 'toh-filter-text',
+    template: '<input type="text" id="filterText" [(ngModel)]="filter" (keyup)="filterChanged($event)" />',
+    standalone: true,
+    imports: [FormsModule]
 })
 export class FilterTextComponent {
   @Output() changed: EventEmitter<string>;

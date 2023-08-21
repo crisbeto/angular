@@ -3,9 +3,10 @@ import { LeafService } from '../leaf.service';
 
 // #docregion self-no-data-component
 @Component({
-  selector: 'app-self-no-data',
-  templateUrl: './self-no-data.component.html',
-  styleUrls: ['./self-no-data.component.css']
+    selector: 'app-self-no-data',
+    templateUrl: './self-no-data.component.html',
+    styleUrls: ['./self-no-data.component.css'],
+    standalone: true
 })
 export class SelfNoDataComponent {
   constructor(@Self() @Optional() public leaf?: LeafService) { }

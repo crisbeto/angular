@@ -1,13 +1,15 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 @Component({
-  template: `
+    template: `
     <h3 highlight>Item Detail</h3>
     <div>Item id: {{id}}</div>
     <br>
     <a routerLink="../list">Items List</a>
-  `
+  `,
+    standalone: true,
+    imports: [RouterLink]
 })
 export class ItemsDetailComponent implements OnInit {
   id = 0;

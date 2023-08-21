@@ -1,8 +1,12 @@
 import { Component } from '@angular/core';
+import { CarsComponent } from './car.components';
+import { VillainsListComponent } from './villains-list.component';
+import { HeroesListComponent } from './heroes-list.component';
+import { NgIf } from '@angular/common';
 
 @Component({
-  selector: 'app-root',
-  template: `
+    selector: 'app-root',
+    template: `
     <label for="showHeroes">
       <input id="showHeroes" type="checkbox" [checked]="showHeroes"   (change)="showHeroes=!showHeroes">
       Heroes
@@ -21,7 +25,9 @@ import { Component } from '@angular/core';
     <app-heroes-list   *ngIf="showHeroes"></app-heroes-list>
     <app-villains-list *ngIf="showVillains"></app-villains-list>
     <app-cars       *ngIf="showCars"></app-cars>
-  `
+  `,
+    standalone: true,
+    imports: [NgIf, HeroesListComponent, VillainsListComponent, CarsComponent]
 })
 export class AppComponent {
   showCars = true;

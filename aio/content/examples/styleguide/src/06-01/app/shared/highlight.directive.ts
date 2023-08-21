@@ -3,7 +3,8 @@ import { Directive, HostListener } from '@angular/core';
 
 // #docregion example
 @Directive({
-  selector: '[tohHighlight]'
+    selector: '[tohHighlight]',
+    standalone: true
 })
 export class HighlightDirective {
   @HostListener('mouseover') onMouseEnter() {

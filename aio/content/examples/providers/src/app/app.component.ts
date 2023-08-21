@@ -1,15 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 
 import { User, UserService } from './user.service';
+import { NgFor } from '@angular/common';
 
 // #docregion component-providers
 @Component({
-  // #enddocregion component-providers
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css'],
-  // #docregion component-providers
-  providers: [UserService]
+    // #enddocregion component-providers
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    // #docregion component-providers
+    providers: [UserService],
+    standalone: true,
+    imports: [NgFor]
 })
 // #enddocregion component-providers
 export class AppComponent implements OnInit {

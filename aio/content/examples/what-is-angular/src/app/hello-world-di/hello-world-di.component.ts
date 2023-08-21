@@ -2,8 +2,9 @@ import { Component } from '@angular/core';
 import { Logger } from '../logger.service';
 
 @Component({
-  selector: 'hello-world-di',
-  templateUrl: './hello-world-di.component.html'
+    selector: 'hello-world-di',
+    templateUrl: './hello-world-di.component.html',
+    standalone: true
 })
 export class HelloWorldDependencyInjectionComponent  {
   count = 0;

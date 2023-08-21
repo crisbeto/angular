@@ -3,8 +3,9 @@ import { Component, Input } from '@angular/core';
 import { Hero } from '../shared/hero.model';
 
 @Component({
-  selector: 'toh-hero',
-  template: `...`
+    selector: 'toh-hero',
+    template: `...`,
+    standalone: true
 })
 export class HeroComponent {
   @Input() hero!: Hero;

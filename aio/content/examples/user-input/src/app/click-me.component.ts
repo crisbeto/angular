@@ -9,10 +9,11 @@ import { Component } from '@angular/core';
 
 // #docregion click-me-component
 @Component({
-  selector: 'app-click-me',
-  template: `
+    selector: 'app-click-me',
+    template: `
     <button type="button" (click)="onClickMe()">Click me!</button>
-    {{clickMessage}}`
+    {{clickMessage}}`,
+    standalone: true
 })
 export class ClickMeComponent {
   clickMessage = '';

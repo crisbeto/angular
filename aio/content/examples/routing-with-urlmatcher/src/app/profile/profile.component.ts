@@ -4,12 +4,15 @@ import { ActivatedRoute, ParamMap } from '@angular/router';
 // #enddocregion activated-route-and-parammap
 // #docregion rxjs-map
 import { map } from 'rxjs/operators';
+import { AsyncPipe } from '@angular/common';
 // #enddocregion rxjs-map
 
 @Component({
-  selector: 'app-profile',
-  templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.css']
+    selector: 'app-profile',
+    templateUrl: './profile.component.html',
+    styleUrls: ['./profile.component.css'],
+    standalone: true,
+    imports: [AsyncPipe]
 })
 export class ProfileComponent {
 // #docregion subscribe

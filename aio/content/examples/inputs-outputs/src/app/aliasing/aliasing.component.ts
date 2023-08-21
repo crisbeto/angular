@@ -5,11 +5,12 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
-  selector: 'app-aliasing',
-  templateUrl: './aliasing.component.html',
-  styleUrls: ['./aliasing.component.css'],
-  inputs: ['input1: saveForLaterItem'], // propertyName:alias
-  outputs: ['outputEvent1: saveForLaterEvent']
+    selector: 'app-aliasing',
+    templateUrl: './aliasing.component.html',
+    styleUrls: ['./aliasing.component.css'],
+    inputs: ['input1: saveForLaterItem'],
+    outputs: ['outputEvent1: saveForLaterEvent'],
+    standalone: true
 })
 export class AliasingComponent {
 

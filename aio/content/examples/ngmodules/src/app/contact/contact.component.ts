@@ -1,15 +1,20 @@
 // Exact copy except import UserService from greeting
 import {Component, OnInit} from '@angular/core';
-import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import {UserService} from '../greeting/user.service';
 
 import {Contact, ContactService} from './contact.service';
+import { AwesomePipe } from '../shared/awesome.pipe';
+import { HighlightDirective } from '../shared/highlight.directive';
+import { NgIf } from '@angular/common';
 
 @Component({
-  selector: 'app-contact',
-  templateUrl: './contact.component.html',
-  styleUrls: ['./contact.component.css']
+    selector: 'app-contact',
+    templateUrl: './contact.component.html',
+    styleUrls: ['./contact.component.css'],
+    standalone: true,
+    imports: [NgIf, FormsModule, ReactiveFormsModule, HighlightDirective, AwesomePipe]
 })
 export class ContactComponent implements OnInit {
   contact!: Contact;

@@ -17,11 +17,13 @@ import { UserService } from './user.service';
 const template = '{{log}}';
 
 @Component({
-  selector: 'provider-1',
-  template,
-  // #docregion providers-logger
-  providers: [Logger]
-  // #enddocregion providers-logger
+    selector: 'provider-1',
+    template,
+    // #docregion providers-logger
+    providers: [Logger]
+    // #enddocregion providers-logger
+    ,
+    standalone: true
 })
 export class Provider1Component {
   log: string;
@@ -34,12 +36,14 @@ export class Provider1Component {
 //////////////////////////////////////////
 
 @Component({
-  selector: 'provider-3',
-  template,
-  providers:
+    selector: 'provider-3',
+    template,
+    providers:
     // #docregion providers-3
     [{ provide: Logger, useClass: Logger }]
     // #enddocregion providers-3
+    ,
+    standalone: true
 })
 export class Provider3Component {
   log: string;
@@ -53,12 +57,14 @@ export class Provider3Component {
 export class BetterLogger extends Logger {}
 
 @Component({
-  selector: 'provider-4',
-  template,
-  providers:
+    selector: 'provider-4',
+    template,
+    providers:
     // #docregion providers-4
     [{ provide: Logger, useClass: BetterLogger }]
     // #enddocregion providers-4
+    ,
+    standalone: true
 })
 export class Provider4Component {
   log: string;
@@ -83,13 +89,15 @@ export class EvenBetterLogger extends Logger {
 // #enddocregion EvenBetterLogger
 
 @Component({
-  selector: 'provider-5',
-  template,
-  providers:
+    selector: 'provider-5',
+    template,
+    providers:
     // #docregion providers-5
-    [ UserService,
-      { provide: Logger, useClass: EvenBetterLogger }]
+    [UserService,
+        { provide: Logger, useClass: EvenBetterLogger }]
     // #enddocregion providers-5
+    ,
+    standalone: true
 })
 export class Provider5Component {
   log: string;
@@ -111,12 +119,12 @@ export class OldLogger {
 }
 
 @Component({
-  selector: 'provider-6a',
-  template,
-  providers:
-    [ NewLogger,
-      // Not aliased! Creates two instances of `NewLogger`
-      { provide: OldLogger, useClass: NewLogger}]
+    selector: 'provider-6a',
+    template,
+    providers: [NewLogger,
+        // Not aliased! Creates two instances of `NewLogger`
+        { provide: OldLogger, useClass: NewLogger }],
+    standalone: true
 })
 export class Provider6aComponent {
   log: string;
@@ -132,14 +140,16 @@ export class Provider6aComponent {
 }
 
 @Component({
-  selector: 'provider-6b',
-  template,
-  providers:
+    selector: 'provider-6b',
+    template,
+    providers:
     // #docregion providers-6b
-    [ NewLogger,
-      // Alias OldLogger w/ reference to NewLogger
-      { provide: OldLogger, useExisting: NewLogger}]
+    [NewLogger,
+        // Alias OldLogger w/ reference to NewLogger
+        { provide: OldLogger, useExisting: NewLogger }]
     // #enddocregion providers-6b
+    ,
+    standalone: true
 })
 export class Provider6bComponent {
   log: string;
@@ -163,10 +173,10 @@ export const SilentLogger = {
 };
 
 @Component({
-  selector: 'provider-7',
-  template,
-  providers:
-    [{ provide: Logger, useValue: SilentLogger }]
+    selector: 'provider-7',
+    template,
+    providers: [{ provide: Logger, useValue: SilentLogger }],
+    standalone: true
 })
 export class Provider7Component {
   log: string;
@@ -179,9 +189,10 @@ export class Provider7Component {
 /////////////////
 
 @Component({
-  selector: 'provider-8',
-  template,
-  providers: [heroServiceProvider, Logger, UserService]
+    selector: 'provider-8',
+    template,
+    providers: [heroServiceProvider, Logger, UserService],
+    standalone: true
 })
 export class Provider8Component {
   // must be true else this component would have blown up at runtime
@@ -193,17 +204,19 @@ export class Provider8Component {
 /////////////////
 
 @Component({
-  selector: 'provider-9',
-  template,
-  /*
-   // #docregion providers-9-interface
-   // Can't use interface as provider token
-   [{ provide: AppConfig, useValue: HERO_DI_CONFIG })]
-   // #enddocregion providers-9-interface
-   */
-  // #docregion providers-9
-  providers: [{ provide: APP_CONFIG, useValue: HERO_DI_CONFIG }]
-  // #enddocregion providers-9
+    selector: 'provider-9',
+    template,
+    /*
+     // #docregion providers-9-interface
+     // Can't use interface as provider token
+     [{ provide: AppConfig, useValue: HERO_DI_CONFIG })]
+     // #enddocregion providers-9-interface
+     */
+    // #docregion providers-9
+    providers: [{ provide: APP_CONFIG, useValue: HERO_DI_CONFIG }]
+    // #enddocregion providers-9
+    ,
+    standalone: true
 })
 export class Provider9Component implements OnInit {
   log = '';
@@ -228,9 +241,10 @@ import { Optional } from '@angular/core';
 const someMessage = 'Hello from the injected logger';
 
 @Component({
-  selector: 'provider-10',
-  template,
-  providers: [{ provide: Logger, useValue: null }]
+    selector: 'provider-10',
+    template,
+    providers: [{ provide: Logger, useValue: null }],
+    standalone: true
 })
 export class Provider10Component implements OnInit {
   log = '';
@@ -248,8 +262,8 @@ export class Provider10Component implements OnInit {
 /////////////////
 
 @Component({
-  selector: 'app-providers',
-  template: `
+    selector: 'app-providers',
+    template: `
   <h2>Provider variations</h2>
   <div id="p1"><provider-1></provider-1></div>
   <div id="p3"><provider-3></provider-3></div>
@@ -261,6 +275,8 @@ export class Provider10Component implements OnInit {
   <div id="p8"><provider-8></provider-8></div>
   <div id="p9"><provider-9></provider-9></div>
   <div id="p10"><provider-10></provider-10></div>
-  `
+  `,
+    standalone: true,
+    imports: [Provider1Component, Provider3Component, Provider4Component, Provider5Component, Provider6aComponent, Provider6bComponent, Provider7Component, Provider8Component, Provider9Component, Provider10Component]
 })
 export class ProvidersComponent { }

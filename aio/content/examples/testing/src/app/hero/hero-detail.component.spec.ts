@@ -7,7 +7,7 @@ import {RouterTestingHarness} from '@angular/router/testing';
 
 import {asyncData, click} from '../../testing';
 import {Hero} from '../model/hero';
-import {SharedModule} from '../shared/shared.module';
+
 
 import {HeroDetailComponent} from './hero-detail.component';
 import {HeroDetailService} from './hero-detail.service';
@@ -214,14 +214,13 @@ function formsModuleSetup() {
   beforeEach(async () => {
     await TestBed
         .configureTestingModule({
-          imports: [FormsModule],
-          declarations: [HeroDetailComponent, TitleCasePipe],
-          providers: [
-            provideHttpClient(),
-            provideHttpClientTesting(),
-            provideRouter([{path: 'heroes/:id', component: HeroDetailComponent}]),
-          ]
-        })
+    imports: [FormsModule, HeroDetailComponent, TitleCasePipe],
+    providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'heroes/:id', component: HeroDetailComponent }]),
+    ]
+})
         .compileComponents();
   });
   // #enddocregion setup-forms-module
@@ -241,14 +240,13 @@ function sharedModuleSetup() {
   beforeEach(async () => {
     await TestBed
         .configureTestingModule({
-          imports: [SharedModule],
-          declarations: [HeroDetailComponent],
-          providers: [
-            provideRouter([{path: 'heroes/:id', component: HeroDetailComponent}]),
-            provideHttpClient(),
-            provideHttpClientTesting(),
-          ]
-        })
+    imports: [HeroDetailComponent],
+    providers: [
+        provideRouter([{ path: 'heroes/:id', component: HeroDetailComponent }]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+    ]
+})
         .compileComponents();
   });
   // #enddocregion setup-shared-module

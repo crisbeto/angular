@@ -7,15 +7,27 @@ import {provideRouter, Router, RouterLink} from '@angular/router';
 import {AppComponent} from './app.component';
 
 // #docregion component-stubs
-@Component({selector: 'app-banner', template: ''})
+@Component({
+    selector: 'app-banner', template: '',
+    standalone: true,
+    imports: [RouterLink]
+})
 class BannerStubComponent {
 }
 
-@Component({selector: 'router-outlet', template: ''})
+@Component({
+    selector: 'router-outlet', template: '',
+    standalone: true,
+    imports: [RouterLink]
+})
 class RouterOutletStubComponent {
 }
 
-@Component({selector: 'app-welcome', template: ''})
+@Component({
+    selector: 'app-welcome', template: '',
+    standalone: true,
+    imports: [RouterLink]
+})
 class WelcomeStubComponent {
 }
 // #enddocregion component-stubs
@@ -28,11 +40,10 @@ describe('AppComponent & TestModule', () => {
     // #docregion testbed-stubs
     TestBed
         .configureTestingModule({
-          imports: [RouterLink],
-          providers: [provideRouter([])],
-          declarations:
-              [AppComponent, BannerStubComponent, RouterOutletStubComponent, WelcomeStubComponent]
-        })
+    imports: [RouterLink, BannerStubComponent, RouterOutletStubComponent, WelcomeStubComponent],
+    providers: [provideRouter([])],
+    declarations: [AppComponent]
+})
         // #enddocregion testbed-stubs
         .compileComponents()
         .then(() => {
@@ -49,16 +60,13 @@ describe('AppComponent & NO_ERRORS_SCHEMA', () => {
     // #docregion no-errors-schema, mixed-setup
     TestBed
         .configureTestingModule({
-          declarations: [
-            AppComponent,
-            // #enddocregion no-errors-schema
-            BannerStubComponent,
-            // #docregion no-errors-schema
-          ],
-          providers: [provideRouter([])],
-          imports: [RouterLink],
-          schemas: [NO_ERRORS_SCHEMA]
-        })
+    declarations: [AppComponent],
+    providers: [provideRouter([])],
+    imports: [RouterLink,
+        // #enddocregion no-errors-schema
+        BannerStubComponent],
+    schemas: [NO_ERRORS_SCHEMA]
+})
         // #enddocregion no-errors-schema, mixed-setup
         .compileComponents()
         .then(() => {
@@ -70,19 +78,19 @@ describe('AppComponent & NO_ERRORS_SCHEMA', () => {
 });
 
 //////// Testing w/ real root module //////
-import {AppModule} from './app.module';
+
 import {AppRoutingModule} from './app-routing.module';
 
 describe('AppComponent & AppModule', () => {
   beforeEach(waitForAsync(() => {
     TestBed
         .configureTestingModule({
-          imports: [AppModule],
+          imports: [],
         })
 
         // Get rid of app's Router configuration otherwise many failures.
         // Doing so removes Router declarations; add the Router stubs
-        .overrideModule(AppModule, {
+        .overrideModule( /* TODO(standalone-migration): clean up removed NgModule reference manually. */ AppModule, {
           remove: {imports: [AppRoutingModule]},
           add: {
             declarations: [RouterOutletStubComponent],

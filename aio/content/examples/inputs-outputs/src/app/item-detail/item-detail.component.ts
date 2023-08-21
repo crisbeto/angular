@@ -4,9 +4,10 @@ import { Component, Input } from '@angular/core'; // First, import Input
 // #enddocregion use-input
 
 @Component({
-  selector: 'app-item-detail',
-  templateUrl: './item-detail.component.html',
-  styleUrls: ['./item-detail.component.css']
+    selector: 'app-item-detail',
+    templateUrl: './item-detail.component.html',
+    styleUrls: ['./item-detail.component.css'],
+    standalone: true
 })
 
 // #docregion use-input

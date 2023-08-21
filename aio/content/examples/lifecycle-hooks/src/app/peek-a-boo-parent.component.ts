@@ -2,10 +2,12 @@
 import { Component } from '@angular/core';
 
 import { LoggerService } from './logger.service';
+import { PeekABooComponent } from './peek-a-boo.component';
+import { NgIf, NgFor } from '@angular/common';
 
 @Component({
-  selector: 'peek-a-boo-parent',
-  template: `
+    selector: 'peek-a-boo-parent',
+    template: `
   <hr />
   <div class="parent">
     <h2>Peek-A-Boo</h2>
@@ -23,7 +25,9 @@ import { LoggerService } from './logger.service';
     </div>
   </div>
   `,
-  providers:  [ LoggerService ]
+    providers: [LoggerService],
+    standalone: true,
+    imports: [NgIf, PeekABooComponent, NgFor]
 })
 export class PeekABooParentComponent {
 

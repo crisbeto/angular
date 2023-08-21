@@ -1,9 +1,10 @@
 import { Component, Output, EventEmitter } from '@angular/core';
 
 @Component({
-  selector: 'app-item-output',
-  templateUrl: './item-output.component.html',
-  styleUrls: ['./item-output.component.css']
+    selector: 'app-item-output',
+    templateUrl: './item-output.component.html',
+    styleUrls: ['./item-output.component.css'],
+    standalone: true
 })
 // #docregion item-output-class
 export class ItemOutputComponent {

@@ -1,14 +1,18 @@
 // #docregion
 import { Component } from '@angular/core';
+import { DatePipe } from '@angular/common';
 
 @Component({
-  selector: 'app-hero-birthday2',
-  // #docregion template
-  template: `
+    selector: 'app-hero-birthday2',
+    // #docregion template
+    template: `
     <p>The hero's birthday is {{ birthday | date:format }}</p>
     <button type="button" (click)="toggleFormat()">Toggle Format</button>
   `
-  // #enddocregion template
+    // #enddocregion template
+    ,
+    standalone: true,
+    imports: [DatePipe]
 })
 // #docregion class
 export class HeroBirthday2Component {

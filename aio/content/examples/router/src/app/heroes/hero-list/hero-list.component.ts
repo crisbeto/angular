@@ -7,16 +7,19 @@ import { switchMap } from 'rxjs/operators';
 // #enddocregion rxjs-imports
 import { Component, OnInit } from '@angular/core';
 // #docregion import-router
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 // #enddocregion import-router
 
 import { HeroService } from '../hero.service';
 import { Hero } from '../hero';
+import { NgFor, AsyncPipe } from '@angular/common';
 
 @Component({
-  selector: 'app-hero-list',
-  templateUrl: './hero-list.component.html',
-  styleUrls: ['./hero-list.component.css']
+    selector: 'app-hero-list',
+    templateUrl: './hero-list.component.html',
+    styleUrls: ['./hero-list.component.css'],
+    standalone: true,
+    imports: [NgFor, RouterLink, AsyncPipe]
 })
 // #docregion ctor
 export class HeroListComponent implements OnInit {

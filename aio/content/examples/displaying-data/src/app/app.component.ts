@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
 
 import { Hero } from './hero';
+import { NgFor, NgIf } from '@angular/common';
 
 @Component({
-  selector: 'app-root',
-  template: `
+    selector: 'app-root',
+    template: `
   <h1>{{title}}</h1>
   <h2>My favorite hero is: {{myHero.name}}</h2>
   <p>Heroes:</p>
@@ -14,7 +15,9 @@ import { Hero } from './hero';
       </li>
   </ul>
   <p *ngIf="heroes.length > 3">There are many heroes!</p>
-`
+`,
+    standalone: true,
+    imports: [NgFor, NgIf]
 })
 export class AppComponent {
   title = 'Tour of Heroes';

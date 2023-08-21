@@ -11,7 +11,7 @@ describe('Favorite Color Component', () => {
   beforeEach(waitForAsync(() => {
     TestBed
         .configureTestingModule(
-            {imports: [ReactiveFormsModule], declarations: [FavoriteColorComponent]})
+            { imports: [ReactiveFormsModule, FavoriteColorComponent] })
         .compileComponents();
   }));
 

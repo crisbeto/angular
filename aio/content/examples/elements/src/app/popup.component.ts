@@ -3,19 +3,19 @@ import { Component, EventEmitter, HostBinding, Input, Output } from '@angular/co
 import { animate, state, style, transition, trigger } from '@angular/animations';
 
 @Component({
-  selector: 'my-popup',
-  template: `
+    selector: 'my-popup',
+    template: `
     <span>Popup: {{message}}</span>
     <button type="button" (click)="closed.next()">&#x2716;</button>
   `,
-  animations: [
-    trigger('state', [
-      state('opened', style({transform: 'translateY(0%)'})),
-      state('void, closed', style({transform: 'translateY(100%)', opacity: 0})),
-      transition('* => *', animate('100ms ease-in')),
-    ])
-  ],
-  styles: [`
+    animations: [
+        trigger('state', [
+            state('opened', style({ transform: 'translateY(0%)' })),
+            state('void, closed', style({ transform: 'translateY(100%)', opacity: 0 })),
+            transition('* => *', animate('100ms ease-in')),
+        ])
+    ],
+    styles: [`
     :host {
       position: absolute;
       bottom: 0;
@@ -34,7 +34,8 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
     button {
       border-radius: 50%;
     }
-  `]
+  `],
+    standalone: true
 })
 export class PopupComponent {
   @HostBinding('@state')

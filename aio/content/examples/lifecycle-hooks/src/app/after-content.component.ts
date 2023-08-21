@@ -4,21 +4,24 @@ import { AfterContentChecked, AfterContentInit, Component, ContentChild } from '
 
 import { ChildComponent } from './child.component';
 import { LoggerService } from './logger.service';
+import { NgIf } from '@angular/common';
 
 @Component({
-  selector: 'after-content',
-// #docregion template
-  template: `
+    selector: 'after-content',
+    // #docregion template
+    template: `
     <div>projected content begins</div>
       <ng-content></ng-content>
     <div>projected content ends</div>
   `
-// #enddocregion template
-   + `
+        // #enddocregion template
+        + `
     <p *ngIf="comment" class="comment">
       {{comment}}
     </p>
-  `
+  `,
+    standalone: true,
+    imports: [NgIf]
 })
 // #docregion hooks
 export class AfterContentComponent implements AfterContentChecked, AfterContentInit {

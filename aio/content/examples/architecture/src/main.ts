@@ -1,7 +1,22 @@
 // #docregion
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 
-import { AppModule } from './app/app.module';
 
-platformBrowserDynamic().bootstrapModule(AppModule)
+import { importProvidersFrom } from '@angular/core';
+import { AppComponent } from './app/app.component';
+import { FormsModule } from '@angular/forms';
+import { BrowserModule, provideProtractorTestingSupport, bootstrapApplication } from '@angular/platform-browser';
+import { Logger } from './app/logger.service';
+import { HeroService } from './app/hero.service';
+import { BackendService } from './app/backend.service';
+
+bootstrapApplication(AppComponent, {
+    providers: [
+        importProvidersFrom(BrowserModule, FormsModule),
+        BackendService,
+        HeroService,
+        Logger,
+        provideProtractorTestingSupport()
+    ]
+})
   .catch(err => console.error(err));

@@ -8,11 +8,12 @@ import { HeroService } from './heroes/hero.service';
 import { HeroListComponent } from './heroes/hero-list.component';
 
 @Component({
-  selector: 'app-tests',
-  template: `
+    selector: 'app-tests',
+    template: `
     <h2>Tests</h2>
     <p id="tests">Tests {{results.pass}}: {{results.message}}</p>
-  `
+  `,
+    standalone: true
 })
 export class TestComponent {
   results = runTests();

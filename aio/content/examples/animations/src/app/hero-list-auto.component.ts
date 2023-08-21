@@ -13,22 +13,26 @@ import {
 } from '@angular/animations';
 
 import { Hero } from './hero';
+import { NgFor } from '@angular/common';
 
 @Component({
-  selector: 'app-hero-list-auto',
-  templateUrl: 'hero-list-auto.component.html',
-  styleUrls: ['./hero-list-page.component.css'],
-  // #docregion auto-calc
-  animations: [
-    trigger('shrinkOut', [
-      state('in', style({ height: '*' })),
-      transition('* => void', [
-        style({ height: '*' }),
-        animate(250, style({ height: 0 }))
-      ])
-    ])
-  ]
-  // #enddocregion auto-calc
+    selector: 'app-hero-list-auto',
+    templateUrl: 'hero-list-auto.component.html',
+    styleUrls: ['./hero-list-page.component.css'],
+    // #docregion auto-calc
+    animations: [
+        trigger('shrinkOut', [
+            state('in', style({ height: '*' })),
+            transition('* => void', [
+                style({ height: '*' }),
+                animate(250, style({ height: 0 }))
+            ])
+        ])
+    ]
+    // #enddocregion auto-calc
+    ,
+    standalone: true,
+    imports: [NgFor]
 })
 export class HeroListAutoComponent {
    @Input() heroes: Hero[] = [];

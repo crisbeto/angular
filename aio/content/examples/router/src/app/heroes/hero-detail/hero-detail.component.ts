@@ -7,11 +7,15 @@ import {switchMap} from 'rxjs/operators';
 
 import {Hero} from '../hero';
 import {HeroService} from '../hero.service';
+import { FormsModule } from '@angular/forms';
+import { NgIf, AsyncPipe } from '@angular/common';
 
 @Component({
-  selector: 'app-hero-detail',
-  templateUrl: './hero-detail.component.html',
-  styleUrls: ['./hero-detail.component.css']
+    selector: 'app-hero-detail',
+    templateUrl: './hero-detail.component.html',
+    styleUrls: ['./hero-detail.component.css'],
+    standalone: true,
+    imports: [NgIf, FormsModule, AsyncPipe]
 })
 export class HeroDetailComponent implements OnInit {
   hero$!: Observable<Hero>;

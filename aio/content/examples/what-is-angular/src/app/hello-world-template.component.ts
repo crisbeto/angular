@@ -8,8 +8,9 @@ import { Component } from '@angular/core';
         <h2>Hello World Template</h2>
         <button type="button" (click)="onEditClick()">Make text editable!</button>
         <p [contentEditable]="canEdit">{{ message }}</p>
-        `
-  })
+        `,
+    standalone: true
+})
   export class HelloWorldTemplateComponent {
     message = 'I am read only!';
     canEdit = false;

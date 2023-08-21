@@ -18,8 +18,9 @@ import { LoggerService } from './logger.service';
 import { PeekABooDirective } from './peek-a-boo.directive';
 
 @Component({
-  selector: 'peek-a-boo',
-  template: '<p>Now you see my hero, {{name}}</p>'
+    selector: 'peek-a-boo',
+    template: '<p>Now you see my hero, {{name}}</p>',
+    standalone: true
 })
 // Don't HAVE to mention the Lifecycle Hook interfaces
 // unless we want typing and tool support.

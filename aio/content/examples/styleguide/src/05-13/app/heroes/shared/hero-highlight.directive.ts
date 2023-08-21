@@ -2,7 +2,10 @@
 import { Directive, ElementRef, Input, OnChanges } from '@angular/core';
 
 // eslint-disable-next-line @angular-eslint/directive-selector
-@Directive({ selector: '[heroHighlight]' })
+@Directive({
+    selector: '[heroHighlight]',
+    standalone: true
+})
 export class HeroHighlightDirective implements OnChanges {
 
   // Aliased because `color` is a better property name than `heroHighlight`

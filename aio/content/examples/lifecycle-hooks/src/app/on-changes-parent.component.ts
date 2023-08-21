@@ -2,11 +2,14 @@ import { Component, ViewChild } from '@angular/core';
 
 import { Hero } from './hero';
 import { OnChangesComponent } from './on-changes.component';
+import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'on-changes-parent',
-  templateUrl: './on-changes-parent.component.html',
-  styles: ['']
+    selector: 'on-changes-parent',
+    templateUrl: './on-changes-parent.component.html',
+    styles: [''],
+    standalone: true,
+    imports: [FormsModule, OnChangesComponent]
 })
 export class OnChangesParentComponent {
   hero!: Hero;

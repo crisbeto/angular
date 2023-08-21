@@ -8,9 +8,8 @@ import { UserServiceConfig } from './user.service';
 
 
 @NgModule({
-  imports:      [ CommonModule ],
-  declarations: [ GreetingComponent ],
-  exports:      [ GreetingComponent ]
+    imports: [CommonModule, GreetingComponent],
+    exports: [GreetingComponent]
 })
 export class GreetingModule {
   // #docregion ctor

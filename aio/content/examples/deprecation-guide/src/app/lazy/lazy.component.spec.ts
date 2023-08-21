@@ -8,8 +8,8 @@ describe('LazyComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ LazyComponent ]
-    })
+    imports: [LazyComponent]
+})
     .compileComponents();
   });
 

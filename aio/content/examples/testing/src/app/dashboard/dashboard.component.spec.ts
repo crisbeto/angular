@@ -45,7 +45,7 @@ describe('DashboardComponent (deep)', () => {
 describe('DashboardComponent (shallow)', () => {
   beforeEach(() => {
     TestBed.configureTestingModule(
-        {declarations: [DashboardComponent], schemas: [NO_ERRORS_SCHEMA]});
+        { imports: [DashboardComponent], schemas: [NO_ERRORS_SCHEMA] });
   });
 
   compileAndCreate();

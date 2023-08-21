@@ -9,7 +9,7 @@ describe('FavoriteColorComponent', () => {
   let fixture: ComponentFixture<FavoriteColorComponent>;
 
   beforeEach(waitForAsync(() => {
-    TestBed.configureTestingModule({imports: [FormsModule], declarations: [FavoriteColorComponent]})
+    TestBed.configureTestingModule({ imports: [FormsModule, FavoriteColorComponent] })
         .compileComponents();
   }));
 

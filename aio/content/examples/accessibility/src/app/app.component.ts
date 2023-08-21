@@ -1,9 +1,12 @@
 import { Component } from '@angular/core';
+import { ExampleProgressbarComponent } from './progress-bar.component';
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: [ './app.component.css' ]
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    standalone: true,
+    imports: [ExampleProgressbarComponent]
 })
 export class AppComponent  {
   progress = 0;

@@ -3,11 +3,16 @@
 import { Component } from '@angular/core';
 
 import { HEROES } from './heroes';
+import { FlyingHeroesPipe, FlyingHeroesImpurePipe } from './flying-heroes.pipe';
+import { NgFor } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-flying-heroes',
-  templateUrl: './flying-heroes.component.html',
-  styles: ['#flyers, #all {font-style: italic}', 'button {display: block}', 'input {margin: .25rem .25rem .5rem 0;}']
+    selector: 'app-flying-heroes',
+    templateUrl: './flying-heroes.component.html',
+    styles: ['#flyers, #all {font-style: italic}', 'button {display: block}', 'input {margin: .25rem .25rem .5rem 0;}'],
+    standalone: true,
+    imports: [FormsModule, NgFor, FlyingHeroesPipe]
 })
 // #docregion v1
 export class FlyingHeroesComponent {
@@ -46,9 +51,15 @@ export class FlyingHeroesComponent {
 
 ////// Identical except for impure pipe //////
 @Component({
-  selector: 'app-flying-heroes-impure',
-  templateUrl: './flying-heroes-impure.component.html',
-  styles: ['#flyers, #all {font-style: italic}', 'button {display: block}', 'input {margin: .25rem .25rem .5rem 0;}'],
+    selector: 'app-flying-heroes-impure',
+    templateUrl: './flying-heroes-impure.component.html',
+    styles: ['#flyers, #all {font-style: italic}', 'button {display: block}', 'input {margin: .25rem .25rem .5rem 0;}'],
+    standalone: true,
+    imports: [
+        FormsModule,
+        NgFor,
+        FlyingHeroesImpurePipe,
+    ],
 })
 export class FlyingHeroesImpureComponent extends FlyingHeroesComponent {
   override title = 'Flying Heroes (impure pipe)';

@@ -3,17 +3,20 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 
 import { Hero } from './hero';
+import { NgFor } from '@angular/common';
 
 @Component({
-  selector: 'on-changes',
-  template: `
+    selector: 'on-changes',
+    template: `
   <div class="info">
     <p>{{hero.name}} can {{power}}</p>
 
     <h3>Change Log</h3>
     <div *ngFor="let chg of changeLog" class="log">{{chg}}</div>
   </div>
-  `
+  `,
+    standalone: true,
+    imports: [NgFor]
 })
 export class OnChangesComponent implements OnChanges {
 // #docregion inputs

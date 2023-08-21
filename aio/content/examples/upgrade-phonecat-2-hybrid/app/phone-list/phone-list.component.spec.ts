@@ -27,14 +27,14 @@ describe('PhoneList', () => {
   beforeEach(waitForAsync(() => {
     TestBed
         .configureTestingModule({
-          declarations: [PhoneListComponent],
-          providers: [
-            {provide: ActivatedRoute, useValue: new ActivatedRouteMock({params: {phoneId: 1}})},
-            {provide: Location, useClass: SpyLocation},
-            {provide: Phone, useClass: MockPhone},
-          ],
-          schemas: [NO_ERRORS_SCHEMA]
-        })
+    declarations: [PhoneListComponent],
+    providers: [
+        { provide: ActivatedRoute, useValue: new ActivatedRouteMock({ params: { phoneId: 1 } }) },
+        { provide: Location, useClass: SpyLocation },
+        { provide: Phone, useClass: MockPhone },
+    ],
+    schemas: [NO_ERRORS_SCHEMA]
+})
         .compileComponents();
   }));
 

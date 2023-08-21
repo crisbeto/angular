@@ -5,8 +5,8 @@ import { MissionService } from './mission.service';
 import { Subscription } from 'rxjs';
 
 @Component({
-  selector: 'app-astronaut',
-  template: `
+    selector: 'app-astronaut',
+    template: `
     <p>
       {{astronaut}}: <strong>{{mission}}</strong>
       <button
@@ -16,7 +16,8 @@ import { Subscription } from 'rxjs';
         Confirm
       </button>
     </p>
-  `
+  `,
+    standalone: true
 })
 export class AstronautComponent implements OnDestroy {
   @Input() astronaut = '';

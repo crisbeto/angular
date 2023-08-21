@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { NgIf, UpperCasePipe, LowerCasePipe, JsonPipe, CurrencyPipe, DatePipe } from '@angular/common';
 
 
 interface Item {
@@ -9,9 +10,11 @@ interface Item {
 }
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    standalone: true,
+    imports: [NgIf, UpperCasePipe, LowerCasePipe, JsonPipe, CurrencyPipe, DatePipe]
 })
 export class AppComponent {
   title = 'Template Expression Operators';

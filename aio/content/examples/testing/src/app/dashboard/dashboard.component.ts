@@ -4,11 +4,16 @@ import {Router} from '@angular/router';
 
 import {Hero} from '../model/hero';
 import {HeroService} from '../model/hero.service';
+import { DashboardHeroComponent } from './dashboard-hero.component';
+import { NgFor } from '@angular/common';
+import { HighlightDirective } from '../shared/highlight.directive';
 
 @Component({
-  selector: 'app-dashboard',
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css']
+    selector: 'app-dashboard',
+    templateUrl: './dashboard.component.html',
+    styleUrls: ['./dashboard.component.css'],
+    standalone: true,
+    imports: [HighlightDirective, NgFor, DashboardHeroComponent]
 })
 export class DashboardComponent implements OnInit {
   heroes: Hero[] = [];

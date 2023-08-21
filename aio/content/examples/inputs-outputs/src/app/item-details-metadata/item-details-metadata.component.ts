@@ -6,8 +6,9 @@ import { Component, Input } from '@angular/core'; // First, import Input
 import { booleanAttribute } from '@angular/core'; // First, import booleanAttribute
 // #enddocregion use-input-metadata-boolean-transform
 @Component({
-  selector: 'app-item-detail-metadata',
-  templateUrl: './item-details-metadata.component.html'
+    selector: 'app-item-detail-metadata',
+    templateUrl: './item-details-metadata.component.html',
+    standalone: true
 })
 
 

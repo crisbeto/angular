@@ -4,10 +4,12 @@ import { Observable } from 'rxjs';
 
 import { Hero, HeroTaxReturn } from './hero';
 import { HeroesService } from './heroes.service';
+import { HeroTaxReturnComponent } from './hero-tax-return.component';
+import { NgFor, AsyncPipe } from '@angular/common';
 
 @Component({
-  selector: 'app-heroes-list',
-  template: `
+    selector: 'app-heroes-list',
+    template: `
     <div>
       <h3>Hero Tax Returns</h3>
       <ul>
@@ -22,13 +24,15 @@ import { HeroesService } from './heroes.service';
       </app-hero-tax-return>
     </div>
     `,
-  styles: [`
+    styles: [`
     li button {
       font-size: inherit;
       margin: 0.3rem;
       padding: 0.5rem;
     }
-  `]
+  `],
+    standalone: true,
+    imports: [NgFor, HeroTaxReturnComponent, AsyncPipe]
 })
 export class HeroesListComponent {
   heroes: Observable<Hero[]>;

@@ -2,8 +2,9 @@ import { HttpClient } from '@angular/common/http';
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'fetch',
-  pure: false
+    name: 'fetch',
+    pure: false,
+    standalone: true
 })
 export class FetchJsonPipe implements PipeTransform {
   private cachedData: any = null;

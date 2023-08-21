@@ -8,8 +8,8 @@ describe('SubmitButtonComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ SubmitButtonComponent ]
-    })
+    imports: [SubmitButtonComponent]
+})
     .compileComponents();
   });
 

@@ -3,11 +3,12 @@ import { LeafService } from '../leaf.service';
 
 // #docregion skipself-component
 @Component({
-  selector: 'app-skipself',
-  templateUrl: './skipself.component.html',
-  styleUrls: ['./skipself.component.css'],
-  // Angular would ignore this LeafService instance
-  providers: [{ provide: LeafService, useValue: { emoji: '🍁' } }]
+    selector: 'app-skipself',
+    templateUrl: './skipself.component.html',
+    styleUrls: ['./skipself.component.css'],
+    // Angular would ignore this LeafService instance
+    providers: [{ provide: LeafService, useValue: { emoji: '🍁' } }],
+    standalone: true
 })
 export class SkipselfComponent {
   // Use @SkipSelf() in the constructor

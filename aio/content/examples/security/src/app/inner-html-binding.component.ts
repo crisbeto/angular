@@ -2,8 +2,9 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-inner-html-binding',
-  templateUrl: './inner-html-binding.component.html',
+    selector: 'app-inner-html-binding',
+    templateUrl: './inner-html-binding.component.html',
+    standalone: true,
 })
 // #docregion class
 export class InnerHtmlBindingComponent {

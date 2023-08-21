@@ -4,12 +4,13 @@ import { PopupService } from './popup.service';
 import { PopupComponent } from './popup.component';
 
 @Component({
-  selector: 'app-root',
-  template: `
+    selector: 'app-root',
+    template: `
     <input #input value="Message">
     <button type="button" (click)="popup.showAsComponent(input.value)">Show as component</button>
     <button type="button" (click)="popup.showAsElement(input.value)">Show as element</button>
   `,
+    standalone: true,
 })
 export class AppComponent {
   constructor(injector: Injector, public popup: PopupService) {

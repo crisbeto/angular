@@ -5,7 +5,8 @@
 import { Directive } from '@angular/core';
 
 @Directive({
-  selector: '[appItem]'
+    selector: '[appItem]',
+    standalone: true
 })
 export class ItemDirective {
 // code goes here

@@ -1,20 +1,23 @@
 import { Component } from '@angular/core';
 
 import { LoggerService } from './logger.service';
+import { ChildComponent } from './child.component';
+import { AfterContentComponent } from './after-content.component';
+import { NgIf, NgFor } from '@angular/common';
 
 @Component({
-  selector: 'after-content-parent',
-  template: `
+    selector: 'after-content-parent',
+    template: `
   <div class="parent">
     <h2>AfterContent</h2>
 
     <div *ngIf="show">` +
-      // #docregion parent-template
-      `<after-content>
+        // #docregion parent-template
+        `<after-content>
         <app-child></app-child>
       </after-content>`
-      // #enddocregion parent-template
-    + `</div>
+        // #enddocregion parent-template
+        + `</div>
 
     <div class="info">
       <h3>AfterContent Logs</h3>
@@ -23,7 +26,9 @@ import { LoggerService } from './logger.service';
     </div>
   </div>
   `,
-  providers: [LoggerService]
+    providers: [LoggerService],
+    standalone: true,
+    imports: [NgIf, AfterContentComponent, ChildComponent, NgFor]
 })
 export class AfterContentParentComponent {
   show = true;
