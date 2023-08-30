@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AST, BindingPipe, BindingType, BoundTarget, Call, DYNAMIC_TYPE, ImplicitReceiver, ParsedEventType, ParseSourceSpan, PropertyRead, PropertyWrite, SafeCall, SafePropertyRead, SchemaMetadata, ThisReceiver, TmplAstBoundAttribute, TmplAstBoundEvent, TmplAstBoundText, TmplAstDeferredBlock, TmplAstElement, TmplAstForLoopBlock, TmplAstIcu, TmplAstIfBlock, TmplAstNode, TmplAstReference, TmplAstSwitchBlock, TmplAstTemplate, TmplAstTextAttribute, TmplAstVariable, TransplantedType} from '@angular/compiler';
+import {AST, BindingPipe, BindingType, BoundTarget, Call, DYNAMIC_TYPE, ImplicitReceiver, ParsedEventType, ParseSourceSpan, PropertyRead, PropertyWrite, SafeCall, SafePropertyRead, SchemaMetadata, ThisReceiver, TmplAstBoundAttribute, TmplAstBoundDeferredTrigger, TmplAstBoundEvent, TmplAstBoundText, TmplAstDeferredBlock, TmplAstElement, TmplAstForLoopBlock, TmplAstIcu, TmplAstIfBlock, TmplAstNode, TmplAstReference, TmplAstSwitchBlock, TmplAstTemplate, TmplAstTextAttribute, TmplAstVariable, TransplantedType} from '@angular/compiler';
 import ts from 'typescript';
 
 import {Reference} from '../../imports';
@@ -1152,6 +1152,29 @@ class TcbComponentContextCompletionOp extends TcbOp {
 }
 
 /**
+ * A `TcbOp` which renders a data-bound trigger of a `defer` block into the TCB.
+ *
+ * Executing this operation returns nothing.
+ */
+class TcbBoundDeferredTriggerOp extends TcbOp {
+  constructor(
+      private tcb: Context, private scope: Scope, private trigger: TmplAstBoundDeferredTrigger) {
+    super();
+  }
+
+  override get optional() {
+    return false;
+  }
+
+  override execute(): null {
+    const expr = tcbExpression(this.trigger.value, this.tcb, this.scope);
+    this.scope.addStatement(ts.factory.createExpressionStatement(expr));
+    return null;
+  }
+}
+
+
+/**
  * Value used to break a circular reference between `TcbOp`s.
  *
  * This value is returned whenever `TcbOp`s have a circular dependency. The expression is a non-null
@@ -1505,7 +1528,11 @@ class Scope {
       }
       this.checkAndAppendReferencesOfNode(node);
     } else if (node instanceof TmplAstDeferredBlock) {
-      // TODO(crisbeto): type check `when` and `prefetchWhen` triggers.
+      node.triggers.when &&
+          this.opQueue.push(new TcbBoundDeferredTriggerOp(this.tcb, this, node.triggers.when));
+      node.prefetchTriggers.when &&
+          this.opQueue.push(
+              new TcbBoundDeferredTriggerOp(this.tcb, this, node.prefetchTriggers.when));
       this.appendChildren(node);
       node.placeholder !== null && this.appendChildren(node.placeholder);
       node.loading !== null && this.appendChildren(node.loading);
