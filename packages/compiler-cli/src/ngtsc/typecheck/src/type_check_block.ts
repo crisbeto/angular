@@ -1175,6 +1175,46 @@ class TcbBoundDeferredTriggerOp extends TcbOp {
 
 
 /**
+ * A `TcbOp` which renders a `switch` block as a TypeScript `switch` statement.
+ *
+ * Executing this operation returns nothing.
+ */
+class TcbSwitchOp extends TcbOp {
+  constructor(private tcb: Context, private scope: Scope, private block: TmplAstSwitchBlock) {
+    super();
+  }
+
+  override get optional() {
+    return false;
+  }
+
+  override execute(): ts.Expression|null {
+    const clauses: ts.CaseOrDefaultClause[] = [];
+
+    for (const current of this.block.cases) {
+      // Our template switch statements don't fall through so we always have a break at the end.
+      const breakStatement = ts.factory.createBreakStatement();
+      const clauseScope = Scope.forNodes(this.tcb, this.scope, current.children, null);
+
+      if (current.expression === null) {
+        clauses.push(ts.factory.createDefaultClause([...clauseScope.render(), breakStatement]));
+      } else {
+        clauses.push(ts.factory.createCaseClause(
+            tcbExpression(current.expression, this.tcb, clauseScope),
+            [...clauseScope.render(), breakStatement]));
+      }
+    }
+
+    this.scope.addStatement(ts.factory.createSwitchStatement(
+        tcbExpression(this.block.expression, this.tcb, this.scope),
+        ts.factory.createCaseBlock(clauses)));
+
+    return null;
+  }
+}
+
+
+/**
  * Value used to break a circular reference between `TcbOp`s.
  *
  * This value is returned whenever `TcbOp`s have a circular dependency. The expression is a non-null
@@ -1543,10 +1583,7 @@ class Scope {
         this.appendChildren(branch);
       }
     } else if (node instanceof TmplAstSwitchBlock) {
-      // TODO(crisbeto): type check switch condition
-      for (const currentCase of node.cases) {
-        this.appendChildren(currentCase);
-      }
+      this.opQueue.push(new TcbSwitchOp(this.tcb, this, node));
     } else if (node instanceof TmplAstForLoopBlock) {
       // TODO(crisbeto): type check loop expression, context variables and trackBy
       this.appendChildren(node);
