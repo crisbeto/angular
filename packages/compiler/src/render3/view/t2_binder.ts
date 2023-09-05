@@ -15,7 +15,7 @@ import {createCssSelector} from './template';
 import {getAttrsForDirectiveMatching} from './util';
 
 /** Node that has a `Scope` associated with it. */
-type ScopedNode = Template|IfBlockBranch;
+type ScopedNode = Template|IfBlockBranch|ForLoopBlock;
 
 /**
  * Processes `Target`s with a given set of directives and performs a binding operation, which
@@ -109,6 +109,9 @@ class Scope implements Visitor {
         this.visitVariable(nodeOrChildren.expressionAlias);
       }
       nodeOrChildren.children.forEach(node => node.visit(this));
+    } else if (nodeOrChildren instanceof ForLoopBlock) {
+      this.visitVariable(nodeOrChildren.item);
+      nodeOrChildren.children.forEach(node => node.visit(this));
     } else {
       // No overarching `Template` instance, so process the nodes directly.
       nodeOrChildren.forEach(node => node.visit(this));
@@ -170,7 +173,7 @@ class Scope implements Visitor {
   }
 
   visitForLoopBlock(block: ForLoopBlock) {
-    block.children.forEach(node => node.visit(this));
+    this.ingestScopedNode(block);
     block.empty?.visit(this);
   }
 
@@ -522,6 +525,10 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
       }
       nodeOrNodes.children.forEach(this.visitNode);
       this.nestingLevel.set(nodeOrNodes, this.level);
+    } else if (nodeOrNodes instanceof ForLoopBlock) {
+      this.visitNode(nodeOrNodes.item);
+      nodeOrNodes.children.forEach(this.visitNode);
+      this.nestingLevel.set(nodeOrNodes, this.level);
     } else {
       // Visit each node from the top-level template.
       nodeOrNodes.forEach(this.visitNode);
@@ -625,7 +632,7 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
 
   visitForLoopBlock(block: ForLoopBlock) {
     block.expression.visit(this);
-    block.children.forEach(this.visitNode);
+    this.ingestScopedNode(block);
     block.empty?.visit(this);
   }
 

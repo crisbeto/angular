@@ -1480,5 +1480,19 @@ describe('type check blocks', () => {
 
       expect(loopTcb(TEMPLATE)).toContain('"" + ((this).main()); "" + ((this).empty());');
     });
+
+    fit('', () => {
+      const TEMPLATE = `
+        {#for item of items; track item}
+          {{item.foo}}
+
+          {#for inner of item.items; track inner}
+            {{inner.bar}}
+          {/for}
+        {/for}
+      `;
+
+      console.log(loopTcb(TEMPLATE));
+    });
   });
 });

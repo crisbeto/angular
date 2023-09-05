@@ -1276,6 +1276,30 @@ class TcbSwitchOp extends TcbOp {
 }
 
 
+class TcbForOp extends TcbOp {
+  constructor(private tcb: Context, private scope: Scope, private block: TmplAstForLoopBlock) {
+    super();
+  }
+
+  override get optional() {
+    return false;
+  }
+
+  override execute(): ts.Expression|null {
+    const innerScope = Scope.forNodes(this.tcb, this.scope, this.block, null);
+    const initializer = ts.factory.createVariableDeclarationList(
+        [ts.factory.createVariableDeclaration(this.block.item.name)], ts.NodeFlags.Const);
+    const expression = tcbExpression(this.block.expression, this.tcb, innerScope);
+
+    this.scope.addStatement(ts.factory.createForOfStatement(
+        undefined, initializer, expression, ts.factory.createBlock(innerScope.render())));
+
+    return null;
+  }
+}
+
+
+
 /**
  * Value used to break a circular reference between `TcbOp`s.
  *
@@ -1400,7 +1424,7 @@ class Scope {
    */
   static forNodes(
       tcb: Context, parent: Scope|null,
-      blockOrNodes: TmplAstTemplate|TmplAstIfBlockBranch|(TmplAstNode[]),
+      blockOrNodes: TmplAstTemplate|TmplAstIfBlockBranch|TmplAstForLoopBlock|(TmplAstNode[]),
       guard: ts.Expression|null): Scope {
     const scope = new Scope(tcb, parent, guard);
 
@@ -1441,6 +1465,13 @@ class Scope {
         scope.varMap.set(expressionAlias, opIndex);
       }
 
+      children = blockOrNodes.children;
+    } else if (blockOrNodes instanceof TmplAstForLoopBlock) {
+      // TODO: other context variables
+      const op = new TcbBlockVariableOp(
+          tcb, scope, ts.factory.createIdentifier(blockOrNodes.item.name), blockOrNodes.item);
+      const opIndex = scope.opQueue.push(op) - 1;
+      scope.varMap.set(blockOrNodes.item, opIndex);
       children = blockOrNodes.children;
     } else {
       children = blockOrNodes;
@@ -1657,8 +1688,7 @@ class Scope {
     } else if (node instanceof TmplAstSwitchBlock) {
       this.opQueue.push(new TcbSwitchOp(this.tcb, this, node));
     } else if (node instanceof TmplAstForLoopBlock) {
-      // TODO(crisbeto): type check loop expression, context variables and trackBy
-      this.appendChildren(node);
+      this.opQueue.push(new TcbForOp(this.tcb, this, node));
       node.empty && this.appendChildren(node.empty);
     } else if (node instanceof TmplAstBoundText) {
       this.opQueue.push(new TcbTextInterpolationOp(this.tcb, this, node));

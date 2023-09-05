@@ -172,7 +172,8 @@ function parseForLoopParameters(
 
   const [, itemName, rawExpression] = match;
   const result = {
-    itemName,
+    itemName: new t.Variable(
+        itemName, '$implicit', expressionParam.sourceSpan, expressionParam.sourceSpan),
     trackBy: null as ASTWithSource | null,
     expression: parseBlockParameterToBinding(expressionParam, bindingParser, rawExpression),
     context: null as t.ForLoopBlockContext | null,

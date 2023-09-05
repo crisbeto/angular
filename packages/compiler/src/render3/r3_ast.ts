@@ -268,7 +268,7 @@ export interface ForLoopBlockContext {
 
 export class ForLoopBlock implements Node {
   constructor(
-      public itemName: string, public expression: ASTWithSource, public trackBy: ASTWithSource,
+      public item: Variable, public expression: ASTWithSource, public trackBy: ASTWithSource,
       public contextVariables: ForLoopBlockContext|null, public children: Node[],
       public empty: ForLoopBlockEmpty|null, public sourceSpan: ParseSourceSpan,
       public startSourceSpan: ParseSourceSpan, public endSourceSpan: ParseSourceSpan|null) {}

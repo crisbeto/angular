@@ -1486,13 +1486,14 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
             scope.get(indexLocalName)!.identical(scope.get(countLocalName)!.minus(o.literal(1))));
 
     return [
-      new t.Variable(block.itemName, '$implicit', block.sourceSpan, block.sourceSpan),
+      block.item,
       new t.Variable(indexLocalName, '$index', block.sourceSpan, block.sourceSpan),
       new t.Variable(countLocalName, '$count', block.sourceSpan, block.sourceSpan),
     ];
   }
 
   private createTrackByFunction(block: t.ForLoopBlock): o.Expression {
+    const itemName = block.item.name;
     const ast = block.trackBy.ast;
 
     // Top-level access of `$index` uses the built in `repeaterTrackByIndex`.
@@ -1503,15 +1504,15 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
 
     // Top-level access of the item uses the built in `repeaterTrackByIdentity`.
     if (ast instanceof PropertyRead && ast.receiver instanceof ImplicitReceiver &&
-        ast.name === block.itemName) {
+        ast.name === itemName) {
       return o.importExpr(R3.repeaterTrackByIdentity);
     }
 
     // Otherwise transpile to an inline arrow function.
     if (ast instanceof PropertyRead && ast.receiver instanceof PropertyRead &&
-        ast.receiver.receiver instanceof ImplicitReceiver && ast.receiver.name === block.itemName) {
+        ast.receiver.receiver instanceof ImplicitReceiver && ast.receiver.name === itemName) {
       // TODO(crisbeto): support references outside the function scope.
-      const params = [getLoopLocalName(block, '$index'), block.itemName];
+      const params = [getLoopLocalName(block, '$index'), itemName];
       const scope = this._bindingScope.nestedScope(this.level + 1, new Set(params));
       const binding =
           convertPropertyBinding(scope, o.variable(CONTEXT_NAME), block.trackBy, 'trackBy');
