@@ -143,7 +143,9 @@ class R3AstHumanizer implements t.Visitor<void> {
     } else if (trigger instanceof t.InteractionDeferredTrigger) {
       this.result.push(['InteractionDeferredTrigger', trigger.reference]);
     } else if (trigger instanceof t.ViewportDeferredTrigger) {
-      this.result.push(['ViewportDeferredTrigger', trigger.reference]);
+      const result = ['ViewportDeferredTrigger'];
+      trigger.expression !== null && result.push(unparse(trigger.expression));
+      this.result.push(result);
     } else {
       throw new Error('Unknown trigger');
     }

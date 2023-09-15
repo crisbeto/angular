@@ -1409,13 +1409,19 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
           [o.literal(interaction.reference)]);
     }
 
-    // TODO(crisbeto): currently the reference is passed as a string.
-    // Update this once we figure out how we should refer to the target.
-    // `deferOnViewport(target)`
     if (viewport) {
-      this.creationInstruction(
-          viewport.sourceSpan, prefetch ? R3.deferPrefetchOnViewport : R3.deferOnViewport,
-          [o.literal(viewport.reference)]);
+      const instructionRef = prefetch ? R3.deferPrefetchOnViewport : R3.deferOnViewport;
+      if (viewport.expression) {
+        const value = viewport.expression.visit(this._valueConverter);
+        this.allocateBindingSlots(value);
+        this.updateInstructionWithAdvance(
+            deferredIndex, viewport.sourceSpan, instructionRef,
+            () => this.convertPropertyBinding(value));
+      } else {
+        // TODO
+        this.updateInstructionWithAdvance(
+            deferredIndex, viewport.sourceSpan, instructionRef, [o.literal(-1)]);
+      }
     }
   }
 

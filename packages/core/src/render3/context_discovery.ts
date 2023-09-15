@@ -59,7 +59,7 @@ export function getLContext(target: any): LContext|null {
         }
         component = target;
       } else if (isDirectiveInstance(target)) {
-        nodeIndex = findViaDirective(lView, target);
+        nodeIndex = findDirectiveInstanceIndex(lView, target);
         if (nodeIndex == -1) {
           throw new Error('The provided directive was not found in the application');
         }
@@ -273,7 +273,7 @@ function findViaComponent(lView: LView, componentInstance: {}): number {
 /**
  * Locates the directive within the given LView and returns the matching index
  */
-function findViaDirective(lView: LView, directiveInstance: {}): number {
+export function findDirectiveInstanceIndex(lView: LView, directiveInstance: {}): number {
   // if a directive is monkey patched then it will (by default)
   // have a reference to the LView of the current view. The
   // element bound to the directive being search lives somewhere

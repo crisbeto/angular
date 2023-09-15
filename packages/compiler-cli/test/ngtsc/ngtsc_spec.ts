@@ -7626,6 +7626,47 @@ function allTests(os: string) {
 
         expect(jsContents).toContain('defineComponent');
       });
+
+      fit('', () => {
+        /*
+          <div *ngIf="cond">
+            {#defer on viewport(btn)}
+              Main content
+              {:placeholder} Placeholder
+            {/defer}
+          </div>
+
+          <div>
+            <div>
+              <button #btn></button>
+            </div>
+          </div>
+        */
+
+        env.tsconfig({_enabledBlockTypes: ['defer', 'if']});
+        env.write('test.ts', `
+          import {Component} from '@angular/core';
+
+          @Component({
+            selector: 'test-cmp',
+            standalone: true,
+            template: \`
+              {#defer on viewport(trigger)}
+                Main content
+                {:placeholder} <div #trigger></div>
+              {/defer}
+            \`,
+          })
+          export class TestCmp {
+            items: any[] = [];
+            cond = false;
+          }
+        `);
+        env.driveMain();
+        const jsContents = env.getContents('test.js');
+
+        console.log(jsContents);
+      });
     });
 
     describe('iframe processing', () => {

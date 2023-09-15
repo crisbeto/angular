@@ -6,9 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ɵPLATFORM_BROWSER_ID as PLATFORM_BROWSER_ID} from '@angular/common';
+import {CommonModule, ɵPLATFORM_BROWSER_ID as PLATFORM_BROWSER_ID} from '@angular/common';
 import {ɵsetEnabledBlockTypes as setEnabledBlockTypes} from '@angular/compiler/src/jit_compiler_facade';
-import {Component, Input, PLATFORM_ID, QueryList, Type, ViewChildren, ɵDEFER_BLOCK_DEPENDENCY_INTERCEPTOR} from '@angular/core';
+import {Component, Directive, Input, PLATFORM_ID, QueryList, Type, ViewChildren, ɵDEFER_BLOCK_DEPENDENCY_INTERCEPTOR} from '@angular/core';
 import {getComponentDef} from '@angular/core/src/render3/definition';
 import {TestBed} from '@angular/core/testing';
 
@@ -49,7 +49,7 @@ function onIdle(callback: () => Promise<void>): Promise<void> {
 const COMMON_PROVIDERS = [{provide: PLATFORM_ID, useValue: PLATFORM_BROWSER_ID}];
 
 describe('#defer', () => {
-  beforeEach(() => setEnabledBlockTypes(['defer', 'for']));
+  beforeEach(() => setEnabledBlockTypes(['defer', 'for', 'if']));
   afterEach(() => setEnabledBlockTypes([]));
 
   beforeEach(() => {
@@ -141,6 +141,48 @@ describe('#defer', () => {
     expect(fixture.nativeElement.outerHTML).toContain('<my-lazy-cmp>Hi!</my-lazy-cmp>');
   });
 
+  fit('', async () => {
+    @Component({selector: 'some-comp', template: '', standalone: true})
+    class SomeComp {
+    }
+
+    @Directive({selector: '[some-dir]', exportAs: 'someDir', standalone: true})
+    class SomeDir {
+    }
+
+    //   {#if cond}
+    //   {#defer on viewport(trigger)}
+    //     Main content
+    //     {:placeholder} Placeholder
+    //   {/defer}
+    // {/if}
+
+    // <div>
+    //   <div>
+    //     <some-comp #trigger/>
+    //   </div>
+    // </div>
+
+    @Component({
+      standalone: true,
+      imports: [CommonModule, SomeComp, SomeDir],
+      template: `
+        <div class="root" [attr.test]="ref?.id">
+          <div>
+            <span id="bar" #ref></span>
+          </div>
+        </div>
+      `
+    })
+    class MyCmp {
+      cond = true;
+    }
+
+    const fixture = TestBed.createComponent(MyCmp);
+    fixture.detectChanges();
+
+    console.log(fixture.nativeElement.innerHTML.trim());
+  });
 
   describe('directive matching', () => {
     it('should support directive matching in all blocks', async () => {

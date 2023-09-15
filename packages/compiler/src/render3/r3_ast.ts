@@ -150,7 +150,7 @@ export class InteractionDeferredTrigger extends DeferredTrigger {
 }
 
 export class ViewportDeferredTrigger extends DeferredTrigger {
-  constructor(public reference: string|null, sourceSpan: ParseSourceSpan) {
+  constructor(public expression: AST|null, sourceSpan: ParseSourceSpan) {
     super(sourceSpan);
   }
 }

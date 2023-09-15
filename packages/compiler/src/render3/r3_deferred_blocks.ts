@@ -198,11 +198,11 @@ function parsePrimaryTriggers(
     if (WHEN_PARAMETER_PATTERN.test(param.expression)) {
       parseWhenTrigger(param, bindingParser, triggers, errors);
     } else if (ON_PARAMETER_PATTERN.test(param.expression)) {
-      parseOnTrigger(param, triggers, errors);
+      parseOnTrigger(param, triggers, bindingParser, errors);
     } else if (PREFETCH_WHEN_PATTERN.test(param.expression)) {
       parseWhenTrigger(param, bindingParser, prefetchTriggers, errors);
     } else if (PREFETCH_ON_PATTERN.test(param.expression)) {
-      parseOnTrigger(param, prefetchTriggers, errors);
+      parseOnTrigger(param, prefetchTriggers, bindingParser, errors);
     } else {
       errors.push(new ParseError(param.sourceSpan, 'Unrecognized trigger'));
     }

@@ -12,16 +12,18 @@ import {populateDehydratedViewsInContainer} from '../../linker/view_container_re
 import {assertDefined, assertEqual, throwError} from '../../util/assert';
 import {assertIndexInDeclRange, assertLContainer, assertTNodeForLView} from '../assert';
 import {bindingUpdated} from '../bindings';
+import {findDirectiveInstanceIndex, getComponentViewByInstance, readPatchedLView} from '../context_discovery';
 import {getComponentDef, getDirectiveDef, getPipeDef} from '../definition';
 import {LContainer} from '../interfaces/container';
 import {DEFER_BLOCK_STATE, DeferBlockInstanceState, DeferDependenciesLoadingState, DeferredLoadingBlockConfig, DeferredPlaceholderBlockConfig, DependencyResolverFn, LDeferBlockDetails, TDeferBlockDetails} from '../interfaces/defer';
 import {DirectiveDefList, PipeDefList} from '../interfaces/definition';
 import {TContainerNode, TNode} from '../interfaces/node';
+import {RElement} from '../interfaces/renderer_dom';
 import {isDestroyed} from '../interfaces/type_checks';
 import {HEADER_OFFSET, INJECTOR, LView, PARENT, TVIEW, TView} from '../interfaces/view';
 import {getCurrentTNode, getLView, getSelectedTNode, getTView, nextBindingIndex} from '../state';
 import {isPlatformBrowser} from '../util/misc_utils';
-import {getConstant, getTNode, removeLViewOnDestroy, storeLViewOnDestroy} from '../util/view_utils';
+import {getConstant, getTNode, removeLViewOnDestroy, storeLViewOnDestroy, unwrapRNode} from '../util/view_utils';
 import {addLViewToLContainer, createAndRenderEmbeddedLView, removeLViewFromLContainer, shouldAddViewToDom} from '../view_manipulation';
 
 import {ɵɵtemplate} from './template';
@@ -248,7 +250,32 @@ export function ɵɵdeferPrefetchOnInteraction(target?: unknown) {}  // TODO: im
  * @param target Optional element on which to listen for hover events.
  * @codeGenApi
  */
-export function ɵɵdeferOnViewport(target?: unknown) {}  // TODO: implement runtime logic.
+export function ɵɵdeferOnViewport(target: unknown) {
+  const lView = getLView();
+  const bindingIndex = nextBindingIndex();
+  const resolvedValue = true;
+
+  // TODO: handle the target being null
+  if (lView[bindingIndex] === resolvedValue || target == null) {
+    return;
+  }
+
+  const tNode = getSelectedTNode();
+  const lDetails = getLDeferBlockDetails(lView, tNode);
+  const renderedState = lDetails[DEFER_BLOCK_STATE];
+  const element = resolveTriggerElement(target);
+
+  if (renderedState === DeferBlockInstanceState.INITIAL) {
+    renderPlaceholder(lView, tNode);
+  }
+
+  // The binding index tracks whether we've resolved the DOM node.
+  lView[bindingIndex] = resolvedValue;
+
+  console.log('resolved DOM node', element?.tagName);
+
+  // TODO: do things with the domNode
+}
 
 /**
  * Creates runtime data structures for the `prefetch on viewport` deferred trigger.
@@ -563,6 +590,25 @@ function triggerDeferBlock(lView: LView, tNode: TNode) {
         throwError('Unknown defer block state');
       }
   }
+}
+
+function resolveTriggerElement(target: {}): RElement|null {
+  const constructor = target.constructor;
+  let node: RElement|null = null;
+
+  // We want to allow users to pass in a local ref to the trigger directly, however if the node
+  // is a component how or the ref is pointing to a directive instance, we'll receive the instance
+  // instead. Infer the DOM node from the directive instance.
+  if (getComponentDef(constructor) || getDirectiveDef(constructor)) {
+    const patchedLView = readPatchedLView(target);
+    const index = patchedLView ? findDirectiveInstanceIndex(patchedLView, target) : -1;
+    node = index > -1 ? unwrapRNode(patchedLView![index]) as RElement : null;
+  } else {
+    // TODO: assert value is an element.
+    node = target as RElement;
+  }
+
+  return node;
 }
 
 /**

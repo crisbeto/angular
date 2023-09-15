@@ -58,7 +58,7 @@ export function parseWhenTrigger(
 /** Parses an `on` trigger */
 export function parseOnTrigger(
     {expression, sourceSpan}: html.BlockParameter, triggers: t.DeferredBlockTriggers,
-    errors: ParseError[]): void {
+    bindingParser: BindingParser, errors: ParseError[]): void {
   const onIndex = expression.indexOf('on');
 
   // This is here just to be safe, we shouldn't enter this function
@@ -67,7 +67,8 @@ export function parseOnTrigger(
     errors.push(new ParseError(sourceSpan, `Could not find "on" keyword in expression`));
   } else {
     const start = getTriggerParametersStart(expression, onIndex + 1);
-    const parser = new OnTriggerParser(expression, start, sourceSpan, triggers, errors);
+    const parser =
+        new OnTriggerParser(expression, start, bindingParser, sourceSpan, triggers, errors);
     parser.parse();
   }
 }
@@ -78,8 +79,9 @@ class OnTriggerParser {
   private tokens: Token[];
 
   constructor(
-      private expression: string, private start: number, private span: ParseSourceSpan,
-      private triggers: t.DeferredBlockTriggers, private errors: ParseError[]) {
+      private expression: string, private start: number, private bindingParser: BindingParser,
+      private span: ParseSourceSpan, private triggers: t.DeferredBlockTriggers,
+      private errors: ParseError[]) {
     this.tokens = new Lexer().tokenize(expression.slice(start));
   }
 
@@ -158,7 +160,8 @@ class OnTriggerParser {
           break;
 
         case OnTriggerType.VIEWPORT:
-          this.trackTrigger('viewport', createViewportTrigger(parameters, sourceSpan));
+          this.trackTrigger(
+              'viewport', createViewportTrigger(parameters, this.bindingParser, sourceSpan));
           break;
 
         default:
@@ -319,13 +322,18 @@ function createHoverTrigger(
 }
 
 function createViewportTrigger(
-    parameters: string[], sourceSpan: ParseSourceSpan): t.ViewportDeferredTrigger {
+    parameters: string[], bindingParser: BindingParser,
+    sourceSpan: ParseSourceSpan): t.ViewportDeferredTrigger {
   // TODO: the RFC has some more potential parameters for `viewport`.
   if (parameters.length > 1) {
     throw new Error(`"${OnTriggerType.VIEWPORT}" trigger can only have zero or one parameters`);
   }
 
-  return new t.ViewportDeferredTrigger(parameters[0] ?? null, sourceSpan);
+  const expression = parameters.length > 0 ?
+      bindingParser.parseBinding(parameters[0], false, sourceSpan, sourceSpan.start.offset) :
+      null;
+
+  return new t.ViewportDeferredTrigger(expression, sourceSpan);
 }
 
 /** Gets the index within an expression at which the trigger parameters start. */
