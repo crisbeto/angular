@@ -112,7 +112,7 @@ describe('typeahead', () => {
 
       const task: MockTask = {
         id: {} as MockTask['id'],
-        fn: fn.bind<null, unknown, unknown>(null, ...args),
+        fn: fn.bind(null, ...args),
         delay,
         recurring,
         nextTriggerTime: this.now + delay,

@@ -12,7 +12,7 @@
     "removeComments": false,
     "noImplicitAny": true,
     "skipLibCheck": true,
-    "suppressImplicitAnyIndexErrors": true,
+    "ignoreDeprecations": "5.0",
     "typeRoots": [
       "node_modules/@types"
     ]

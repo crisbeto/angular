@@ -9,7 +9,7 @@
     "experimentalDecorators": true,
     "lib": ["es2018", "dom"],
     "noImplicitAny": true,
-    "suppressImplicitAnyIndexErrors": true,
+    "ignoreDeprecations": "5.0",
     "typeRoots": [
       "node_modules/@types"
     ]
