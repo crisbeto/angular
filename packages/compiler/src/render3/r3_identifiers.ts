@@ -147,6 +147,8 @@ export class Identifiers {
   static deferOnHover: o.ExternalReference = {name: 'ɵɵdeferOnHover', moduleName: CORE};
   static deferOnInteraction: o.ExternalReference = {name: 'ɵɵdeferOnInteraction', moduleName: CORE};
   static deferOnViewport: o.ExternalReference = {name: 'ɵɵdeferOnViewport', moduleName: CORE};
+  static deferNestedOnViewport:
+      o.ExternalReference = {name: 'ɵɵdeferNestedOnViewport', moduleName: CORE};
   static deferPrefetchWhen: o.ExternalReference = {name: 'ɵɵdeferPrefetchWhen', moduleName: CORE};
   static deferPrefetchOnIdle:
       o.ExternalReference = {name: 'ɵɵdeferPrefetchOnIdle', moduleName: CORE};

@@ -147,6 +147,7 @@ export const angularCoreEnv: {[name: string]: Function} =
        'ɵɵdeferOnHover': r3.ɵɵdeferOnHover,
        'ɵɵdeferOnInteraction': r3.ɵɵdeferOnInteraction,
        'ɵɵdeferOnViewport': r3.ɵɵdeferOnViewport,
+       'ɵɵdeferNestedOnViewport': r3.ɵɵdeferNestedOnViewport,
        'ɵɵdeferPrefetchWhen': r3.ɵɵdeferPrefetchWhen,
        'ɵɵdeferPrefetchOnIdle': r3.ɵɵdeferPrefetchOnIdle,
        'ɵɵdeferPrefetchOnImmediate': r3.ɵɵdeferPrefetchOnImmediate,

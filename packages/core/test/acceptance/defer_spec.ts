@@ -150,26 +150,18 @@ describe('#defer', () => {
     class SomeDir {
     }
 
-    //   {#if cond}
-    //   {#defer on viewport(trigger)}
-    //     Main content
-    //     {:placeholder} Placeholder
-    //   {/defer}
-    // {/if}
-
-    // <div>
-    //   <div>
-    //     <some-comp #trigger/>
-    //   </div>
-    // </div>
-
     @Component({
       standalone: true,
       imports: [CommonModule, SomeComp, SomeDir],
       template: `
-        <div class="root" [attr.test]="ref?.id">
+        {#defer on viewport(trigger)}
+          Main content
+          {:placeholder} Placeholder
+        {/defer}
+
+        <div>
           <div>
-            <span id="bar" #ref></span>
+            <button #trigger></button>
           </div>
         </div>
       `
@@ -180,8 +172,13 @@ describe('#defer', () => {
 
     const fixture = TestBed.createComponent(MyCmp);
     fixture.detectChanges();
+    console.log(fixture.nativeElement.textContent.trim());
 
-    console.log(fixture.nativeElement.innerHTML.trim());
+    fixture.nativeElement.querySelector('button').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    console.log(fixture.nativeElement.textContent.trim());
   });
 
   describe('directive matching', () => {

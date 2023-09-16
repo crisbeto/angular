@@ -20,10 +20,11 @@ import {DirectiveDefList, PipeDefList} from '../interfaces/definition';
 import {TContainerNode, TNode} from '../interfaces/node';
 import {RElement} from '../interfaces/renderer_dom';
 import {isDestroyed} from '../interfaces/type_checks';
-import {HEADER_OFFSET, INJECTOR, LView, PARENT, TVIEW, TView} from '../interfaces/view';
+import {DECLARATION_VIEW, HEADER_OFFSET, INJECTOR, LView, PARENT, TVIEW, TView} from '../interfaces/view';
 import {getCurrentTNode, getLView, getSelectedTNode, getTView, nextBindingIndex} from '../state';
 import {isPlatformBrowser} from '../util/misc_utils';
-import {getConstant, getTNode, removeLViewOnDestroy, storeLViewOnDestroy, unwrapRNode} from '../util/view_utils';
+import {getLViewParent} from '../util/view_traversal_utils';
+import {getConstant, getNativeByTNode, getTNode, removeLViewOnDestroy, storeLViewOnDestroy, unwrapRNode} from '../util/view_utils';
 import {addLViewToLContainer, createAndRenderEmbeddedLView, removeLViewFromLContainer, shouldAddViewToDom} from '../view_manipulation';
 
 import {ɵɵtemplate} from './template';
@@ -117,7 +118,7 @@ export function ɵɵdeferWhen(rawValue: unknown) {
   if (bindingUpdated(lView, bindingIndex, rawValue)) {
     const value = Boolean(rawValue);  // handle truthy or falsy values
     const tNode = getSelectedTNode();
-    const lDetails = getLDeferBlockDetails(lView, tNode);
+    const lDetails = getLDeferBlockDetails(lView, tNode.index);
     const renderedState = lDetails[DEFER_BLOCK_STATE];
     if (value === false && renderedState === DeferBlockInstanceState.INITIAL) {
       // If nothing is rendered yet, render a placeholder (if defined).
@@ -261,9 +262,8 @@ export function ɵɵdeferOnViewport(target: unknown) {
   }
 
   const tNode = getSelectedTNode();
-  const lDetails = getLDeferBlockDetails(lView, tNode);
+  const lDetails = getLDeferBlockDetails(lView, tNode.index);
   const renderedState = lDetails[DEFER_BLOCK_STATE];
-  const element = resolveTriggerElement(target);
 
   if (renderedState === DeferBlockInstanceState.INITIAL) {
     renderPlaceholder(lView, tNode);
@@ -272,9 +272,38 @@ export function ɵɵdeferOnViewport(target: unknown) {
   // The binding index tracks whether we've resolved the DOM node.
   lView[bindingIndex] = resolvedValue;
 
-  console.log('resolved DOM node', element?.tagName);
+  // -1 is a special value indicating that the trigger is inside the placeholder.
+  if (target !== -1) {
+    const element = resolveTriggerElement(target);
+    // TODO: do things with the domNode
 
-  // TODO: do things with the domNode
+    element!.addEventListener('click', () => {
+      triggerDeferBlock(lView, tNode);
+    });
+  }
+}
+
+export function ɵɵdeferNestedOnViewport(depth: number, deferIndex: number) {
+  const lView = getLView();
+  const tNode = getCurrentTNode()!;  // TODO: assert
+  const element = getNativeByTNode(tNode, lView);
+  let i = depth;
+  let deferredLView: LView|null = lView;
+
+  while (i > 0 && deferredLView) {
+    deferredLView = getLViewParent(deferredLView);
+    i--;
+  }
+
+  if (!deferredLView) {
+    throw new Error('TODO: could not resolve');
+  }
+
+  const deferredTNode = getTNode(deferredLView[TVIEW], HEADER_OFFSET + deferIndex);
+
+  (element as HTMLElement).addEventListener('click', () => {
+    triggerDeferBlock(deferredLView!, deferredTNode);
+  });
 }
 
 /**
@@ -328,9 +357,9 @@ function getDeferBlockDataIndex(deferBlockIndex: number) {
 }
 
 /** Retrieves a defer block state from an LView, given a TNode that represents a block. */
-function getLDeferBlockDetails(lView: LView, tNode: TNode): LDeferBlockDetails {
+function getLDeferBlockDetails(lView: LView, index: number): LDeferBlockDetails {
   const tView = lView[TVIEW];
-  const slotIndex = getDeferBlockDataIndex(tNode.index);
+  const slotIndex = getDeferBlockDataIndex(index);
   ngDevMode && assertIndexInDeclRange(tView, slotIndex);
   return lView[slotIndex];
 }
@@ -380,7 +409,7 @@ function renderDeferBlockState(
   // Make sure this TNode belongs to TView that represents host LView.
   ngDevMode && assertTNodeForLView(tNode, hostLView);
 
-  const lDetails = getLDeferBlockDetails(hostLView, tNode);
+  const lDetails = getLDeferBlockDetails(hostLView, tNode.index);
 
   ngDevMode && assertDefined(lDetails, 'Expected a defer block state defined');
 

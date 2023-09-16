@@ -136,6 +136,7 @@ export {
   ɵɵdeferOnHover,
   ɵɵdeferOnInteraction,
   ɵɵdeferOnViewport,
+  ɵɵdeferNestedOnViewport,
   ɵɵdeferPrefetchWhen,
   ɵɵdeferPrefetchOnIdle,
   ɵɵdeferPrefetchOnImmediate,

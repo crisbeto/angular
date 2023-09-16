@@ -7653,7 +7653,14 @@ function allTests(os: string) {
             template: \`
               {#defer on viewport(trigger)}
                 Main content
-                {:placeholder} <div #trigger></div>
+                {:placeholder}
+                  {#if cond}
+                    <div>
+                      <div>
+                        <button #trigger></button>
+                      </div>
+                    </div>
+                  {/if}
               {/defer}
             \`,
           })
