@@ -141,44 +141,229 @@ describe('#defer', () => {
     expect(fixture.nativeElement.outerHTML).toContain('<my-lazy-cmp>Hi!</my-lazy-cmp>');
   });
 
-  fit('', async () => {
-    @Component({selector: 'some-comp', template: '', standalone: true})
-    class SomeComp {
-    }
+  fdescribe('trigger testing', () => {
+    it('should work when the trigger is inside the placeholder', async () => {
+      @Component({
+        standalone: true,
+        template: `
+          {#defer on viewport(trigger)}
+            Main content
+            {:placeholder} Placeholder <div><div><div><button #trigger></button></div></div></div>
+          {/defer}
+        `
+      })
+      class MyCmp {
+      }
 
-    @Directive({selector: '[some-dir]', exportAs: 'someDir', standalone: true})
-    class SomeDir {
-    }
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Placeholder');
 
-    @Component({
-      standalone: true,
-      imports: [CommonModule, SomeComp, SomeDir],
-      template: `
-        {#defer on viewport(trigger)}
-          Main content
-          {:placeholder} Placeholder
-        {/defer}
+      fixture.nativeElement.querySelector('button').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Main content');
+    });
 
-        <div>
+    it('should work when the trigger is a component inside the placeholder', async () => {
+      @Component({selector: 'some-comp', template: '<button></button>', standalone: true})
+      class SomeComp {
+      }
+
+      @Component({
+        standalone: true,
+        imports: [SomeComp],
+        template: `
+          {#defer on viewport(trigger)}
+            Main content
+            {:placeholder} Placeholder <div><div><div><some-comp #trigger/></div></div></div>
+          {/defer}
+        `
+      })
+      class MyCmp {
+      }
+
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Placeholder');
+
+      fixture.nativeElement.querySelector('button').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Main content');
+    });
+
+    it('should work when the trigger is outside the defer block', async () => {
+      @Component({
+        standalone: true,
+        template: `
+          {#defer on viewport(trigger)}
+            Main content
+            {:placeholder} Placeholder
+          {/defer}
+
           <div>
-            <button #trigger></button>
+            <div>
+              <div>
+                <button #trigger></button>
+              </div>
           </div>
         </div>
+        `
+      })
+      class MyCmp {
+      }
+
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Placeholder');
+
+      fixture.nativeElement.querySelector('button').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Main content');
+    });
+
+    it('should work when the trigger is on a component outside the defer block', async () => {
+      @Component({selector: 'some-comp', template: '<button></button>', standalone: true})
+      class SomeComp {
+      }
+
+      @Component({
+        standalone: true,
+        imports: [SomeComp],
+        template: `
+          {#defer on viewport(trigger)}
+            Main content
+            {:placeholder} Placeholder
+          {/defer}
+
+          <div>
+            <div>
+              <div>
+                <some-comp #trigger/>
+              </div>
+          </div>
+        </div>
+        `
+      })
+      class MyCmp {
+      }
+
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Placeholder');
+
+      fixture.nativeElement.querySelector('button').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Main content');
+    });
+
+    it('should work when the trigger is on a parent element', async () => {
+      @Component({
+        standalone: true,
+        template: `
+          <button #trigger>
+            <div>
+              <div>
+              {#defer on viewport(trigger)}
+                Main content
+                {:placeholder} Placeholder
+              {/defer}
+              </div>
+            </div>
+          </button>
+        `
+      })
+      class MyCmp {
+      }
+
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Placeholder');
+
+      fixture.nativeElement.querySelector('button').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Main content');
+    });
+
+    it('should work when the trigger is inside a parent embedded view', async () => {
+      @Component({
+        standalone: true,
+        template: `
+        {#if cond}
+          <button #trigger></button>
+
+          {#if cond}
+            {#if cond}
+            {#defer on viewport(trigger)}
+              Main content
+              {:placeholder} Placeholder
+            {/defer}
+            {/if}
+          {/if}
+        {/if}
       `
-    })
-    class MyCmp {
-      cond = true;
-    }
+      })
+      class MyCmp {
+        cond = true;
+      }
 
-    const fixture = TestBed.createComponent(MyCmp);
-    fixture.detectChanges();
-    console.log(fixture.nativeElement.textContent.trim());
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Placeholder');
 
-    fixture.nativeElement.querySelector('button').click();
-    await fixture.whenStable();
-    fixture.detectChanges();
+      fixture.nativeElement.querySelector('button').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Main content');
+    });
 
-    console.log(fixture.nativeElement.textContent.trim());
+    it('should work when the trigger is on a component inside a parent embedded view', async () => {
+      @Component({selector: 'some-comp', template: '<button></button>', standalone: true})
+      class SomeComp {
+      }
+
+      @Component({
+        standalone: true,
+        imports: [SomeComp],
+        template: `
+          {#if cond}
+            <some-comp #trigger/>
+
+            {#if cond}
+              {#if cond}
+              {#defer on viewport(trigger)}
+                Main content
+                {:placeholder} Placeholder
+              {/defer}
+              {/if}
+            {/if}
+          {/if}
+        `
+      })
+      class MyCmp {
+        cond = true;
+      }
+
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Placeholder');
+
+      fixture.nativeElement.querySelector('button').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent.trim()).toBe('Main content');
+    });
   });
 
   describe('directive matching', () => {

@@ -248,7 +248,8 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
       private i18nUseExternalIds: boolean,
       private deferBlocks: Map<t.DeferredBlock, DeferBlockTemplateDependency[]>,
       private _constants: ComponentDefConsts = createComponentDefConsts(),
-      private referencedNodeCallback?: ReferencedNodeCallback) {
+      private referencedNodeCallback?: ReferencedNodeCallback,
+      private indexes = new Map<t.Element, {index: number, level: number}>()) {
     this._bindingScope = parentBindingScope.nestedScope(level);
 
     // Turn the relative context file path into an identifier by replacing non-alphanumeric
@@ -669,6 +670,7 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
   visitElement(element: t.Element) {
     const elementIndex = this.allocateDataSlot();
     const stylingBuilder = new StylingBuilder(null);
+    this.indexes.set(element, {index: elementIndex, level: this.level});
 
     let isNonBindableMode: boolean = false;
     const isI18nRootElement: boolean =
@@ -949,7 +951,7 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
     const visitor = new TemplateDefinitionBuilder(
         this.constantPool, this._bindingScope, this.level + 1, contextName, this.i18n, index, name,
         this._namespace, this.fileBasedI18nSuffix, this.i18nUseExternalIds, this.deferBlocks,
-        this._constants, referencedNodeCallback || this.referencedNodeCallback);
+        this._constants, referencedNodeCallback || this.referencedNodeCallback, this.indexes);
 
     // Nested templates must not be visited until after their parent templates have completed
     // processing, so they are queued here until after the initial pass. Otherwise, we wouldn't
@@ -1301,21 +1303,7 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
 
     const placeholderIndex = placeholder ?
         this.createEmbeddedTemplateFn(
-            null, placeholder.children, '_DeferPlaceholder', placeholder.sourceSpan, undefined,
-            undefined, undefined, undefined,
-            (el, builder) => {
-              if (!placeholderAnalysis) {
-                return;
-              }
-
-              for (const [trigger, ref] of placeholderAnalysis.entries()) {
-                if (ref === el && trigger === deferred.triggers.viewport) {
-                  builder.creationInstruction(
-                      el.sourceSpan, R3.deferNestedOnViewport,
-                      [o.literal(builder.level - this.level), o.literal(deferredIndex)]);
-                }
-              }
-            }) :
+            null, placeholder.children, '_DeferPlaceholder', placeholder.sourceSpan) :
         null;
     const placeholderConsts = placeholder && placeholder.minimumTime !== null ?
         // TODO(crisbeto): potentially pass the time directly instead of storing it in the `consts`
@@ -1344,10 +1332,10 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
           placeholderConsts ? this.addToConsts(placeholderConsts) : o.TYPED_NULL_EXPR,
         ]));
 
-    this.createDeferTriggerInstructions(deferredIndex, triggers, false, placeholderAnalysis);
     this.createDeferTriggerInstructions(
-        // TODO
-        deferredIndex, prefetchTriggers, true, null);
+        deferredIndex, triggers, false, placeholderIndex, placeholderAnalysis);
+    this.createDeferTriggerInstructions(
+        deferredIndex, prefetchTriggers, true, placeholderIndex, null);  // TODO
 
     // Allocate an extra data slot right after a defer block slot to store
     // instance-specific state of that defer block at runtime.
@@ -1389,7 +1377,7 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
 
   private createDeferTriggerInstructions(
       deferredIndex: number, triggers: t.DeferredBlockTriggers, prefetch: boolean,
-      triggerAnalysis: Map<t.DeferredTrigger, t.Element>|null) {
+      placeholderIndex: number|null, placeholderTriggers: Set<t.Element>|null) {
     const {when, idle, immediate, timer, hover, interaction, viewport} = triggers;
 
     // `deferWhen(ctx.someValue)`
@@ -1438,14 +1426,28 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
     }
 
     if (viewport) {
-      const instructionRef = prefetch ? R3.deferPrefetchOnViewport : R3.deferOnViewport;
-
-      const value: AST|null = (viewport.expression && !triggerAnalysis?.has(viewport)) ?
-          viewport.expression.visit(this._valueConverter) :
+      const expr = viewport.expression?.ast;
+      const name = expr instanceof PropertyRead && expr.receiver instanceof ImplicitReceiver ?
+          expr.name :
           null;
-      this.allocateBindingSlots(value);
-      this.updateInstructionWithAdvance(deferredIndex, viewport.sourceSpan, instructionRef, () => {
-        return value ? this.convertPropertyBinding(value) : [o.literal(-1)];
+
+      this.creationInstruction(null, R3.deferOnViewport, () => {
+        // TODO: this needs to be more efficient.
+        // TODO: needs safeguards so we don't pick up elements from other embedded views.
+        // TODO: use the binding scope to find whether the block can refer to an element?
+        for (const [el, data] of this.indexes) {
+          const ref = el.references.find(r => r.name === name);
+
+          if (ref) {
+            const depth = this.level - data.level;
+            const params = [o.literal(data.index), o.literal(depth >= 0 ? depth : null)];
+            if (placeholderIndex !== null && placeholderTriggers?.has(el)) {
+              params.push(o.literal(placeholderIndex));
+            }
+            return params;
+          }
+        }
+        return [];
       });
     }
   }
@@ -2999,16 +3001,15 @@ export interface ParsedTemplate {
 }
 
 class PlaceholderTriggerAnalyzer extends t.RecursiveVisitor {
-  constructor(
-      private triggers: t.DeferredBlockTriggers, private map: Map<t.DeferredTrigger, t.Element>) {
+  constructor(private triggers: t.DeferredBlockTriggers, private elements: Set<t.Element>) {
     super();
   }
 
   static analyze(root: t.DeferredBlockPlaceholder, triggers: t.DeferredBlockTriggers) {
-    const map = new Map<t.DeferredTrigger, t.Element>();
-    const visitor = new PlaceholderTriggerAnalyzer(triggers, map);
+    const elements = new Set<t.Element>;
+    const visitor = new PlaceholderTriggerAnalyzer(triggers, elements);
     t.visitAll(visitor, root.children);
-    return map;
+    return elements;
   }
 
   override visitElement(element: t.Element): void {
@@ -3019,21 +3020,20 @@ class PlaceholderTriggerAnalyzer extends t.RecursiveVisitor {
       const ref = element.references.find(r => r.name === expr.name);
 
       if (ref) {
-        this.map.set(viewport, element);
+        this.elements.add(element);
       }
     }
 
     super.visitElement(element);
   }
 
-  // override visitTemplate(): void {}
-  // override visitIfBlock(): void {}
-  // override visitIfBlockBranch(): void {}
-  // override visitSwitchBlock(): void {}
-  // override visitSwitchBlockCase(): void {}
-  // override visitForLoopBlock(): void {}
-  // override visitForLoopBlockEmpty(): void {}
-
+  override visitTemplate(): void {}
+  override visitIfBlock(): void {}
+  override visitIfBlockBranch(): void {}
+  override visitSwitchBlock(): void {}
+  override visitSwitchBlockCase(): void {}
+  override visitForLoopBlock(): void {}
+  override visitForLoopBlockEmpty(): void {}
   override visitDeferredBlock(): void {}
   override visitDeferredBlockError(): void {}
   override visitDeferredBlockLoading(): void {}

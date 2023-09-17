@@ -10,21 +10,21 @@ import {InjectionToken, Injector} from '../../di';
 import {findMatchingDehydratedView} from '../../hydration/views';
 import {populateDehydratedViewsInContainer} from '../../linker/view_container_ref';
 import {assertDefined, assertEqual, throwError} from '../../util/assert';
-import {assertIndexInDeclRange, assertLContainer, assertTNodeForLView} from '../assert';
+import {afterRender} from '../after_render_hooks';
+import {assertIndexInDeclRange, assertLContainer, assertLView, assertTNodeForLView} from '../assert';
 import {bindingUpdated} from '../bindings';
-import {findDirectiveInstanceIndex, getComponentViewByInstance, readPatchedLView} from '../context_discovery';
 import {getComponentDef, getDirectiveDef, getPipeDef} from '../definition';
-import {LContainer} from '../interfaces/container';
+import {CONTAINER_HEADER_OFFSET, LContainer} from '../interfaces/container';
 import {DEFER_BLOCK_STATE, DeferBlockInstanceState, DeferDependenciesLoadingState, DeferredLoadingBlockConfig, DeferredPlaceholderBlockConfig, DependencyResolverFn, LDeferBlockDetails, TDeferBlockDetails} from '../interfaces/defer';
 import {DirectiveDefList, PipeDefList} from '../interfaces/definition';
 import {TContainerNode, TNode} from '../interfaces/node';
 import {RElement} from '../interfaces/renderer_dom';
-import {isDestroyed} from '../interfaces/type_checks';
-import {DECLARATION_VIEW, HEADER_OFFSET, INJECTOR, LView, PARENT, TVIEW, TView} from '../interfaces/view';
+import {isDestroyed, isLView} from '../interfaces/type_checks';
+import {HEADER_OFFSET, HOST, INJECTOR, LView, PARENT, TVIEW, TView} from '../interfaces/view';
 import {getCurrentTNode, getLView, getSelectedTNode, getTView, nextBindingIndex} from '../state';
 import {isPlatformBrowser} from '../util/misc_utils';
 import {getLViewParent} from '../util/view_traversal_utils';
-import {getConstant, getNativeByTNode, getTNode, removeLViewOnDestroy, storeLViewOnDestroy, unwrapRNode} from '../util/view_utils';
+import {getConstant, getTNode, removeLViewOnDestroy, storeLViewOnDestroy} from '../util/view_utils';
 import {addLViewToLContainer, createAndRenderEmbeddedLView, removeLViewFromLContainer, shouldAddViewToDom} from '../view_manipulation';
 
 import {ɵɵtemplate} from './template';
@@ -251,60 +251,66 @@ export function ɵɵdeferPrefetchOnInteraction(target?: unknown) {}  // TODO: im
  * @param target Optional element on which to listen for hover events.
  * @codeGenApi
  */
-export function ɵɵdeferOnViewport(target: unknown) {
-  const lView = getLView();
-  const bindingIndex = nextBindingIndex();
-  const resolvedValue = true;
+export function ɵɵdeferOnViewport(
+    index: number, walkUpTimes: number|null, placeholderViewIndex?: number) {
+  const initialLView = getLView();
+  const tNode = getCurrentTNode()!;
 
-  // TODO: handle the target being null
-  if (lView[bindingIndex] === resolvedValue || target == null) {
-    return;
-  }
+  const ref = afterRender(() => {
+    const el = resolveTriggerNode(initialLView, index, walkUpTimes, placeholderViewIndex ?? null);
 
-  const tNode = getSelectedTNode();
-  const lDetails = getLDeferBlockDetails(lView, tNode.index);
-  const renderedState = lDetails[DEFER_BLOCK_STATE];
+    if (el) {
+      ref.destroy();
 
-  if (renderedState === DeferBlockInstanceState.INITIAL) {
-    renderPlaceholder(lView, tNode);
-  }
+      // TODO: temporary listener to illustrate the approach.
+      el.addEventListener('click', () => triggerDeferBlock(initialLView, tNode));
+    }
+  }, {injector: initialLView[INJECTOR]!});
 
-  // The binding index tracks whether we've resolved the DOM node.
-  lView[bindingIndex] = resolvedValue;
+  // TODO: should this also show the placeholder when the trigger is outside of the placeholder?
+  if (placeholderViewIndex != null) {
+    const renderedState = getLDeferBlockDetails(initialLView, tNode.index)[DEFER_BLOCK_STATE];
 
-  // -1 is a special value indicating that the trigger is inside the placeholder.
-  if (target !== -1) {
-    const element = resolveTriggerElement(target);
-    // TODO: do things with the domNode
-
-    element!.addEventListener('click', () => {
-      triggerDeferBlock(lView, tNode);
-    });
+    if (renderedState === DeferBlockInstanceState.INITIAL) {
+      renderPlaceholder(initialLView, tNode);
+    }
   }
 }
 
-export function ɵɵdeferNestedOnViewport(depth: number, deferIndex: number) {
-  const lView = getLView();
-  const tNode = getCurrentTNode()!;  // TODO: assert
-  const element = getNativeByTNode(tNode, lView);
-  let i = depth;
-  let deferredLView: LView|null = lView;
+function resolveTriggerNode(
+    initialLView: LView, elementIndex: number, walkUpTimes: number|null,
+    placeholderViewIndex: number|null): RElement|null {
+  let lView: LView|null = initialLView;
 
-  while (i > 0 && deferredLView) {
-    deferredLView = getLViewParent(deferredLView);
-    i--;
+  if (placeholderViewIndex !== null) {
+    // TODO: why is this always + 1? Something seems off...
+    const placeholderContainer = initialLView[HEADER_OFFSET + placeholderViewIndex + 1];
+    ngDevMode && assertLContainer(placeholderContainer);
+    lView = placeholderContainer[CONTAINER_HEADER_OFFSET];
+    ngDevMode && assertLView(lView);
+  } else if (walkUpTimes !== null) {
+    let i = walkUpTimes;
+
+    while (i > 0 && lView) {
+      // TODO: nextContext uses DECLARATION_VIEW. Should we do the same?
+      // TODO: maybe export `walkUpViews` utility?
+      lView = getLViewParent(lView);
+      i--;
+    }
   }
 
-  if (!deferredLView) {
-    throw new Error('TODO: could not resolve');
+  if (!lView) {
+    return null;
   }
 
-  const deferredTNode = getTNode(deferredLView[TVIEW], HEADER_OFFSET + deferIndex);
+  const target = lView[HEADER_OFFSET + elementIndex];
 
-  (element as HTMLElement).addEventListener('click', () => {
-    triggerDeferBlock(deferredLView!, deferredTNode);
-  });
+  // If the target is an LView, it's pointing to a component instance so we resolve the host node.
+  // TODO: assert that the return value is a DOM node
+  return isLView(target) ? target[HOST] : target;
 }
+
+export function ɵɵdeferNestedOnViewport(depth: number, deferIndex: number) {}
 
 /**
  * Creates runtime data structures for the `prefetch on viewport` deferred trigger.
@@ -619,25 +625,6 @@ function triggerDeferBlock(lView: LView, tNode: TNode) {
         throwError('Unknown defer block state');
       }
   }
-}
-
-function resolveTriggerElement(target: {}): RElement|null {
-  const constructor = target.constructor;
-  let node: RElement|null = null;
-
-  // We want to allow users to pass in a local ref to the trigger directly, however if the node
-  // is a component how or the ref is pointing to a directive instance, we'll receive the instance
-  // instead. Infer the DOM node from the directive instance.
-  if (getComponentDef(constructor) || getDirectiveDef(constructor)) {
-    const patchedLView = readPatchedLView(target);
-    const index = patchedLView ? findDirectiveInstanceIndex(patchedLView, target) : -1;
-    node = index > -1 ? unwrapRNode(patchedLView![index]) as RElement : null;
-  } else {
-    // TODO: assert value is an element.
-    node = target as RElement;
-  }
-
-  return node;
 }
 
 /**
