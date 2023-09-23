@@ -341,6 +341,7 @@
     },
     {
       "description": "should generate a for block that tracks by a field on the item",
+      "focusTest": true,
       "angularCompilerOptions": {
         "_enabledBlockTypes": ["for"]
       },

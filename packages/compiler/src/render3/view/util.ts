@@ -128,6 +128,7 @@ export interface Instruction {
   span: ParseSourceSpan|null;
   reference: o.ExternalReference;
   paramsOrFn?: InstructionParams;
+  leadingComments?: o.LeadingComment[];
 }
 
 /** Generates a call to a single instruction. */
@@ -331,7 +332,7 @@ export function getInterpolationArgsLength(interpolation: Interpolation) {
 export function getInstructionStatements(instructions: Instruction[]): o.Statement[] {
   const statements: o.Statement[] = [];
   let pendingExpression: o.Expression|null = null;
-  let pendingExpressionType: o.ExternalReference|null = null;
+  let pendingInstruction: Instruction|null = null;
   let chainLength = 0;
 
   for (const current of instructions) {
@@ -342,25 +343,31 @@ export function getInstructionStatements(instructions: Instruction[]): o.Stateme
 
     // If the current instruction is the same as the previous one
     // and it can be chained, add another call to the chain.
-    if (chainLength < MAX_CHAIN_LENGTH && pendingExpressionType === current.reference &&
-        CHAINABLE_INSTRUCTIONS.has(pendingExpressionType)) {
+    if (chainLength < MAX_CHAIN_LENGTH && pendingInstruction?.reference === current.reference &&
+        CHAINABLE_INSTRUCTIONS.has(pendingInstruction.reference)) {
       // We'll always have a pending expression when there's a pending expression type.
       pendingExpression = pendingExpression!.callFn(params, pendingExpression!.sourceSpan);
       chainLength++;
     } else {
       if (pendingExpression !== null) {
-        statements.push(pendingExpression.toStmt());
+        statements.push(pendingExpression.toStmt(pendingInstruction?.leadingComments));
       }
       pendingExpression = invokeInstruction(current.span, current.reference, params);
-      pendingExpressionType = current.reference;
+      pendingInstruction = current;
       chainLength = 0;
+    }
+
+    if (pendingInstruction.leadingComments?.length &&
+        CHAINABLE_INSTRUCTIONS.has(pendingInstruction.reference)) {
+      throw new Error(`Chainable instruction ${
+          pendingInstruction.reference.name} cannot have leading comments.`);
     }
   }
 
   // Since the current instruction adds the previous one to the statements,
   // we may be left with the final one at the end that is still pending.
   if (pendingExpression !== null) {
-    statements.push(pendingExpression.toStmt());
+    statements.push(pendingExpression.toStmt(pendingInstruction?.leadingComments));
   }
 
   return statements;

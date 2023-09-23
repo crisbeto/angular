@@ -1473,7 +1473,15 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
 
     this.registerComputedLoopVariables(block, primaryData.scope);
 
-    // `repeaterCreate(0, ...)`
+    // Important: the tracking function gets generated as a constant or a function declaration
+    // outside of the class. If the function is only used once, minifiers might inline it into the
+    // `repeaterCreate` call which is detrimental to performance (as evidenced by our bechmarks).
+    // Prepend a `@__NOINLINE__` to prevent minifiers from inlining variables into the call.
+    // Note that it's important that the comment is at the call site, *not* the declaration.
+    const createLeadingComments = [o.leadingComment('@__NOINLINE__', true, false)];
+    // const createLeadingComments = undefined;
+
+    // `/*@__NOINLINE__*/ repeaterCreate(0, ...)`
     this.creationInstruction(block.sourceSpan, R3.repeaterCreate, () => {
       const params = [
         o.literal(blockIndex),
@@ -1493,7 +1501,7 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
       }
 
       return params;
-    });
+    }, undefined, createLeadingComments);
 
     // `repeater(0, iterable)`
     this.updateInstruction(
@@ -1683,8 +1691,9 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
   // bindings. e.g. {{ foo }} <div #foo></div>
   private instructionFn(
       fns: Instruction[], span: ParseSourceSpan|null, reference: o.ExternalReference,
-      paramsOrFn: InstructionParams, prepend: boolean = false): void {
-    fns[prepend ? 'unshift' : 'push']({span, reference, paramsOrFn});
+      paramsOrFn: InstructionParams, prepend: boolean = false,
+      leadingComments?: o.LeadingComment[]): void {
+    fns[prepend ? 'unshift' : 'push']({span, reference, paramsOrFn, leadingComments});
   }
 
   private processStylingUpdateInstruction(
@@ -1706,8 +1715,9 @@ export class TemplateDefinitionBuilder implements t.Visitor<void>, LocalResolver
 
   private creationInstruction(
       span: ParseSourceSpan|null, reference: o.ExternalReference, paramsOrFn?: InstructionParams,
-      prepend?: boolean) {
-    this.instructionFn(this._creationCodeFns, span, reference, paramsOrFn || [], prepend);
+      prepend?: boolean, leadingComments?: o.LeadingComment[]) {
+    this.instructionFn(
+        this._creationCodeFns, span, reference, paramsOrFn || [], prepend, leadingComments);
   }
 
   private updateInstructionWithAdvance(

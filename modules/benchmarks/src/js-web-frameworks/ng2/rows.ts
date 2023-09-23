@@ -14,13 +14,13 @@ export interface RowData {
   label: string;
 }
 
-
 @Component({
   selector: 'js-web-frameworks',
   template: `
     <table class="table table-hover table-striped test-data">
         <tbody>
-            <tr [class.danger]="item.id === selected" *ngFor="let item of data; trackBy: itemById">
+          {#for (item of data); track item}
+            <tr [class.danger]="item.id === selected">
                 <td class="col-md-1">{{item.id}}</td>
                 <td class="col-md-4">
                     <a href="#" (click)="select(item.id); $event.preventDefault()">{{item.label}}</a>
@@ -32,6 +32,7 @@ export interface RowData {
                 </td>
                 <td class="col-md-6"></td>
             </tr>
+          {/for}
         </tbody>
     </table>
   `
