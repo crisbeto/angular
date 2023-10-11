@@ -14,6 +14,9 @@ FooModule.ɵinj = /*@__PURE__*/ $i0$.ɵɵdefineInjector({});
 (() => {
   (typeof ngDevMode === "undefined" || ngDevMode) && i0.ɵsetClassMetadata(FooModule, [{
     type: NgModule,
-    args: [{ declarations: [FooComponent, BarDirective, QuxPipe], bootstrap: [FooComponent] }]
-  }], null, null)
+    args: [{
+      declarations: [FooComponent, BarDirective, QuxPipe],
+      bootstrap: [FooComponent]
+    }]
+  }], null, null);
 })();

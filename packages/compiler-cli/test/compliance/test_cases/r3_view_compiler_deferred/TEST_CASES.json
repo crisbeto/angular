@@ -76,6 +76,7 @@
       "inputFiles": [
         "deferred_with_local_deps.ts"
       ],
+      "focusTest": true,
       "expectations": [
         {
           "files": [
@@ -91,6 +92,7 @@
     },
     {
       "description": "should generate a deferred block with external dependencies",
+      "focusTest": true,
       "inputFiles": [
         "deferred_with_external_deps.ts",
         "deferred_with_external_deps_eager.ts",
