@@ -171,7 +171,7 @@ describe('DestroyRef', () => {
       @Component({
         standalone: true,
         imports: [Child, NgIf],
-        template: '<child *ngIf="showChild"></child>',
+        template: '@if (showChild) {<child></child>}',
       })
       class Parent {
         showChild = true;

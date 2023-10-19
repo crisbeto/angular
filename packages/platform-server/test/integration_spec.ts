@@ -283,7 +283,7 @@ function createMyAnimationApp(standalone: boolean) {
     selector: 'app',
     template: `
   <div [@myAnimation]="state">
-    <svg *ngIf="true"></svg>
+    @if (true) {<svg></svg>}
     {{text}}
   </div>`,
     animations: [trigger(

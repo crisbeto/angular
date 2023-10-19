@@ -364,8 +364,7 @@ describe('ViewContainerRef', () => {
       @Component({
         selector: 'test-cmpt',
         template: `
-          <ng-template #t>content</ng-template>
-          before|<ng-template #c1></ng-template>|middle|<ng-template #c2></ng-template>|after
+                    before|middle|after
         `
       })
       class TestComponent {
@@ -398,7 +397,7 @@ describe('ViewContainerRef', () => {
     it('should add embedded views at the right position in the DOM tree (ng-template next to other ng-template)',
        () => {
          @Component({
-           template: `before|<ng-template #a>A</ng-template><ng-template #b>B</ng-template>|after`
+           template: `before|ng-template #b>B</ng-template>|after`
          })
          class TestCmp {
            @ViewChild('a', {static: true}) ta!: TemplateRef<{}>;
@@ -982,7 +981,7 @@ describe('ViewContainerRef', () => {
     it('should not throw when view removes another view upon removal', () => {
       @Component({
         template: `
-          <div *ngIf="visible" [template]="parent">I host a template</div>
+          @if (visible) {<div [template]="parent">I host a template</div>}
           <ng-template #parent>
               <div [template]="child">I host a child template</div>
           </ng-template>
@@ -1781,7 +1780,7 @@ describe('ViewContainerRef', () => {
     it('should insert elements in the proper order when template root is an ng-container', () => {
       @Component({
         template: `
-          <ng-container *ngFor="let item of items">|{{ item }}|</ng-container>
+          @for (item of items; track item) {|{{ item }}|}
         `
       })
       class App {
@@ -1816,7 +1815,7 @@ describe('ViewContainerRef', () => {
          @Component({
            template: `
               <ng-container>
-                <ng-container *ngFor="let item of items">|{{ item }}|</ng-container>
+                @for (item of items; track item) {|{{ item }}|}
               </ng-container>
             `
          })
@@ -1851,7 +1850,7 @@ describe('ViewContainerRef', () => {
        () => {
          @Component({
            template: `
-            <ng-container *ngFor="let item of items"><ng-container>|{{ item }}|</ng-container></ng-container>
+            @for (item of items; track item) {<ng-container>|{{ item }}|</ng-container>}
           `
          })
          class App {
@@ -1886,7 +1885,7 @@ describe('ViewContainerRef', () => {
          @Component({
            template: `
             <ng-container>
-              <ng-container *ngFor="let item of items"><ng-container>|{{ item }}|</ng-container></ng-container>
+              @for (item of items; track item) {<ng-container>|{{ item }}|</ng-container>}
             </ng-container>
           `
          })
@@ -1921,7 +1920,7 @@ describe('ViewContainerRef', () => {
        () => {
          @Component({
            template: `
-          <ng-container *ngFor="let item of items">{count, select, other {|{{ item }}|}}</ng-container>
+          @for (item of items; track item) {{count, select, other {|{{ item }}|}}}
         `
          })
          class App {
@@ -2237,7 +2236,7 @@ describe('ViewContainerRef', () => {
     it('should project the ViewContainerRef content along its host, in a view', () => {
       @Component({
         selector: 'child-with-view',
-        template: `Before (inside)-<ng-content *ngIf="show"></ng-content>-After (inside)`
+        template: `Before (inside)-@if (show) {<ng-content></ng-content>}-After (inside)`
       })
       class ChildWithView {
         show: boolean = true;
@@ -2365,8 +2364,7 @@ describe('ViewContainerRef', () => {
             <div #target></div>
           </content-comp>
 
-          <ng-template #source>My Content</ng-template>
-        `
+                  `
         })
         class MyComp {
           @ViewChild('source', {static: true}) source!: TemplateRef<{}>;
@@ -2584,10 +2582,7 @@ class EmbeddedComponentWithNgContent {
 @Component({
   selector: 'view-container-ref-comp',
   template: `
-    <ng-template #ref0>0</ng-template>
-    <ng-template #ref1>1</ng-template>
-    <ng-template #ref2>2</ng-template>
-  `
+              `
 })
 class ViewContainerRefComp {
   @ViewChildren(TemplateRef) templates!: QueryList<TemplateRef<any>>;

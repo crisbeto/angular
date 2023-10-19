@@ -42,7 +42,7 @@ import {expect} from '@angular/platform-browser/testing/src/matchers';
            @Component({
              selector: 'comp',
              template:
-                 '<svg><ng-container *ngIf="1"><rect x="10" y="10" width="30" height="30"></rect></ng-container></svg>',
+                 '<svg>@if (1) {<ng-container><rect x="10" y="10" width="30" height="30"></rect></ng-container>}</svg>',
            })
            class MyCmp {
            }

@@ -1261,7 +1261,7 @@ class FormControlNumberInput {
   template: `
     <div [formGroup]="form">
       <select formControlName="city">
-        <option *ngFor="let c of cities" [value]="c"></option>
+        @for (c of cities; track c) {<option [value]="c"></option>}
       </select>
     </div>`
 })
@@ -1275,7 +1275,7 @@ class FormControlNameSelect {
   template: `
     <div [formGroup]="form">
       <select formControlName="city">
-        <option *ngFor="let c of cities" [ngValue]="c">{{c.name}}</option>
+        @for (c of cities; track c) {<option [ngValue]="c">{{c.name}}</option>}
       </select>
     </div>`
 })
@@ -1289,7 +1289,7 @@ class FormControlSelectNgValue {
   template: `
     <div [formGroup]="form">
       <select formControlName="city" [compareWith]="compareFn">
-        <option *ngFor="let c of cities" [ngValue]="c">{{c.name}}</option>
+        @for (c of cities; track c) {<option [ngValue]="c">{{c.name}}</option>}
       </select>
     </div>`
 })
@@ -1305,7 +1305,7 @@ class FormControlSelectWithCompareFn {
   template: `
     <div [formGroup]="form">
       <select multiple formControlName="city">
-        <option *ngFor="let c of cities" [value]="c">{{c}}</option>
+        @for (c of cities; track c) {<option [value]="c">{{c}}</option>}
       </select>
     </div>`
 })
@@ -1319,7 +1319,7 @@ class FormControlSelectMultiple {
   template: `
     <div [formGroup]="form">
       <select multiple formControlName="city">
-        <option *ngFor="let c of cities" [ngValue]="c">{{c.name}}</option>
+        @for (c of cities; track c) {<option [ngValue]="c">{{c.name}}</option>}
       </select>
     </div>`
 })
@@ -1333,7 +1333,7 @@ class FormControlSelectMultipleNgValue {
   template: `
     <div [formGroup]="form">
       <select multiple formControlName="city" [compareWith]="compareFn">
-        <option *ngFor="let c of cities" [ngValue]="c">{{c.name}}</option>
+        @for (c of cities; track c) {<option [ngValue]="c">{{c.name}}</option>}
       </select>
     </div>`
 })
@@ -1349,7 +1349,7 @@ class FormControlSelectMultipleWithCompareFn {
   selector: 'ng-model-select-form',
   template: `
     <select [(ngModel)]="selectedCity">
-      <option *ngFor="let c of cities" [ngValue]="c"> {{c.name}} </option>
+      @for (c of cities; track c) {<option [ngValue]="c"> {{c.name}} </option>}
     </select>
   `
 })
@@ -1362,7 +1362,7 @@ class NgModelSelectForm {
   selector: 'ng-model-select-null-form',
   template: `
     <select [(ngModel)]="selectedCity">
-      <option *ngFor="let c of cities" [ngValue]="c"> {{c.name}} </option>
+      @for (c of cities; track c) {<option [ngValue]="c"> {{c.name}} </option>}
       <option [ngValue]="null">Unspecified</option>
     </select>
   `
@@ -1376,7 +1376,7 @@ class NgModelSelectWithNullForm {
   selector: 'ng-model-select-compare-with',
   template: `
     <select [(ngModel)]="selectedCity" [compareWith]="compareFn">
-      <option *ngFor="let c of cities" [ngValue]="c"> {{c.name}} </option>
+      @for (c of cities; track c) {<option [ngValue]="c"> {{c.name}} </option>}
     </select>
   `
 })
@@ -1392,7 +1392,7 @@ class NgModelSelectWithCustomCompareFnForm {
   selector: 'ng-model-select-multiple-compare-with',
   template: `
     <select multiple [(ngModel)]="selectedCities" [compareWith]="compareFn">
-      <option *ngFor="let c of cities" [ngValue]="c"> {{c.name}} </option>
+      @for (c of cities; track c) {<option [ngValue]="c"> {{c.name}} </option>}
     </select>
   `
 })
@@ -1407,7 +1407,7 @@ class NgModelSelectMultipleWithCustomCompareFnForm {
   selector: 'ng-model-select-multiple-form',
   template: `
     <select multiple [(ngModel)]="selectedCities">
-      <option *ngFor="let c of cities" [ngValue]="c"> {{c.name}} </option>
+      @for (c of cities; track c) {<option [ngValue]="c"> {{c.name}} </option>}
     </select>
   `
 })
@@ -1432,12 +1432,12 @@ class NgModelRangeForm {
 @Component({
   selector: 'form-control-radio-buttons',
   template: `
-    <form [formGroup]="form" *ngIf="showRadio.value === 'yes'">
+    @if (showRadio.value === 'yes') {<form [formGroup]="form">
       <input type="radio" formControlName="food" value="chicken">
       <input type="radio" formControlName="food" value="fish">
       <input type="radio" formControlName="drink" value="cola">
       <input type="radio" formControlName="drink" value="sprite">
-    </form>
+    </form>}
     <input type="radio" [formControl]="showRadio" value="yes">
     <input type="radio" [formControl]="showRadio" value="no">`
 })
@@ -1496,8 +1496,8 @@ class WrappedValue implements ControlValueAccessor {
 @Component({
   selector: 'cva-with-disabled-state',
   template: `
-    <div *ngIf="disabled !== undefined">CALLED WITH {{disabled ? 'DISABLED' : 'ENABLED'}}</div>
-    <div *ngIf="disabled === undefined">UNSET</div>
+    @if (disabled !== undefined) {<div>CALLED WITH {{disabled ? 'DISABLED' : 'ENABLED'}}</div>}
+    @if (disabled === undefined) {<div>UNSET</div>}
   `,
   providers: [
     {provide: NG_VALUE_ACCESSOR, multi: true, useExisting: CvaWithDisabledState},

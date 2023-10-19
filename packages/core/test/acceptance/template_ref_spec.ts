@@ -239,8 +239,7 @@ describe('TemplateRef', () => {
   describe('context', () => {
     @Component({
       template: `
-      <ng-template #templateRef let-name="name">{{name}}</ng-template>
-      <ng-container #containerRef></ng-container>
+            <ng-container #containerRef></ng-container>
     `
     })
     class App {
@@ -286,10 +285,7 @@ describe('TemplateRef', () => {
 
       @Component({
         template: `
-          <ng-template #templateRef let-name="name">
-            <button (click)="log(name)"></button>
-          </ng-template>
-          <ng-container #containerRef></ng-container>
+                    <ng-container #containerRef></ng-container>
         `
       })
       class ListenerTest {

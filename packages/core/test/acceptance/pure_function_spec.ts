@@ -65,7 +65,7 @@ describe('components using pure function instructions internally', () => {
     it('should support array literals in dynamic views', () => {
       @Component({
         template: `
-                <my-comp *ngIf="showing" [names]="['Nancy', customName, 'Bess']"></my-comp>
+                @if (showing) {<my-comp [names]="['Nancy', customName, 'Bess']"></my-comp>}
               `,
       })
       class App {
@@ -175,7 +175,7 @@ describe('components using pure function instructions internally', () => {
     it('should support an array literal with more than 1 binding', () => {
       @Component({
         template: `
-                <my-comp *ngIf="showing" [names]="['Nancy', customName, 'Bess', customName2]"></my-comp>
+                @if (showing) {<my-comp [names]="['Nancy', customName, 'Bess', customName2]"></my-comp>}
               `,
       })
       class App {
@@ -443,8 +443,8 @@ describe('components using pure function instructions internally', () => {
     it('should support multiple view instances with multiple bindings', () => {
       @Component({
         template: `
-        <object-comp *ngFor="let config of configs" [config]="config">
-        </object-comp>
+        @for (config of configs; track config) {<object-comp [config]="config">
+        </object-comp>}
       `,
       })
       class App {

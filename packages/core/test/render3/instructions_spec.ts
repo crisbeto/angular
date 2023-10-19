@@ -287,9 +287,9 @@ describe('instructions', () => {
         selector: 'nested-loops',
         standalone: true,
         template: `
-          <ul *ngFor="let row of rows">
-            <li *ngFor="let col of row.cols">{{col}}</li>
-          </ul>
+          @for (row of rows; track row) {<ul>
+            @for (col of row.cols; track col) {<li>{{col}}</li>}
+          </ul>}
         `,
         imports: [CommonModule],
       })

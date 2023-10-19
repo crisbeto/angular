@@ -114,7 +114,7 @@ describe('acceptance integration tests', () => {
     });
 
     it('should add and remove DOM nodes when ng-container is a child of an embedded view', () => {
-      @Component({template: '<ng-container *ngIf="render">content</ng-container>'})
+      @Component({template: '@if (render) {<ng-container>content</ng-container>}'})
       class App {
         render = false;
       }
@@ -691,7 +691,7 @@ describe('acceptance integration tests', () => {
     });
 
     it('should support a component with sub-views', () => {
-      @Component({selector: 'comp', template: '<div *ngIf="condition">text</div>'})
+      @Component({selector: 'comp', template: '@if (condition) {<div>text</div>}'})
       class MyComp {
         @Input() condition!: boolean;
       }
@@ -833,7 +833,7 @@ describe('acceptance integration tests', () => {
         @Component({
           template: `
             <span [attr.title]="title">
-              <b [attr.title]="title" *ngIf="shouldRender"></b>
+              @if (shouldRender) {<b [attr.title]="title"></b>}
             </span>
           `
         })
@@ -2284,7 +2284,7 @@ describe('acceptance integration tests', () => {
   });
 
   it('should be able to insert and remove elements inside <template>', () => {
-    @Component({template: '<template><strong *ngIf="render">Hello</strong></template>'})
+    @Component({template: '<template>@if (render) {<strong>Hello</strong>}</template>'})
     class App {
       render = true;
     }
@@ -2413,9 +2413,9 @@ describe('acceptance integration tests', () => {
 
          @Component({
            template: `
-          <div *ngFor="let item of items" dir [attr.data-comp]="text">
+          @for (item of items; track item) {<div dir [attr.data-comp]="text">
             ...
-          </div>
+          </div>}
         `
          })
          class Cmp {
@@ -2453,16 +2453,27 @@ describe('acceptance integration tests', () => {
 
          @Component({
            template: `
-          <div *ngIf="showWarningMessage; else listOfItems">
+          @if (showWarningMessage) {<div>
             Nooo!
-          </div>
+          </div>} @else {
+            <animation-comp *ngFor="let item of items; trackBy: itemTrackFn">
+              {{ item.value }}
+            </animation-comp>
+          }
 
           <ng-template #listOfItems>
             <animation-comp *ngFor="let item of items; trackBy: itemTrackFn">
               {{ item.value }}
             </animation-comp>
-          </ng-template>
-        `
+         @for (item of items; track itemTrackFn($index, item)) { </ng-template>v>
+            Nooo!
+          </div>} @else {
+            <an}imation-comp *ngFor="let item of items; trackBy: itemTrackFn">
+              {{ item.value }}
+            </animation-comp>
+          }
+
+                  `
          })
          class Cmp {
            showWarningMessage = false;
@@ -2554,17 +2565,15 @@ describe('acceptance integration tests', () => {
              trigger('inner', [transition('* => *', [])]),
            ],
            template: `
-          <div *ngIf="showRoot" (@root.start)="track('root', $event)" @root>
-            <div *ngIf="showIfContents; else innerCompList" (@outer.start)="track('outer', $event)" @outer>
+          @if (showRoot) {<div (@root.start)="track('root'@for (item of items; track itemTrackFn($index, item)) {, $event)" uter.start)="track('outer', $event)" @outer>
               Nooo!
-            </div>
-
-            <ng-template #innerCompList>
-              <inner-comp *ngFor="let item of items; trackBy: itemTrackFn" (@inner.start)="track('inner', $event)" @inner>
+            </div>} @else {
+              <i}nner-comp *ngFor="let item of items; trackBy: itemTrackFn" (@inner.start)="track('inner', $event)" @inner>
                 {{ item.value }}
               </inner-comp>
-            </ng-template>
-          </div>
+            }
+
+                      </div>}
         `
          })
          class Cmp {

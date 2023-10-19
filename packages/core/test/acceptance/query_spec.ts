@@ -343,9 +343,9 @@ describe('query logic', () => {
       @Component({
         selector: 'root',
         template: `
-          <ng-container *ngIf="condition">
+          @if (condition) {<ng-container>
             <comp-with-view-query></comp-with-view-query>
-          </ng-container>
+          </ng-container>}
         `
       })
       class Root {
@@ -717,7 +717,7 @@ describe('query logic', () => {
         selector: 'test-comp',
         template: `
           <shallow-comp>
-            <div *ngIf="showing" #foo></div>
+            @if (showing) {<div #foo></div>}
           </shallow-comp>
         `
       })
@@ -779,11 +779,11 @@ describe('query logic', () => {
       @Component({
         selector: 'comp',
         template: `
-          <ng-container *ngFor="let item of items">
+          @for (item of items; track item) {
             <div with-content>
               <span #foo></span>
             </div>
-          </ng-container>
+          }
         `,
       })
       class Root {
@@ -1301,10 +1301,10 @@ describe('query logic', () => {
         selector: 'test-cmpt',
         template: `
           <needs-target>
-            <ng-container *ngIf="true">
+            @if (true) {<ng-container>
               <div targetDir></div>
               <div #target></div>
-            </ng-container>
+            </ng-container>}
           </needs-target>
         `,
       })
@@ -1889,10 +1889,7 @@ describe('query logic', () => {
       @Component({
         standalone: true,
         template: `
-          <ng-template #foo><div>Test</div></ng-template>
-          <ng-template #bar><div>Test</div></ng-template>
-          <ng-template #baz><div>Test</div></ng-template>
-        `,
+                                      `,
       })
       class TestCmp {
         @ViewChildren(TemplateRef) tplQuery?: QueryList<TemplateRef<unknown>>;
@@ -2092,8 +2089,7 @@ describe('query logic', () => {
            @Component({
              selector: 'test-comp',
              template: `
-              <ng-template #tpl><div #foo>match</div></ng-template>
-              <ng-template vc></ng-template>
+                            <ng-template vc></ng-template>
             `,
            })
            class TestComponent implements AfterViewInit {
@@ -2183,16 +2179,10 @@ describe('query logic', () => {
            @Component({
              selector: 'test-comp',
              template: `
-               <ng-template #tpl1 let-idx="idx">
-                 <div #foo [id]="'foo1_' + idx"></div>
-               </ng-template>
-
+               
                <div #foo id="middle"></div>
 
-               <ng-template #tpl2 let-idx="idx">
-                 <div #foo [id]="'foo2_' + idx"></div>
-               </ng-template>
-
+               
                <ng-template vc></ng-template>
              `,
            })
@@ -2259,13 +2249,8 @@ describe('query logic', () => {
            @Component({
              selector: 'test-comp',
              template: `
-               <ng-template #tpl let-idx="idx" let-container_idx="container_idx">
-                 <div #foo [id]="'foo_' + container_idx + '_' + idx"></div>
-               </ng-template>
-
-               <ng-template vc #vi0="vc"></ng-template>
-               <ng-template vc #vi1="vc"></ng-template>
-             `,
+               
+                                           `,
            })
            class TestComponent {
              @ViewChild('tpl') tpl!: TemplateRef<any>;
@@ -2821,7 +2806,7 @@ class SubclassStaticContentQueryComp extends StaticContentQueryComp {
 @Component({
   selector: 'query-with-changes',
   template: `
-    <div *ngIf="showing" #foo></div>
+    @if (showing) {<div #foo></div>}
   `
 })
 export class QueryCompWithChanges {
@@ -2834,11 +2819,11 @@ export class QueryCompWithChanges {
   selector: 'query-with-no-changes',
   template: `
     <query-component>
-      <div *ngIf="true" #foo></div>
-      <div *ngIf="showing">
+      @if (true) {<div #foo></div>}
+      @if (showing) {<div>
         Showing me should not change the content of the query
-        <div *ngIf="innerShowing" #foo></div>
-      </div>
+        <@if (innerShowing) {div #foo></div>
+}      </div>}
     </query-component>
   `
 })

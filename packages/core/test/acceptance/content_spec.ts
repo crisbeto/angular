@@ -384,7 +384,7 @@ describe('projection', () => {
     @Component({
       selector: 'child',
       template:
-          `<div *ngFor="let item of [1, 2]; let i = index">({{i}}):<ng-content></ng-content></div>`
+          `@for (item of [1, 2]; track item; let i = $index) {<div>({{i}}):<ng-content></ng-content></div>}`
     })
     class Child {
     }
@@ -417,9 +417,9 @@ describe('projection', () => {
       selector: 'my-app',
       template: `
         <root-comp>
-          <ng-container *ngFor="let item of items; last as last">
-            <nested-comp *ngIf="!last"></nested-comp>
-          </ng-container>
+          @for (item of items; track item; let last = $last)@if (!last) { {
+         p *ngIf="!last"}></nested-comp>
+          }
         </root-comp>
       `
     })
@@ -869,7 +869,7 @@ describe('projection', () => {
       class Child {
       }
 
-      @Component({template: `<child><div *ngIf="value">content</div></child>`})
+      @Component({template: `<child>@if (value) {<div>content</div>}</child>`})
       class Parent {
         value = false;
       }
@@ -903,9 +903,9 @@ describe('projection', () => {
       selector: 'my-app',
       template: `
         <root-comp>
-          <ng-container *ngFor="let item of items; last as last">
-            <child-comp *ngIf="!last">{{ item }}|</child-comp>
-          </ng-container>
+          @for (item of items; track item; let last = $last)@if (!last) { {
+        p *ngIf="!last">{{ item }}}|</child-comp>
+          }
         </root-comp>
       `
     })
@@ -1112,7 +1112,7 @@ describe('projection', () => {
 
       @Component({
         selector: 'main-selector',
-        template: '<selector-proj><div x="true" *ngIf="true">Hello world!</div></selector-proj>'
+        template: '<selector-proj>@if (true) {<div x="true">Hello world!</div>}</selector-proj>'
       })
       class SelectorMainComp {
       }
@@ -1141,7 +1141,7 @@ describe('projection', () => {
 
       @Component({
         selector: 'main-selector',
-        template: '<selector-proj><div x="true" *ngIf="true">Hello world!</div></selector-proj>'
+        template: '<selector-proj>@if (true) {<div x="true">Hello world!</div>}</selector-proj>'
       })
       class SelectorMainComp {
       }
@@ -1170,7 +1170,7 @@ describe('projection', () => {
 
       @Component({
         selector: 'main-selector',
-        template: '<selector-proj><div class="x" *ngIf="true">Hello world!</div></selector-proj>'
+        template: '<selector-proj>@if (true) {<div class="x">Hello world!</div>}</selector-proj>'
       })
       class SelectorMainComp {
       }
@@ -1231,9 +1231,9 @@ describe('projection', () => {
         selector: 'root-comp',
         template: `
           <projector-app>
-            <div *ngIf="show" ngProjectAs="foo">as element</div>
-            <div *ngIf="show" ngProjectAs="[foo]">as attribute</div>
-            <div *ngIf="show" ngProjectAs=".foo">as class</div>
+            @if (show) {<div ngProjectAs="foo">as element</div>}
+            @if (show) {<div ngProjectAs="[foo]">as attribute</div>}
+            @if (show) {<div ngProjectAs=".foo">as class</div>}
           </projector-app>
         `,
       })
@@ -1331,7 +1331,7 @@ describe('projection', () => {
 
            @Component({
              selector: 'parent-comp',
-             template: `<child-comp><span *ngIf="true" class="{{'a'}}"></span></child-comp>`
+             template: `<child-comp>@if (true) {<span class="{{'a'}}"></span>}</child-comp>`
            })
            class ParentComp {
            }
@@ -1352,7 +1352,7 @@ describe('projection', () => {
       @Component({
         selector: 'parent-comp',
         template:
-            `<child-comp><span *ngIf="true" id="5" jjj="class" class="{{'a'}}" [title]="'abc'"></span></child-comp>`
+            `<child-comp>@if (true) {<span id="5" jjj="class" class="{{'a'}}" [title]="'abc'"></span>}</child-comp>`
       })
       class ParentComp {
       }

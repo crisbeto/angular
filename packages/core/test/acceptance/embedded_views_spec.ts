@@ -22,7 +22,7 @@ describe('embedded views', () => {
     }
 
     @Component({
-      template: `<child-cmp *ngIf="true" [addItemFn]="addItem.bind(this)"></child-cmp>`,
+      template: `@if (true) {<child-cmp [addItemFn]="addItem.bind(this)"></child-cmp>}`,
     })
     class TestCmp {
       item: string = 'CmpItem';

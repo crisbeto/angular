@@ -256,8 +256,8 @@ import {expect} from '@angular/platform-browser/testing/src/matchers';
           selector: 'test-component',
           imports: [NgIf],
           template: `
-            <div *ngIf="true">Hello</div>
-            <div *ngIf="false">World</div>
+            @if (true) {<div>Hello</div>}
+            @if (false) {<div>World</div>}
           `,
           standalone: true,
         })

@@ -128,9 +128,9 @@ describe('directives', () => {
       @Component({
         selector: 'my-component',
         template: `
-          <ng-container *ngIf="visible" directiveA>
+          @if (visible) {<ng-container directiveA>
             <span>Some content</span>
-          </ng-container>`
+          </ng-container>}`
       })
       class MyComponent {
         visible = true;
@@ -407,7 +407,7 @@ describe('directives', () => {
 
          @Component({
            selector: 'my-app',
-           template: '<ng-template *ngIf="true" dir="{{ message }}"></ng-template>',
+           template: '@if (true) {<ng-template dir="{{ message }}"></ng-template>}',
          })
          class TestComp {
            message = 'Hello';

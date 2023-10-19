@@ -323,9 +323,9 @@ import {NgModelCustomComp, NgModelCustomWrapper} from './value_accessor_integrat
            @Component({
              template: `
               <form>
-                <div *ngFor="let item of items; index as i">
+                @for (item of items; track item; let i = $index) {<div>
                   <input [(ngModel)]="item.value" name="name-{{i}}">
-                </div>
+                </div>}
               </form>
             `
            })
@@ -379,9 +379,9 @@ import {NgModelCustomComp, NgModelCustomWrapper} from './value_accessor_integrat
              template: `
               <form>
                 <ng-container ngModelGroup="group">
-                  <div *ngFor="let item of items; index as i">
+                  @for (item of items; track item; let i = $index) {<div>
                     <input [(ngModel)]="item.value" name="name-{{i}}">
-                  </div>
+                  </div>}
                 </ng-container>
               </form>
             `
@@ -2788,10 +2788,10 @@ class NgModelValidBinding {
   selector: 'ng-model-ngif-form',
   template: `
     <form>
-      <div ngModelGroup="name" *ngIf="groupShowing">
+      @if (groupShowing) {<div ngModelGroup="name">
         <input name="first" [(ngModel)]="first">
-      </div>
-      <input name="email" [(ngModel)]="email" *ngIf="emailShowing">
+      </div>}
+      @if (emailShowing) {<input name="email" [(ngModel)]="email">}
     </form>
   `
 })

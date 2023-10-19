@@ -895,9 +895,9 @@ describe('host bindings', () => {
   it('should support host bindings in for loop', () => {
     @Component({
       template: `
-          <div *ngFor="let row of rows">
+          @for (row of rows; track row) {<div>
             <p hostBindingDir></p>
-          </div>
+          </div>}
         `
     })
     class App {

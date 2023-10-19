@@ -26,8 +26,7 @@ describe('view insertion', () => {
 
       @Component({
         template: `
-              <ng-template #simple><increment-comp></increment-comp></ng-template>
-              <div #container></div>
+                            <div #container></div>
             `
       })
       class App {
@@ -83,8 +82,7 @@ describe('view insertion', () => {
     it('should insert into an empty container, at the front, in the middle, and at the end', () => {
       @Component({
         template: `
-              <ng-template #empty></ng-template>
-              <div #container></div>
+                            <div #container></div>
             `
       })
       class App {
@@ -131,8 +129,7 @@ describe('view insertion', () => {
       @Component({
         selector: 'comp',
         template: `
-                  <ng-template #projection><ng-content></ng-content></ng-template>
-                  <div #container></div>
+                                    <div #container></div>
                 `
       })
       class Comp {
@@ -190,7 +187,7 @@ describe('view insertion', () => {
     it('should insert into an empty container, at the front, in the middle, and at the end', () => {
       @Component({
         template: `
-                  <ng-template #subContainer><div class="dynamic" *ngIf="true">test</div></ng-template>
+                  <ng-template #subContainer@if (true) {><div class="dynamic">test</div}></ng-template>
                   <div #container></div>
                 `
       })
@@ -408,9 +405,7 @@ describe('view insertion', () => {
       @Component({
         selector: 'with-content',
         template: `
-          <ng-template #insert>insert</ng-template>
-          <ng-template #before><ng-content></ng-content></ng-template>
-          <div><ng-template #vi="vi" viewInserting></ng-template></div>
+                              <div><ng-template #vi="vi" viewInserting></ng-template></div>
         `
       })
       class WithContentCmpt {
@@ -483,8 +478,7 @@ describe('view insertion', () => {
         @Component({
           selector: 'test-cmpt',
           template: `
-                <ng-template #insert>insert</ng-template>
-                <div><ng-template #vi="vi" viewInserting></ng-template></div>
+                                <div><ng-template #vi="vi" viewInserting></ng-template></div>
               `
         })
         class TestCmpt {
@@ -599,10 +593,10 @@ describe('view insertion', () => {
           <ng-template #parameterListItem let-parameter="parameter">
             {{parameter}}
           </ng-template>
-          <ng-container *ngFor="let parameter of items;"
+          @for (parameter of items; track parameter) {<ng-container
             [ngTemplateOutlet]="parameterListItem"
             [ngTemplateOutletContext]="{parameter:parameter}">
-          </ng-container>
+          </ng-container>}
         `
       })
       class AppComponent {
@@ -880,10 +874,7 @@ describe('view insertion', () => {
 
       @Component({
         template: `
-          <ng-template #broken>
-            <dir></dir>
-          </ng-template>
-        `,
+                  `,
       })
       class App {
         @ViewChild('broken') template!: TemplateRef<unknown>;
