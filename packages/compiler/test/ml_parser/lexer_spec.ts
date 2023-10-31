@@ -3422,6 +3422,18 @@ describe('HtmlLexer', () => {
         [TokenType.EOF],
       ]);
     });
+
+    fit('', () => {
+      const tokens = tokenizeAndHumanizeParts(
+          `
+            @for item of items; track item {
+              hi
+            }
+          `,
+          {tokenizeExpansionForms: true});
+
+      console.log(tokens);
+    });
   });
 });
 

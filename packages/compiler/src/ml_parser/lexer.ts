@@ -966,8 +966,13 @@ class _Tokenizer {
         TokenType.EXPANSION_FORM_START;
   }
 
+  private _isInIncompleteBlock(): boolean {
+    const tokens = this.tokens;
+    return tokens.length > 0 && tokens[tokens.length - 1].type === TokenType.INCOMPLETE_BLOCK_OPEN;
+  }
+
   private isExpansionFormStart(): boolean {
-    if (this._cursor.peek() !== chars.$LBRACE) {
+    if (this._cursor.peek() !== chars.$LBRACE || this._isInIncompleteBlock()) {
       return false;
     }
     if (this._interpolationConfig) {

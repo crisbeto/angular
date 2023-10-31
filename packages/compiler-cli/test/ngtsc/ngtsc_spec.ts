@@ -9108,6 +9108,27 @@ function allTests(os: string) {
           expect(jsContents).not.toContain('import { CmpA }');
         });
 
+        fit('', () => {
+          env.write('/test.ts', `
+            import { Component } from '@angular/core';
+
+            @Component({
+              selector: 'test-cmp',
+              standalone: true,
+              template: \`
+                @for item of items; track item {
+                  hi
+                }
+              \`,
+            })
+            export class TestCmp {
+              items = [1, 2];
+            }
+          `);
+
+          env.driveMain();
+        });
+
         it('should drop imports when one is deferrable and the rest are type-only imports', () => {
           env.write('cmp-a.ts', `
             import { Component } from '@angular/core';

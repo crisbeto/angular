@@ -331,6 +331,8 @@ class HtmlAstToIvyAst implements html.Visitor {
   visitBlock(block: html.Block, context: html.Node[]) {
     const index = Array.isArray(context) ? context.indexOf(block) : -1;
 
+    debugger;
+
     if (index === -1) {
       throw new Error(
           'Visitor invoked incorrectly. Expecting visitBlock to be invoked siblings array as its context');
