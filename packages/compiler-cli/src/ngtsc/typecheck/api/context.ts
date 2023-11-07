@@ -12,7 +12,7 @@ import ts from 'typescript';
 import {Reference} from '../../imports';
 import {ClassDeclaration} from '../../reflection';
 
-import {TemplateSourceMapping, TypeCheckableDirectiveMeta} from './api';
+import {TemplateSourceMapping, TypeCheckableComponentMeta, TypeCheckableDirectiveMeta} from './api';
 
 /**
  * A currently pending type checking operation, into which templates for type-checking can be
@@ -40,8 +40,8 @@ export interface TypeCheckContext {
    */
   addTemplate(
       ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
-      binder: R3TargetBinder<TypeCheckableDirectiveMeta>, template: TmplAstNode[],
-      pipes: Map<string, Reference<ClassDeclaration<ts.ClassDeclaration>>>,
+      binder: R3TargetBinder<TypeCheckableDirectiveMeta, TypeCheckableComponentMeta>,
+      template: TmplAstNode[], pipes: Map<string, Reference<ClassDeclaration<ts.ClassDeclaration>>>,
       schemas: SchemaMetadata[], sourceMapping: TemplateSourceMapping, file: ParseSourceFile,
       parseErrors: ParseError[]|null, isStandalone: boolean): void;
 }

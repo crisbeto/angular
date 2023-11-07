@@ -6,12 +6,20 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {BoundTarget, DirectiveMeta, ParseSourceFile} from '@angular/compiler';
+import {BoundTarget, ComponentMeta as BaseComponentMeta, DirectiveMeta as BaseDirectiveMeta, ParseSourceFile} from '@angular/compiler';
 
 import {Reference} from '../../imports';
 import {ClassDeclaration} from '../../reflection';
 
-export interface ComponentMeta extends DirectiveMeta {
+export interface DirectiveMeta extends BaseDirectiveMeta {
+  ref: Reference<ClassDeclaration>;
+  /**
+   * Unparsed selector of the directive, or null if the directive does not have a selector.
+   */
+  selector: string|null;
+}
+
+export interface ComponentMeta extends BaseComponentMeta {
   ref: Reference<ClassDeclaration>;
   /**
    * Unparsed selector of the directive, or null if the directive does not have a selector.
@@ -33,7 +41,7 @@ export interface ComponentInfo {
    * BoundTarget containing the parsed template. Can also be used to query for directives used in
    * the template.
    */
-  boundTemplate: BoundTarget<ComponentMeta>;
+  boundTemplate: BoundTarget<DirectiveMeta, ComponentMeta>;
 
   /** Metadata about the template */
   templateMeta: {

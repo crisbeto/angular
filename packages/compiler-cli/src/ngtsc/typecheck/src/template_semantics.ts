@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AST, BoundTarget, ImplicitReceiver, PropertyWrite, RecursiveAstVisitor, TmplAstVariable} from '@angular/compiler';
+import {AST, BoundTarget, ComponentMeta, DirectiveMeta, ImplicitReceiver, PropertyWrite, RecursiveAstVisitor, TmplAstVariable} from '@angular/compiler';
 
 import {TemplateId} from '../api';
 
@@ -17,7 +17,8 @@ import {OutOfBandDiagnosticRecorder} from './oob';
  */
 export class ExpressionSemanticVisitor extends RecursiveAstVisitor {
   constructor(
-      private templateId: TemplateId, private boundTarget: BoundTarget<any>,
+      private templateId: TemplateId,
+      private boundTarget: BoundTarget<DirectiveMeta, ComponentMeta>,
       private oob: OutOfBandDiagnosticRecorder) {
     super();
   }
@@ -37,7 +38,7 @@ export class ExpressionSemanticVisitor extends RecursiveAstVisitor {
   }
 
   static visit(
-      ast: AST, id: TemplateId, boundTarget: BoundTarget<any>,
+      ast: AST, id: TemplateId, boundTarget: BoundTarget<DirectiveMeta, ComponentMeta>,
       oob: OutOfBandDiagnosticRecorder): void {
     ast.visit(new ExpressionSemanticVisitor(id, boundTarget, oob));
   }

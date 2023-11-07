@@ -16,7 +16,7 @@ import {PerfEvent, PerfRecorder} from '../../perf';
 import {FileUpdate} from '../../program_driver';
 import {ClassDeclaration, ReflectionHost} from '../../reflection';
 import {ImportManager} from '../../translator';
-import {TemplateDiagnostic, TemplateId, TemplateSourceMapping, TypeCheckableDirectiveMeta, TypeCheckBlockMetadata, TypeCheckContext, TypeCheckingConfig, TypeCtorMetadata} from '../api';
+import {TemplateDiagnostic, TemplateId, TemplateSourceMapping, TypeCheckableComponentMeta, TypeCheckableDirectiveMeta, TypeCheckBlockMetadata, TypeCheckContext, TypeCheckingConfig, TypeCtorMetadata} from '../api';
 import {makeTemplateDiagnostic} from '../diagnostics';
 
 import {DomSchemaChecker, RegistryDomSchemaChecker} from './dom';
@@ -67,7 +67,7 @@ export interface TemplateData {
    * `BoundTarget` which was used to generate the TCB, and contains bindings for the associated
    * template nodes.
    */
-  boundTarget: BoundTarget<TypeCheckableDirectiveMeta>;
+  boundTarget: BoundTarget<TypeCheckableDirectiveMeta, TypeCheckableComponentMeta>;
 
   /**
    * Errors found while parsing them template, which have been converted to diagnostics.
@@ -207,8 +207,8 @@ export class TypeCheckContextImpl implements TypeCheckContext {
    */
   addTemplate(
       ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
-      binder: R3TargetBinder<TypeCheckableDirectiveMeta>, template: TmplAstNode[],
-      pipes: Map<string, Reference<ClassDeclaration<ts.ClassDeclaration>>>,
+      binder: R3TargetBinder<TypeCheckableDirectiveMeta, TypeCheckableComponentMeta>,
+      template: TmplAstNode[], pipes: Map<string, Reference<ClassDeclaration<ts.ClassDeclaration>>>,
       schemas: SchemaMetadata[], sourceMapping: TemplateSourceMapping, file: ParseSourceFile,
       parseErrors: ParseError[]|null, isStandalone: boolean): void {
     if (!this.host.shouldCheckComponent(ref.node)) {

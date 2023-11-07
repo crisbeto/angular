@@ -10,7 +10,7 @@ import {AST, ASTWithSource, BoundTarget, ImplicitReceiver, ParseSourceSpan, Prop
 import {ClassDeclaration, DeclarationNode} from '../../reflection';
 
 import {AbsoluteSourceSpan, AttributeIdentifier, ElementIdentifier, IdentifierKind, MethodIdentifier, PropertyIdentifier, ReferenceIdentifier, TemplateNodeIdentifier, TopLevelIdentifier, VariableIdentifier} from './api';
-import {ComponentMeta} from './context';
+import {ComponentMeta, DirectiveMeta} from './context';
 
 /**
  * A parsed node in a template, which may have a name (if it is a selector) or
@@ -41,7 +41,7 @@ class ExpressionVisitor extends RecursiveAstVisitor {
 
   private constructor(
       private readonly expressionStr: string, private readonly absoluteOffset: number,
-      private readonly boundTemplate: BoundTarget<ComponentMeta>,
+      private readonly boundTemplate: BoundTarget<DirectiveMeta, ComponentMeta>,
       private readonly targetToIdentifier: (target: TmplTarget) => TargetIdentifier | null) {
     super();
   }
@@ -58,7 +58,8 @@ class ExpressionVisitor extends RecursiveAstVisitor {
    * @param targetToIdentifier closure converting a template target node to its identifier.
    */
   static getIdentifiers(
-      ast: AST, source: string, absoluteOffset: number, boundTemplate: BoundTarget<ComponentMeta>,
+      ast: AST, source: string, absoluteOffset: number,
+      boundTemplate: BoundTarget<DirectiveMeta, ComponentMeta>,
       targetToIdentifier: (target: TmplTarget) => TargetIdentifier |
           null): {identifiers: TopLevelIdentifier[], errors: Error[]} {
     const visitor =
@@ -152,7 +153,7 @@ class TemplateVisitor extends TmplAstRecursiveVisitor {
    *
    * @param boundTemplate bound template target
    */
-  constructor(private boundTemplate: BoundTarget<ComponentMeta>) {
+  constructor(private boundTemplate: BoundTarget<DirectiveMeta, ComponentMeta>) {
     super();
   }
 
@@ -449,7 +450,7 @@ class TemplateVisitor extends TmplAstRecursiveVisitor {
  * @param boundTemplate bound template target, which can be used for querying expression targets.
  * @return identifiers in template
  */
-export function getTemplateIdentifiers(boundTemplate: BoundTarget<ComponentMeta>):
+export function getTemplateIdentifiers(boundTemplate: BoundTarget<DirectiveMeta, ComponentMeta>):
     {identifiers: Set<TopLevelIdentifier>, errors: Error[]} {
   const visitor = new TemplateVisitor(boundTemplate);
   if (boundTemplate.target.template !== undefined) {

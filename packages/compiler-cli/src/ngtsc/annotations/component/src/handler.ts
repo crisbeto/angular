@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AnimationTriggerNames, BoundTarget, compileClassDebugInfo, compileClassMetadata, compileComponentClassMetadata, compileComponentFromMetadata, compileDeclareClassMetadata, compileDeclareComponentFromMetadata, ConstantPool, CssSelector, DeclarationListEmitMode, DeclareComponentTemplateInfo, DEFAULT_INTERPOLATION_CONFIG, DomElementSchemaRegistry, Expression, FactoryTarget, makeBindingParser, R3ComponentMetadata, R3DeferBlockTemplateDependency, R3DirectiveDependencyMetadata, R3NgModuleDependencyMetadata, R3PipeDependencyMetadata, R3TargetBinder, R3TemplateDependency, R3TemplateDependencyKind, R3TemplateDependencyMetadata, SchemaMetadata, SelectorMatcher, TmplAstDeferredBlock, TmplAstDeferredBlockTriggers, TmplAstDeferredTrigger, TmplAstElement, ViewEncapsulation, WrappedNodeExpr} from '@angular/compiler';
+import {AnimationTriggerNames, BoundTarget, compileClassDebugInfo, compileClassMetadata, compileComponentClassMetadata, compileComponentFromMetadata, compileDeclareClassMetadata, compileDeclareComponentFromMetadata, ComponentMeta, ConstantPool, CssSelector, DeclarationListEmitMode, DeclareComponentTemplateInfo, DEFAULT_INTERPOLATION_CONFIG, DomElementSchemaRegistry, Expression, FactoryTarget, makeBindingParser, R3ComponentMetadata, R3DeferBlockTemplateDependency, R3DirectiveDependencyMetadata, R3NgModuleDependencyMetadata, R3PipeDependencyMetadata, R3TargetBinder, R3TemplateDependency, R3TemplateDependencyKind, R3TemplateDependencyMetadata, SchemaMetadata, SelectorMatcher, TmplAstDeferredBlock, TmplAstDeferredBlockTriggers, TmplAstDeferredTrigger, TmplAstElement, ViewEncapsulation, WrappedNodeExpr} from '@angular/compiler';
 import ts from 'typescript';
 
 import {Cycle, CycleAnalyzer, CycleHandlingStrategy} from '../../../cycles';
@@ -22,7 +22,7 @@ import {PerfEvent, PerfRecorder} from '../../../perf';
 import {ClassDeclaration, DeclarationNode, Decorator, isNamedClassDeclaration, ReflectionHost, reflectObjectLiteral} from '../../../reflection';
 import {ComponentScopeKind, ComponentScopeReader, DtsModuleScopeResolver, LocalModuleScopeRegistry, makeNotStandaloneDiagnostic, makeUnknownComponentImportDiagnostic, TypeCheckScopeRegistry} from '../../../scope';
 import {AnalysisOutput, CompilationMode, CompileResult, DecoratorHandler, DetectResult, HandlerPrecedence, ResolveResult} from '../../../transform';
-import {TypeCheckableDirectiveMeta, TypeCheckContext} from '../../../typecheck/api';
+import {TypeCheckableComponentMeta, TypeCheckableDirectiveMeta, TypeCheckContext} from '../../../typecheck/api';
 import {ExtendedTemplateChecker} from '../../../typecheck/extended/api';
 import {getSourceFile} from '../../../util/src/typescript';
 import {Xi18nContext} from '../../../xi18n';
@@ -606,7 +606,8 @@ export class ComponentDecoratorHandler implements
       return;
     }
 
-    const binder = new R3TargetBinder<TypeCheckableDirectiveMeta>(scope.matcher);
+    const binder =
+        new R3TargetBinder<TypeCheckableDirectiveMeta, TypeCheckableComponentMeta>(scope.matcher);
     ctx.addTemplate(
         new Reference(node), binder, meta.template.diagNodes, scope.pipes, scope.schemas,
         meta.template.sourceMapping, meta.template.file, meta.template.errors,
@@ -690,7 +691,8 @@ export class ComponentDecoratorHandler implements
 
       // Find all defer blocks used in the template and for each block
       // bind its own scope.
-      const deferBlocks = new Map<TmplAstDeferredBlock, BoundTarget<DirectiveMeta>>();
+      const deferBlocks =
+          new Map<TmplAstDeferredBlock, BoundTarget<DirectiveMeta, ComponentMeta>>();
       for (const deferBlock of bound.getDeferBlocks()) {
         deferBlocks.set(deferBlock, binder.bind({template: deferBlock.children}));
       }
@@ -896,7 +898,8 @@ export class ComponentDecoratorHandler implements
     } else {
       // If there is no scope, we can still use the binder to retrieve
       // *some* information about the deferred blocks.
-      const directivelessBinder = new R3TargetBinder<DirectiveMeta>(new SelectorMatcher());
+      const directivelessBinder =
+          new R3TargetBinder<DirectiveMeta, ComponentMeta>(new SelectorMatcher());
       const bound = directivelessBinder.bind({template: metadata.template.nodes});
       const deferredBlocks = bound.getDeferBlocks();
       const triggerElements = new Map<TmplAstDeferredTrigger, TmplAstElement|null>();
@@ -1142,12 +1145,12 @@ export class ComponentDecoratorHandler implements
    * available for the final `compile` step.
    */
   private resolveDeferBlocks(
-      deferBlocks: Map<TmplAstDeferredBlock, BoundTarget<DirectiveMeta>>,
+      deferBlocks: Map<TmplAstDeferredBlock, BoundTarget<DirectiveMeta, ComponentMeta>>,
       deferrableDecls: Map<ClassDeclaration, AnyUsedType>,
       resolutionData: ComponentResolutionData,
       analysisData: Readonly<ComponentAnalysisData>,
       eagerlyUsedDecls: Set<ClassDeclaration>,
-      componentBoundTarget: BoundTarget<DirectiveMeta>,
+      componentBoundTarget: BoundTarget<DirectiveMeta, ComponentMeta>,
   ) {
     // Collect all deferred decls from all defer blocks from the entire template
     // to intersect with the information from the `imports` field of a particular
@@ -1266,7 +1269,7 @@ export class ComponentDecoratorHandler implements
   /** Resolves the triggers of the defer block to the elements that they're pointing to. */
   private resolveDeferTriggers(
       block: TmplAstDeferredBlock, triggers: TmplAstDeferredBlockTriggers,
-      componentBoundTarget: BoundTarget<DirectiveMeta>,
+      componentBoundTarget: BoundTarget<DirectiveMeta, ComponentMeta>,
       triggerElements: Map<TmplAstDeferredTrigger, TmplAstElement|null>): void {
     Object.keys(triggers).forEach(key => {
       const trigger = triggers[key as keyof TmplAstDeferredBlockTriggers]!;

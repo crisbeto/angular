@@ -10,7 +10,7 @@ import {AST, BindingPipe, ImplicitReceiver, PropertyRead, PropertyWrite, Recursi
 import {SelectorMatcher} from '../../selector';
 import {BoundAttribute, BoundEvent, BoundText, Comment, Content, DeferredBlock, DeferredBlockError, DeferredBlockLoading, DeferredBlockPlaceholder, DeferredTrigger, Element, ForLoopBlock, ForLoopBlockEmpty, HoverDeferredTrigger, Icu, IfBlock, IfBlockBranch, InteractionDeferredTrigger, Node, Reference, SwitchBlock, SwitchBlockCase, Template, Text, TextAttribute, UnknownBlock, Variable, ViewportDeferredTrigger, Visitor} from '../r3_ast';
 
-import {BoundTarget, DirectiveMeta, ReferenceTarget, ScopedNode, Target, TargetBinder} from './t2_api';
+import {BoundTarget, ComponentMeta, DirectiveMeta, ReferenceTarget, ScopedNode, Target, TargetBinder} from './t2_api';
 import {createCssSelector} from './template';
 import {getAttrsForDirectiveMatching} from './util';
 
@@ -19,14 +19,15 @@ import {getAttrsForDirectiveMatching} from './util';
  * returns an object similar to TypeScript's `ts.TypeChecker` that contains knowledge about the
  * target.
  */
-export class R3TargetBinder<DirectiveT extends DirectiveMeta> implements TargetBinder<DirectiveT> {
+export class R3TargetBinder<DirectiveT extends DirectiveMeta, ComponentT extends ComponentMeta>
+    implements TargetBinder<DirectiveT, ComponentT> {
   constructor(private directiveMatcher: SelectorMatcher<DirectiveT[]>) {}
 
   /**
    * Perform a binding operation on the given `Target` and return a `BoundTarget` which contains
    * metadata about the types referenced in the template.
    */
-  bind(target: Target): BoundTarget<DirectiveT> {
+  bind(target: Target): BoundTarget<DirectiveT, ComponentT> {
     if (!target.template) {
       // TODO(alxhub): handle targets which contain things like HostBindings, etc.
       throw new Error('Binding without a template not yet supported');
@@ -719,7 +720,8 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
  *
  * See `BoundTarget` for documentation on the individual methods.
  */
-export class R3BoundTarget<DirectiveT extends DirectiveMeta> implements BoundTarget<DirectiveT> {
+export class R3BoundTarget<DirectiveT extends DirectiveMeta, ComponentT extends ComponentMeta>
+    implements BoundTarget<DirectiveT, ComponentT> {
   constructor(
       readonly target: Target, private directives: Map<Element|Template, DirectiveT[]>,
       private eagerDirectives: DirectiveT[],
@@ -740,6 +742,11 @@ export class R3BoundTarget<DirectiveT extends DirectiveMeta> implements BoundTar
 
   getDirectivesOfNode(node: Element|Template): DirectiveT[]|null {
     return this.directives.get(node) || null;
+  }
+
+  getComponentOfNode(node: Element): ComponentT|null {
+    // TODO
+    return null;
   }
 
   getReferenceTarget(ref: Reference): ReferenceTarget<DirectiveT>|null {

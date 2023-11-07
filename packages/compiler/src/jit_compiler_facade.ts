@@ -621,7 +621,7 @@ function createR3DependencyMetadata(
   return {token, attributeNameType, host, optional, self, skipSelf};
 }
 
-function createR3DeferredMetadata(boundTarget: BoundTarget<any>):
+function createR3DeferredMetadata(boundTarget: BoundTarget<any, any>):
     Map<DeferredBlock, R3DeferBlockMetadata> {
   const deferredBlocks = boundTarget.getDeferBlocks();
   const meta = new Map<DeferredBlock, R3DeferBlockMetadata>();
@@ -640,7 +640,7 @@ function createR3DeferredMetadata(boundTarget: BoundTarget<any>):
 }
 
 function resolveDeferTriggers(
-    block: DeferredBlock, triggers: DeferredBlockTriggers, boundTarget: BoundTarget<any>,
+    block: DeferredBlock, triggers: DeferredBlockTriggers, boundTarget: BoundTarget<any, any>,
     triggerElements: Map<DeferredTrigger, Element|null>): void {
   Object.keys(triggers).forEach(key => {
     const trigger = triggers[key as keyof DeferredBlockTriggers]!;

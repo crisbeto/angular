@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AbsoluteSourceSpan, BoundTarget, DirectiveMeta, ParseSourceSpan, SchemaMetadata} from '@angular/compiler';
+import {AbsoluteSourceSpan, BoundTarget, ComponentMeta, DirectiveMeta, ParseSourceSpan, SchemaMetadata} from '@angular/compiler';
 import ts from 'typescript';
 
 import {ErrorCode} from '../../diagnostics';
@@ -28,6 +28,11 @@ export interface TypeCheckableDirectiveMeta extends DirectiveMeta, DirectiveType
   isSignal: boolean;
   hostDirectives: HostDirectiveMeta[]|null;
   decorator: ts.Decorator|null;
+}
+
+export interface TypeCheckableComponentMeta extends TypeCheckableDirectiveMeta {
+  isComponent: true;
+  ngContentSelectors: string[];
 }
 
 export type TemplateId = string&{__brand: 'TemplateId'};
@@ -68,7 +73,7 @@ export interface TypeCheckBlockMetadata {
   /**
    * Semantic information about the template of the component.
    */
-  boundTarget: BoundTarget<TypeCheckableDirectiveMeta>;
+  boundTarget: BoundTarget<TypeCheckableDirectiveMeta, TypeCheckableComponentMeta>;
 
   /*
    * Pipes used in the template of the component.

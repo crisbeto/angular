@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CssSelector, ParseSourceFile, ParseSourceSpan, parseTemplate, ParseTemplateOptions, R3TargetBinder, SchemaMetadata, SelectorMatcher, TmplAstElement} from '@angular/compiler';
+import {ComponentMeta, CssSelector, ParseSourceFile, ParseSourceSpan, parseTemplate, ParseTemplateOptions, R3TargetBinder, SchemaMetadata, SelectorMatcher, TmplAstElement} from '@angular/compiler';
 import ts from 'typescript';
 
 import {absoluteFrom, AbsoluteFsPath, getSourceFileOrError, LogicalFileSystem} from '../../file_system';
@@ -298,7 +298,7 @@ export function tcb(
 
   const {matcher, pipes} =
       prepareDeclarations(declarations, decl => getClass(sf, decl.name), new Map());
-  const binder = new R3TargetBinder<DirectiveMeta>(matcher);
+  const binder = new R3TargetBinder<DirectiveMeta, ComponentMeta>(matcher);
   const boundTarget = binder.bind({template: nodes});
 
   const id = 'tcb' as TemplateId;
@@ -493,7 +493,7 @@ export function setup(targets: TypeCheckingTarget[], overrides: {
           }
           return getClass(declFile, decl.name);
         }, fakeMetadataRegistry);
-        const binder = new R3TargetBinder<DirectiveMeta>(matcher);
+        const binder = new R3TargetBinder<DirectiveMeta, ComponentMeta>(matcher);
         const classRef = new Reference(classDecl);
 
         const sourceMapping: TemplateSourceMapping = {

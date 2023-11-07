@@ -102,14 +102,20 @@ export interface DirectiveMeta {
   animationTriggerNames: AnimationTriggerNames|null;
 }
 
+export interface ComponentMeta extends DirectiveMeta {
+  isComponent: true;
+
+  ngContentSelectors: string[];
+}
+
 /**
  * Interface to the binding API, which processes a template and returns an object similar to the
  * `ts.TypeChecker`.
  *
  * The returned `BoundTarget` has an API for extracting information about the processed target.
  */
-export interface TargetBinder<D extends DirectiveMeta> {
-  bind(target: Target): BoundTarget<D>;
+export interface TargetBinder<D extends DirectiveMeta, C extends ComponentMeta> {
+  bind(target: Target): BoundTarget<D, C>;
 }
 
 /**
@@ -120,7 +126,7 @@ export interface TargetBinder<D extends DirectiveMeta> {
  *
  * @param DirectiveT directive metadata type
  */
-export interface BoundTarget<DirectiveT extends DirectiveMeta> {
+export interface BoundTarget<DirectiveT extends DirectiveMeta, ComponentT extends ComponentMeta> {
   /**
    * Get the original `Target` that was bound.
    */
@@ -131,6 +137,8 @@ export interface BoundTarget<DirectiveT extends DirectiveMeta> {
    * which matched the node, if any.
    */
   getDirectivesOfNode(node: Element|Template): DirectiveT[]|null;
+
+  getComponentOfNode(node: Element): ComponentT|null;
 
   /**
    * For a given `Reference`, get the reference's target - either an `Element`, a `Template`, or

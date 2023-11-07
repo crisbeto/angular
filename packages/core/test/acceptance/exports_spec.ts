@@ -26,6 +26,21 @@ describe('exports', () => {
     expect(fixture.nativeElement.innerHTML).toEqual('<input value="one"> one');
   });
 
+  fit('', () => {
+    @Component({selector: '[test]', standalone: true, template: 'hello'})
+    class Test {
+    }
+
+    @Component({template: '<ng-template test></ng-template>', standalone: true, imports: [Test]})
+    class App {
+    }
+
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    console.log(fixture.nativeElement.textContent);
+  });
+
   it('should support basic export of component', () => {
     const fixture =
         initWithTemplate(AppComp, '<comp-to-ref #myComp></comp-to-ref> {{ myComp.name }}');
