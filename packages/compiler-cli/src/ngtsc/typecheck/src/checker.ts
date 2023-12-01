@@ -845,6 +845,8 @@ export class TemplateTypeCheckerImpl implements TemplateTypeChecker {
       isComponent: dep.isComponent,
       isStructural: dep.isStructural,
       selector: dep.selector,
+      ngContentSelectors: dep.ngContentSelectors,
+      preserveWhitespaces: dep.preserveWhitespaces,
       tsSymbol,
       ngModule,
     };

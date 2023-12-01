@@ -9,6 +9,7 @@
 import {ErrorCode, ExtendedTemplateDiagnosticName} from '../../diagnostics';
 
 import {TemplateCheckFactory} from './api';
+import {factory as controlFlowPreventingContentProjectionFactory} from './checks/control_flow_preventing_content_projection';
 import {factory as interpolatedSignalNotInvoked} from './checks/interpolated_signal_not_invoked';
 import {factory as invalidBananaInBoxFactory} from './checks/invalid_banana_in_box';
 import {factory as missingControlFlowDirectiveFactory} from './checks/missing_control_flow_directive';
@@ -25,5 +26,5 @@ export const ALL_DIAGNOSTIC_FACTORIES:
       invalidBananaInBoxFactory, nullishCoalescingNotNullableFactory,
       optionalChainNotNullableFactory, missingControlFlowDirectiveFactory,
       textAttributeNotBindingFactory, missingNgForOfLetFactory, suffixNotSupportedFactory,
-      interpolatedSignalNotInvoked
+      interpolatedSignalNotInvoked, controlFlowPreventingContentProjectionFactory
     ];

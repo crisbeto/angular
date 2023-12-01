@@ -67,6 +67,10 @@ export interface PotentialDirective {
    * Whether or not this directive is in scope.
    */
   isInScope: boolean;
+
+  ngContentSelectors: string[]|null;
+
+  preserveWhitespaces: boolean;
 }
 
 /**
