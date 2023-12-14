@@ -671,9 +671,31 @@ export class StaticInterpreter {
       return this.visitType(node.type, context);
     } else if (ts.isTypeQueryNode(node)) {
       return this.visitTypeQuery(node, context);
+    } else if (ts.isTypeLiteralNode(node)) {
+      return this.visitTypeLiteral(node, context);
     }
 
     return DynamicValue.fromDynamicType(node);
+  }
+
+  private visitTypeLiteral(node: ts.TypeLiteralNode, context: Context): ResolvedValue {
+    const map = new Map<string, ResolvedValue>();
+
+    for (const member of node.members) {
+      const name = member.name === undefined ?
+          undefined :
+          this.stringNameFromPropertyName(member.name, context);
+
+      if (name !== undefined) {
+        if (ts.isPropertySignature(member) && member.type !== undefined) {
+          map.set(name, this.visitType(member.type, context));
+        } else {
+          map.set(name, DynamicValue.fromUnsupportedSyntax(member));
+        }
+      }
+    }
+
+    return map;
   }
 
   private visitTupleType(node: ts.TupleTypeNode, context: Context): ResolvedValueArray {

@@ -68,6 +68,42 @@ runInEachFileSystem(() => {
               '{ directive: typeof DirectiveB; inputs: {}; outputs: {}; }]>;');
     });
 
+    fit('', () => {
+      env.write('a.d.ts', `
+        import {ɵɵDirectiveDeclaration} from '@angular/core';
+
+        export declare class DirectiveA {
+          static ɵdir: ɵɵDirectiveDeclaration<DirectiveA, '[test]', never,
+            {input: "input"}, {}, never, never, true, never>;
+        }
+
+        export declare const dirA: {
+          directive: typeof DirectiveA;
+          inputs: ["input: appearance"];
+        };
+      `);
+
+      env.write('test.ts', `
+        import {Directive, Component} from '@angular/core';
+        import {dirA} from './a';
+
+        @Component({
+          selector: 'my-comp',
+          template: '',
+          hostDirectives: [dirA]
+        })
+        export class MyComp {}
+      `);
+
+      env.driveMain();
+
+      const jsContents = env.getContents('test.js');
+      const dtsContents = env.getContents('test.d.ts');
+
+      console.log(jsContents);
+      console.log(dtsContents);
+    });
+
     it('should generate a hostDirectives definition that has inputs and outputs', () => {
       env.write('test.ts', `
         import {Directive, Component, Input, Output, EventEmitter} from '@angular/core';

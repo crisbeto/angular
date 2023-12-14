@@ -405,6 +405,27 @@ runInEachFileSystem(() => {
       expect(local.ownedByModuleGuess).toBeNull();
     });
 
+    fit('supports declarations of readonly tuples with class references', () => {
+      const tuple = evaluate(
+          `
+        import {External} from 'external';
+        declare class Local {}
+        declare const x: {
+          a: typeof External,
+          b: typeof Local,
+        };
+        declare const _x: readonly [typeof External, typeof Local];
+        `,
+          `x`, [
+            {
+              name: _('/node_modules/external/index.d.ts'),
+              contents: 'export declare class External {}'
+            },
+          ]);
+
+      console.log(tuple);
+    });
+
     it('evaluates tuple elements it cannot understand to DynamicValue', () => {
       const value = evaluate(`declare const x: ['foo', string];`, `x`) as [string, DynamicValue];
 

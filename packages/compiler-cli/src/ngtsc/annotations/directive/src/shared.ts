@@ -923,6 +923,8 @@ function extractHostDirectives(
   return resolved.map(value => {
     const hostReference = value instanceof Map ? value.get('directive') : value;
 
+    debugger;
+
     if (!(hostReference instanceof Reference)) {
       throw createValueHasWrongTypeError(
           rawHostDirectives, hostReference, 'Host directive must be a reference');
