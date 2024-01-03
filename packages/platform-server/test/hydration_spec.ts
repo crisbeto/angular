@@ -10,7 +10,7 @@ import '@angular/localize/init';
 
 import {CommonModule, DOCUMENT, isPlatformServer, NgComponentOutlet, NgFor, NgIf, NgTemplateOutlet, PlatformLocation} from '@angular/common';
 import {MockPlatformLocation} from '@angular/common/testing';
-import {afterRender, ApplicationRef, Component, ComponentRef, ContentChildren, createComponent, destroyPlatform, Directive, ElementRef, EnvironmentInjector, ErrorHandler, getPlatform, inject, Injectable, Input, NgZone, PLATFORM_ID, Provider, QueryList, TemplateRef, Type, ViewChild, ViewContainerRef, ViewEncapsulation, ɵsetDocument, ɵwhenStable as whenStable} from '@angular/core';
+import {afterRender, ApplicationRef, Component, ComponentRef, ContentChild, ContentChildren, createComponent, destroyPlatform, Directive, ElementRef, EnvironmentInjector, ErrorHandler, getPlatform, inject, Injectable, Input, NgZone, PLATFORM_ID, Provider, QueryList, TemplateRef, Type, ViewChild, ViewContainerRef, ViewEncapsulation, ɵsetDocument, ɵwhenStable as whenStable} from '@angular/core';
 import {Console} from '@angular/core/src/console';
 import {SSR_CONTENT_INTEGRITY_MARKER} from '@angular/core/src/hydration/utils';
 import {getComponentDef} from '@angular/core/src/render3/definition';
@@ -309,6 +309,62 @@ describe('platform-server hydration integration', () => {
 
       return bootstrapApplication(component, {providers});
     }
+
+    fit('', async () => {
+      @Directive({selector: '[cdkCellDef]', standalone: true})
+      class CdkCellDef {
+        constructor(public template: TemplateRef<any>) {}
+      }
+      // TODO: replacing the `ng-container` instances with `div` or removing `ng-content` causes an
+      // error.
+
+      @Component({
+        standalone: true,
+        selector: 'cdk-table',
+        template: `<ng-container #outlet/>|<ng-content/>`,
+      })
+      class CdkTable {
+        @ViewChild('outlet', {static: true, read: ViewContainerRef}) outlet!: ViewContainerRef;
+        @ContentChild(CdkCellDef) cellDef!: CdkCellDef;
+
+        ngAfterViewInit() {
+          this.outlet.createEmbeddedView(this.cellDef.template);
+        }
+      }
+
+      @Component({
+        standalone: true,
+        selector: 'app',
+        template: `
+          <cdk-table>
+            <ng-container>
+              <span *cdkCellDef>ID</span>
+            </ng-container>
+          </cdk-table>
+        `,
+        imports: [CdkTable, CdkCellDef],
+      })
+      class App {
+      }
+
+      const html = await ssr(App);
+      const ssrContents = getAppContents(html);
+
+      expect(ssrContents).toContain('<app ngh');
+
+      resetTViewsFor(App, CdkTable);
+
+      const appRef = await hydrate(html, App);
+      const compRef = getComponentRef<App>(appRef);
+      appRef.tick();
+
+      const clientRootNode = compRef.location.nativeElement;
+
+
+      console.log(clientRootNode.innerHTML);
+      verifyAllNodesClaimedForHydration(clientRootNode);
+      verifyClientAndSSRContentsMatch(ssrContents, clientRootNode);
+    });
 
     describe('annotations', () => {
       it('should add hydration annotations to component host nodes during ssr', async () => {
