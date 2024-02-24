@@ -208,6 +208,27 @@ runInEachFileSystem(() => {
       expect(result).toBe(null);
     });
   });
+
+  it('should identify an initializer function in a file containing an import whose name overlaps with an object prototype member',
+     () => {
+       const {member, reflector, importTracker} = setup(`
+          import {Directive, model} from '@angular/core';
+          import {toString} from '@unknown/utils';
+
+          @Directive()
+          export class Dir {
+            test = model(1);
+          }
+        `);
+
+       const result = tryParseInitializerApiMember(['model'], member, reflector, importTracker);
+
+       expect(result).toEqual({
+         apiName: 'model',
+         isRequired: false,
+         call: jasmine.objectContaining({kind: ts.SyntaxKind.CallExpression}),
+       });
+     });
 });
 
 
@@ -227,6 +248,12 @@ function setup(contents: string) {
 
         export const input: InitializerFunction;
         export const model: InitializerFunction;
+      `,
+    },
+    {
+      name: absoluteFrom('/node_modules/@unknown/utils/index.d.ts'),
+      contents: `
+        export declare function toString(value: any): string;
       `,
     },
     {

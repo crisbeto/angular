@@ -8,19 +8,13 @@
 
 import ts from 'typescript';
 
-/** Mapping between modules and the named imports consumed by them in a file. */
-type NamedImportsMap = {
-  [moduleName: string]: {
-    // The key is the symbol's original name, while the set
-    // includes all the local names it is vailable under.
-    [exportedName: string]: Set<string>,
-  }
-};
+/**
+ * A map of imported symbols to local names under which the symbols are available within a file.
+ */
+type LocalNamesMap = Map<string, Set<string>>;
 
-type NamespaceImportsMap = {
-  // The key is a set of names the namespace is available under within a file.
-  [moduleName: string]: Set<string>
-};
+/** Mapping between modules and the named imports consumed by them in a file. */
+type NamedImportsMap = Map<string, LocalNamesMap>;
 
 /**
  * Tracks which symbols are imported in specific files and under what names. Allows for efficient
@@ -32,7 +26,7 @@ type NamespaceImportsMap = {
  */
 export class ImportedSymbolsTracker {
   private fileToNamedImports = new WeakMap<ts.SourceFile, NamedImportsMap>();
-  private fileToNamespaceImports = new WeakMap<ts.SourceFile, NamespaceImportsMap>();
+  private fileToNamespaceImports = new WeakMap<ts.SourceFile, LocalNamesMap>();
 
   /**
    * Checks if an identifier is a potential reference to a specific named import within the same
@@ -46,8 +40,8 @@ export class ImportedSymbolsTracker {
     const sourceFile = node.getSourceFile();
     this.scanImports(sourceFile);
     const fileImports = this.fileToNamedImports.get(sourceFile)!;
-    const moduleImports = fileImports[moduleName] ?? null;
-    const symbolImports = moduleImports?.[exportedName];
+    const moduleImports = fileImports.get(moduleName);
+    const symbolImports = moduleImports?.get(exportedName);
     return symbolImports !== undefined && symbolImports.has(node.text);
   }
 
@@ -61,7 +55,7 @@ export class ImportedSymbolsTracker {
     const sourceFile = node.getSourceFile();
     this.scanImports(sourceFile);
     const namespaces = this.fileToNamespaceImports.get(sourceFile)!;
-    return namespaces[moduleName]?.has(node.text) ?? false;
+    return namespaces.get(moduleName)?.has(node.text) ?? false;
   }
 
   /** Scans a `SourceFile` for import statements and caches them for later use. */
@@ -70,8 +64,8 @@ export class ImportedSymbolsTracker {
       return;
     }
 
-    const namedImports: NamedImportsMap = {};
-    const namespaceImports: NamespaceImportsMap = {};
+    const namedImports: NamedImportsMap = new Map();
+    const namespaceImports: LocalNamesMap = new Map();
     this.fileToNamedImports.set(sourceFile, namedImports);
     this.fileToNamespaceImports.set(sourceFile, namespaceImports);
 
@@ -86,17 +80,28 @@ export class ImportedSymbolsTracker {
 
       if (ts.isNamespaceImport(stmt.importClause.namedBindings)) {
         // import * as foo from 'module'
-        namespaceImports[moduleName] ??= new Set();
-        namespaceImports[moduleName].add(stmt.importClause.namedBindings.name.text);
+        if (!namespaceImports.has(moduleName)) {
+          namespaceImports.set(moduleName, new Set());
+        }
+        namespaceImports.get(moduleName)!.add(stmt.importClause.namedBindings.name.text);
       } else {
         // import {foo, bar as alias} from 'module'
         for (const element of stmt.importClause.namedBindings.elements) {
           const localName = element.name.text;
           const exportedName =
               element.propertyName === undefined ? localName : element.propertyName.text;
-          namedImports[moduleName] ??= {};
-          namedImports[moduleName][exportedName] ??= new Set();
-          namedImports[moduleName][exportedName].add(localName);
+
+          if (!namedImports.has(moduleName)) {
+            namedImports.set(moduleName, new Map());
+          }
+
+          const localNames = namedImports.get(moduleName)!;
+
+          if (!localNames.has(exportedName)) {
+            localNames.set(exportedName, new Set());
+          }
+
+          localNames.get(exportedName)?.add(localName);
         }
       }
     }
