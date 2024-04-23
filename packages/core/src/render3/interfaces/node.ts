@@ -7,12 +7,13 @@
  */
 import {KeyValueArray} from '../../util/array_utils';
 import {TStylingRange} from '../interfaces/styling';
-import { AttributeMarker } from './attribute_marker';
 
-import {InputFlags} from './input_flags';
+import {AttributeMarker} from './attribute_marker';
 import {TIcu} from './i18n';
+import {InputFlags} from './input_flags';
 import {CssSelector} from './projection';
 import {RNode} from './renderer_dom';
+
 import type {LView, TView} from './view';
 
 
@@ -337,6 +338,8 @@ export interface TNode {
    * etc.
    */
   flags: TNodeFlags;
+
+  isDefaultContent?: boolean;
 
   /**
    * This number stores two values using its bits:

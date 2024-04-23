@@ -303,6 +303,7 @@ function serializeLContainer(
 function appendSerializedNodePath(
     ngh: SerializedView, tNode: TNode, lView: LView, excludedParentNodes: Set<number>|null) {
   const noOffsetIndex = tNode.index - HEADER_OFFSET;
+  debugger;
   ngh[NODES] ??= {};
   ngh[NODES][noOffsetIndex] = calcPathForNode(tNode, lView, excludedParentNodes);
 }
@@ -464,7 +465,9 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
         // not be able to find an anchor. In this case, use full path instead.
         let nextTNode = tNode.next;
         // Skip over all `<ng-content>` slots in a row.
-        while (nextTNode !== null && (nextTNode.type & TNodeType.Projection)) {
+        //
+        while (nextTNode !== null &&
+               ((nextTNode.type & TNodeType.Projection) || nextTNode.isDefaultContent)) {
           nextTNode = nextTNode.next;
         }
         if (nextTNode && !isInSkipHydrationBlock(nextTNode)) {

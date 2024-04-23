@@ -615,6 +615,7 @@ export function createTNode(
     residualClasses: undefined,
     classBindings: 0 as TStylingRange,
     styleBindings: 0 as TStylingRange,
+    isDefaultContent: false,
   };
   if (ngDevMode) {
     // For performance reasons it is important that the tNode retains the same shape during runtime.
