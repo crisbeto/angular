@@ -39,6 +39,8 @@ export interface LexerRange {
   endPos: number;
 }
 
+type CharCodePredicate = (code: number) => boolean;
+
 /**
  * Options that modify how the text is tokenized.
  */
@@ -308,8 +310,8 @@ class _Tokenizer {
     while (this._cursor.peek() !== chars.$RPAREN && this._cursor.peek() !== chars.$EOF) {
       this._beginToken(TokenType.BLOCK_PARAMETER);
       const start = this._cursor.clone();
+      const parens = new CharacterPairCounter(chars.$LPAREN, chars.$RPAREN);
       let inQuote: number | null = null;
-      let openParens = 0;
 
       // Consume the parameter until the next semicolon or brace.
       // Note that we skip over semicolons/braces inside of strings.
@@ -324,15 +326,15 @@ class _Tokenizer {
           this._cursor.advance();
         } else if (char === inQuote) {
           inQuote = null;
-        } else if (inQuote === null && chars.isQuote(char)) {
-          inQuote = char;
-        } else if (char === chars.$LPAREN && inQuote === null) {
-          openParens++;
-        } else if (char === chars.$RPAREN && inQuote === null) {
-          if (openParens === 0) {
-            break;
-          } else if (openParens > 0) {
-            openParens--;
+        } else if (inQuote === null) {
+          if (chars.isQuote(char)) {
+            inQuote = char;
+          } else {
+            parens.count(char);
+
+            if (parens.isMismatching) {
+              break;
+            }
           }
         }
 
@@ -493,13 +495,13 @@ class _Tokenizer {
     }
   }
 
-  private _attemptCharCodeUntilFn(predicate: (code: number) => boolean) {
+  private _attemptCharCodeUntilFn(predicate: CharCodePredicate) {
     while (!predicate(this._cursor.peek())) {
       this._cursor.advance();
     }
   }
 
-  private _requireCharCodeUntilFn(predicate: (code: number) => boolean, len: number) {
+  private _requireCharCodeUntilFn(predicate: CharCodePredicate, len: number) {
     const start = this._cursor.clone();
     this._attemptCharCodeUntilFn(predicate);
     if (this._cursor.diff(start) < len) {
@@ -1424,4 +1426,39 @@ export class CursorError {
     public msg: string,
     public cursor: CharacterCursor,
   ) {}
+}
+
+/** Counts the number of open character pairs (e.g. `(()` would be a size of 1). */
+class CharacterPairCounter {
+  private _size = 0;
+  private _isMismatching = false;
+
+  constructor(
+    private open: number,
+    private close: number,
+  ) {
+    if (open === close) {
+      throw new Error('Character pair must have different opening and closing characters');
+    }
+  }
+
+  get size(): number {
+    return this._size;
+  }
+
+  get isMismatching(): boolean {
+    return this._isMismatching;
+  }
+
+  count(charCode: number): void {
+    if (charCode === this.open) {
+      this._size++;
+    } else if (charCode === this.close) {
+      if (this.size === 0) {
+        this._isMismatching = true;
+      } else {
+        this._size--;
+      }
+    }
+  }
 }
