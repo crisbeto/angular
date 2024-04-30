@@ -103,6 +103,12 @@ export interface TokenizeOptions {
    * or ICU tokens if `tokenizeExpansionForms` is enabled.
    */
   tokenizeBlocks?: boolean;
+
+  /**
+   * Whether to tokenize the `@let` syntax. Otherwise will be considered either
+   * text or an incomplete block, depending on whether `tokenizeBlocks` is enabled.
+   */
+  tokenizeLet?: boolean;
 }
 
 export function tokenize(
@@ -157,6 +163,7 @@ class _Tokenizer {
   private readonly _preserveLineEndings: boolean;
   private readonly _i18nNormalizeLineEndingsInICUs: boolean;
   private readonly _tokenizeBlocks: boolean;
+  private readonly _tokenizeLet: boolean;
   tokens: Token[] = [];
   errors: TokenError[] = [];
   nonNormalizedIcuExpressions: Token[] = [];
@@ -187,6 +194,8 @@ class _Tokenizer {
     this._preserveLineEndings = options.preserveLineEndings || false;
     this._i18nNormalizeLineEndingsInICUs = options.i18nNormalizeLineEndingsInICUs || false;
     this._tokenizeBlocks = options.tokenizeBlocks ?? true;
+    // TODO(crisbeto): eventually set this to true.
+    this._tokenizeLet = options.tokenizeLet || false;
     try {
       this._cursor.init();
     } catch (e) {
@@ -223,6 +232,15 @@ class _Tokenizer {
           } else {
             this._consumeTagOpen(start);
           }
+        } else if (
+          this._tokenizeLet &&
+          // Use `peek` instead of `attempCharCode` since we
+          // don't want to advance in case it's not `@let`.
+          this._cursor.peek() === chars.$AT &&
+          !this._inInterpolation &&
+          this._attemptStr('@let')
+        ) {
+          this._consumeLetDeclaration(start);
         } else if (this._tokenizeBlocks && this._attemptCharCode(chars.$AT)) {
           this._consumeBlockStart(start);
         } else if (
@@ -346,6 +364,116 @@ class _Tokenizer {
       // Skip to the next parameter.
       this._attemptCharCodeUntilFn(isBlockParameterChar);
     }
+  }
+
+  private _consumeLetDeclaration(start: CharacterCursor, isChain = false) {
+    this._beginToken(TokenType.LET_START, start);
+
+    if (!isChain) {
+      // Require at least one white space after the `@let`.
+      if (chars.isWhitespace(this._cursor.peek())) {
+        this._attemptCharCodeUntilFn(isNotWhitespace);
+      } else {
+        const token = this._endToken([this._cursor.getChars(start)]);
+        token.type = TokenType.INCOMPLETE_LET;
+        return;
+      }
+    }
+
+    const startToken = this._endToken([this._getLetDeclarationName()]);
+
+    // Skip over white space before the equals character.
+    this._attemptCharCodeUntilFn(isNotWhitespace);
+
+    // Expect an equals sign.
+    if (!this._attemptCharCode(chars.$EQ)) {
+      startToken.type = TokenType.INCOMPLETE_LET;
+      return;
+    }
+
+    // Skip spaces after the equals.
+    this._attemptCharCodeUntilFn((code) => isNotWhitespace(code) && !chars.isNewLine(code));
+    this._consumeLetDeclarationValue();
+
+    // Terminate the `@let` with a semicolon or comma.
+    const endChar = this._cursor.peek();
+    if (endChar === chars.$SEMICOLON || endChar === chars.$COMMA) {
+      this._beginToken(TokenType.LET_END);
+      this._endToken([]);
+
+      // Skip over the comma.
+      this._cursor.advance();
+
+      if (endChar === chars.$COMMA) {
+        // Skip over any whitespace after the comma.
+        this._attemptCharCodeUntilFn((code) => isNotWhitespace(code) && !chars.isNewLine(code));
+        this._consumeLetDeclaration(this._cursor.clone(), true);
+      }
+    } else {
+      startToken.type = TokenType.INCOMPLETE_LET;
+      startToken.sourceSpan = this._cursor.getSpan(start);
+    }
+  }
+
+  private _getLetDeclarationName(): string {
+    const nameCursor = this._cursor.clone();
+    let allowDigit = false;
+
+    this._attemptCharCodeUntilFn((code) => {
+      // `@let` names can't start with a digit, but digits are valid anywhere else in the name.
+      if (chars.isAsciiLetter(code) || code === chars.$_ || (allowDigit && chars.isDigit(code))) {
+        allowDigit = true;
+        return false;
+      }
+      return true;
+    });
+
+    return this._cursor.getChars(nameCursor).trim();
+  }
+
+  private _consumeLetDeclarationValue() {
+    const start = this._cursor.clone();
+    this._beginToken(TokenType.LET_VALUE, start);
+
+    const parens = new CharacterPairCounter(chars.$LPAREN, chars.$RPAREN);
+    const brackets = new CharacterPairCounter(chars.$LBRACKET, chars.$RBRACKET);
+    const braces = new CharacterPairCounter(chars.$LBRACE, chars.$RBRACE);
+
+    while (this._cursor.peek() !== chars.$EOF) {
+      const char = this._cursor.peek();
+      const isInCommaSeparatedSyntax = parens.size > 0 || brackets.size > 0 || braces.size > 0;
+
+      // `@let` can end either with a semicolon or a comma. For the latter case we need to
+      // ignore potentially comma-separated syntaxes (e.g. function calls, array literals).
+      // We don't need to worry about strings here since the logic a bit further down skips them.
+      if (char === chars.$SEMICOLON || (char === chars.$COMMA && !isInCommaSeparatedSyntax)) {
+        break;
+      }
+
+      // If we hit a quote, skip over its content since we don't care what's inside.
+      if (chars.isQuote(char)) {
+        this._cursor.advance();
+        this._attemptCharCodeUntilFn((inner) => {
+          if (inner === chars.$BACKSLASH) {
+            this._cursor.advance();
+            return false;
+          }
+          return inner === char;
+        });
+      } else {
+        parens.count(char);
+        brackets.count(char);
+        braces.count(char);
+
+        if (parens.isMismatching || brackets.isMismatching || braces.isMismatching) {
+          break;
+        }
+      }
+
+      this._cursor.advance();
+    }
+
+    this._endToken([this._cursor.getChars(start)]);
   }
 
   /**
