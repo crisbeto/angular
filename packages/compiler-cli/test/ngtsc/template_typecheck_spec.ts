@@ -5461,7 +5461,7 @@ suppress
           })
           export class TwoWayDir {
             @Input() value: number = 0;
-            @Output() valueChanges: EventEmitter<number> = new EventEmitter();
+            @Output() valueChange: EventEmitter<number> = new EventEmitter();
           }
 
           @Component({
@@ -5497,7 +5497,7 @@ suppress
           })
           export class TwoWayDir {
             @Input() value: number = 0;
-            @Output() valueChanges: EventEmitter<number> = new EventEmitter();
+            @Output() valueChange: EventEmitter<number> = new EventEmitter();
           }
 
           @Component({
@@ -7031,6 +7031,75 @@ suppress
         const diags = env.driveDiagnostics();
         expect(diags.length).toBe(1);
         expect(diags[0].messageText).toBe(`Cannot assign to @let declaration 'value'.`);
+      });
+
+      it('should not be able to write to let declaration in a two-way binding', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component, Directive, Input, Output, EventEmitter} from '@angular/core';
+
+          @Directive({
+            selector: '[twoWayDir]',
+            standalone: true
+          })
+          export class TwoWayDir {
+            @Input() value: number = 0;
+            @Output() valueChange: EventEmitter<number> = new EventEmitter();
+          }
+
+          @Component({
+            template: \`
+              @let nonWritable = 1;
+
+              <button twoWayDir [(value)]="nonWritable"></button>
+            \`,
+            standalone: true,
+            imports: [TwoWayDir]
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.map((d) => ts.flattenDiagnosticMessageText(d.messageText, ''))).toEqual([
+          `Cannot use non-signal @let declaration 'nonWritable' in a two-way binding expression. @let declarations are read-only.`,
+        ]);
+      });
+
+      it('should allow two-way bindings to signal-based let declarations', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component, Directive, Input, Output, EventEmitter, signal} from '@angular/core';
+
+          @Directive({
+            selector: '[twoWayDir]',
+            standalone: true
+          })
+          export class TwoWayDir {
+            @Input() value: number = 0;
+            @Output() valueChange: EventEmitter<number> = new EventEmitter();
+          }
+
+          @Component({
+            template: \`
+              @let writable = signalValue;
+
+              <button twoWayDir [(value)]="writable"></button>
+            \`,
+            standalone: true,
+            imports: [TwoWayDir]
+          })
+          export class Main {
+            signalValue = signal(1);
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
       });
     });
   });
