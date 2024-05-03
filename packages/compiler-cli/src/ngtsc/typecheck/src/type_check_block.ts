@@ -392,8 +392,13 @@ class TcbLetDeclarationOp extends TcbOp {
 
   override execute(): ts.Identifier {
     const id = this.tcb.allocateId();
+    addParseSpanInfo(id, this.node.nameSpan);
     const value = tcbExpression(this.node.value, this.tcb, this.scope);
-    this.scope.addStatement(tsCreateVariable(id, value, ts.NodeFlags.Const));
+    // Value needs to be wrapped, because spans for the expressions inside of it can
+    // be picked up incorrectly as belonging to the full variable declaration.
+    const varStatement = tsCreateVariable(id, wrapForTypeChecker(value), ts.NodeFlags.Const);
+    addParseSpanInfo(varStatement.declarationList.declarations[0], this.node.sourceSpan);
+    this.scope.addStatement(varStatement);
     return id;
   }
 }
