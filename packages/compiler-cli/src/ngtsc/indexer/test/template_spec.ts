@@ -13,6 +13,7 @@ import {
   AttributeIdentifier,
   ElementIdentifier,
   IdentifierKind,
+  LetDeclarationIdentifier,
   ReferenceIdentifier,
   TemplateNodeIdentifier,
   TopLevelIdentifier,
@@ -28,6 +29,7 @@ function bind(template: string) {
   return util.getBoundTemplate(template, {
     preserveWhitespaces: true,
     leadingTriviaChars: [],
+    enableLetSyntax: true,
   });
 }
 
@@ -726,6 +728,64 @@ runInEachFileSystem(() => {
             target: variableIdentifier,
           },
         ] as TopLevelIdentifier[]),
+      );
+    });
+  });
+
+  describe('let declarations', () => {
+    it('should discover references to let declaration defined on a single line', () => {
+      const template = `@let foo = 123; <div [someInput]="foo"></div>`;
+      const refs = getTemplateIdentifiers(bind(template));
+      const letIdentifier: LetDeclarationIdentifier = {
+        name: 'foo',
+        kind: IdentifierKind.LetDeclaration,
+        span: new AbsoluteSourceSpan(5, 8),
+      };
+
+      expect(Array.from(refs)).toEqual(
+        jasmine.arrayContaining([
+          letIdentifier,
+          {
+            name: 'foo',
+            kind: IdentifierKind.Property,
+            span: new AbsoluteSourceSpan(34, 37),
+            target: letIdentifier,
+          },
+        ]),
+      );
+    });
+
+    it('should discover references to multiple references defined in a single statement', () => {
+      const template = `@let one = 1, two = 2; <div [someInput]="one" [otherInput]="two"></div>`;
+      const refs = getTemplateIdentifiers(bind(template));
+      const identifierOne: LetDeclarationIdentifier = {
+        name: 'one',
+        kind: IdentifierKind.LetDeclaration,
+        span: new AbsoluteSourceSpan(5, 8),
+      };
+      const identifierTwo: LetDeclarationIdentifier = {
+        name: 'two',
+        kind: IdentifierKind.LetDeclaration,
+        span: new AbsoluteSourceSpan(14, 17),
+      };
+
+      expect(Array.from(refs)).toEqual(
+        jasmine.arrayContaining([
+          identifierOne,
+          {
+            name: 'one',
+            kind: IdentifierKind.Property,
+            span: new AbsoluteSourceSpan(41, 44),
+            target: identifierOne,
+          },
+          identifierTwo,
+          {
+            name: 'two',
+            kind: IdentifierKind.Property,
+            span: new AbsoluteSourceSpan(60, 63),
+            target: identifierTwo,
+          },
+        ]),
       );
     });
   });
