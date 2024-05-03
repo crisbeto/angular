@@ -18,7 +18,9 @@ describe('definitions', () => {
   beforeAll(() => {
     const {project, service: _service, tsLS} = setup();
     service = _service;
-    ngLS = new LanguageService(project, tsLS, {});
+    ngLS = new LanguageService(project, tsLS, {
+      enableLetSyntax: true,
+    });
   });
 
   beforeEach(() => {
@@ -284,6 +286,30 @@ describe('definitions', () => {
       // https://github.com/angular/angular/blob/89c5255b8ca59eed27ede9e1fad69857ab0c6f4f/packages/common/src/directives/ng_for_of.ts#L15
       expect(contextDef.textSpan).toEqual('$implicit');
       expect(contextDef.contextSpan).toContain('$implicit: T;');
+    });
+  });
+
+  describe('@let declarations', () => {
+    it('should work for single @let declaration', () => {
+      const definitions = getDefinitionsAndAssertBoundSpan({
+        templateOverride: `@let value = 42; {{val¦ue}}`,
+        expectedSpanText: 'value',
+      });
+
+      expect(definitions.length).toBe(1);
+      const [def] = definitions;
+      expect(def.textSpan).toBe('@let value = 42');
+    });
+
+    it('should work for multiple @let declarations', () => {
+      const definitions = getDefinitionsAndAssertBoundSpan({
+        templateOverride: `@let one = 1, two = 2, sum = one + two; {{tw¦o}}`,
+        expectedSpanText: 'two',
+      });
+
+      expect(definitions.length).toBe(1);
+      const [def] = definitions;
+      expect(def.textSpan).toBe('two = 2');
     });
   });
 

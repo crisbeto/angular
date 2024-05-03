@@ -41,6 +41,7 @@ function parse(template: string): ParseResult {
       leadingTriviaChars: [],
       preserveWhitespaces: true,
       alwaysAttemptHtmlToR3AstConversion: true,
+      enableLetSyntax: true,
     }),
     position,
   };
@@ -331,6 +332,25 @@ describe('getTargetAtPosition for template AST', () => {
     const {node} = context as SingleNodeTarget;
     expect(isTemplateNode(node!)).toBe(true);
     expect(node).toBeInstanceOf(t.Variable);
+  });
+
+  it('should locate single @let name', () => {
+    const {errors, nodes, position} = parse(`@let va¦lue = 1337;`);
+    expect(errors).toBe(null);
+    const {context} = getTargetAtPosition(nodes, position)!;
+    const {node} = context as SingleNodeTarget;
+    expect(isTemplateNode(node!)).toBe(true);
+    expect(node).toBeInstanceOf(t.LetDeclaration);
+  });
+
+  it('should locate @let name within multiple declarations', () => {
+    const {errors, nodes, position} = parse(`@let one = 1, t¦wo = 2, sum = one + two;`);
+    expect(errors).toBe(null);
+    const {context} = getTargetAtPosition(nodes, position)!;
+    const {node} = context as SingleNodeTarget;
+    expect(isTemplateNode(node!)).toBe(true);
+    expect(node).toBeInstanceOf(t.LetDeclaration);
+    expect((node as t.LetDeclaration).name).toBe('two');
   });
 
   it('should locate template children', () => {
@@ -659,6 +679,26 @@ describe('getTargetAtPosition for expression AST', () => {
     const {node} = context as SingleNodeTarget;
     expect(isExpressionNode(node!)).toBe(true);
     expect(node).toBeInstanceOf(e.Conditional);
+  });
+
+  it('should locate single @let value', () => {
+    const {errors, nodes, position} = parse(`@let value = 13¦37;`);
+    expect(errors).toBe(null);
+    const {context} = getTargetAtPosition(nodes, position)!;
+    const {node} = context as SingleNodeTarget;
+    expect(isExpressionNode(node!)).toBe(true);
+    expect(node).toBeInstanceOf(e.LiteralPrimitive);
+    expect((node as e.LiteralPrimitive).value).toBe(1337);
+  });
+
+  it('should locate @let value within multiple declarations', () => {
+    const {errors, nodes, position} = parse(`@let one = 1, two = ¦2, sum = one + two;`);
+    expect(errors).toBe(null);
+    const {context} = getTargetAtPosition(nodes, position)!;
+    const {node} = context as SingleNodeTarget;
+    expect(isExpressionNode(node!)).toBe(true);
+    expect(node).toBeInstanceOf(e.LiteralPrimitive);
+    expect((node as e.LiteralPrimitive).value).toBe(2);
   });
 
   describe('object literal shorthand', () => {
