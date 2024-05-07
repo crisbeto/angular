@@ -17,7 +17,8 @@ export type SemanticVariable =
   | ContextVariable
   | IdentifierVariable
   | SavedViewVariable
-  | AliasVariable;
+  | AliasVariable
+  | LetReferenceVariable;
 
 export interface SemanticVariableBase {
   kind: SemanticVariableKind;
@@ -78,4 +79,15 @@ export interface AliasVariable extends SemanticVariableBase {
   kind: SemanticVariableKind.Alias;
   identifier: string;
   expression: o.Expression;
+}
+
+/**
+ * A variable that represents a reference to an `@let` declaration.
+ * It will be inlined if it's only used within its declaration view.
+ */
+export interface LetReferenceVariable extends SemanticVariableBase {
+  kind: SemanticVariableKind.LetReference;
+  identifier: string;
+  target: XrefId;
+  view: XrefId;
 }

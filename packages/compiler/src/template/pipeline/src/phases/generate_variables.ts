@@ -61,14 +61,25 @@ function recursivelyProcessView(view: ViewCompilationUnit, parentScope: Scope | 
       case ir.OpKind.Listener:
       case ir.OpKind.TwoWayListener:
         // Prepend variables to listener handler functions.
-        op.handlerOps.prepend(generateVariablesInScopeForView(view, scope));
+        insertVariableOps(op.handlerOps, generateVariablesInScopeForView(view, scope, true));
         break;
     }
   }
 
-  // Prepend the declarations for all available variables in scope to the `update` block.
-  const preambleOps = generateVariablesInScopeForView(view, scope);
-  view.update.prepend(preambleOps);
+  insertVariableOps(view.update, generateVariablesInScopeForView(view, scope, false));
+}
+
+function insertVariableOps(ops: ir.OpList<ir.UpdateOp>, variables: GeneratedVariables): void {
+  ops.prepend(variables.prepend);
+
+  if (variables.localLetRefs !== null) {
+    for (const op of ops) {
+      // Local let references have to be inserted after their corresponding `storeLet` call.
+      if (op.kind === ir.OpKind.StoreLet && variables.localLetRefs.has(op.target)) {
+        ir.OpList.insertAfter<ir.UpdateOp>(variables.localLetRefs.get(op.target)!, op);
+      }
+    }
+  }
 }
 
 /**
@@ -90,6 +101,11 @@ interface Scope {
    * Local references collected from elements within the view.
    */
   references: Reference[];
+
+  /**
+   * Map of the ref to a `@let` declaration and the variable referring to it.
+   */
+  letReferences: Map<ir.XrefId, LetReference>;
 
   /**
    * `Scope` of the parent view, if any.
@@ -127,10 +143,42 @@ interface Reference {
 }
 
 /**
+ * Information a reference to an `@let` declaration.
+ */
+interface LetReference {
+  /** Slot in which the declaration is stored. */
+  targetSlot: ir.SlotHandle;
+
+  /** Variable referring to the declaration. */
+  variable: ir.LetReferenceVariable;
+}
+
+/** A variable op initialized to a reference to a local let. */
+type LocalLetVariable = ir.VariableOp<ir.UpdateOp> & {initializer: ir.LocalLetReferenceExpr};
+
+/**
+ * Tracks the variables that have been generated for a specific view.
+ */
+interface GeneratedVariables {
+  /**
+   * Variables that should be prepended before all the other instructions.
+   */
+  prepend: ir.VariableOp<ir.UpdateOp>[];
+
+  /**
+   * Map between let declarations and the local variables within the view that reference them.
+   * Local let references are processed separately, because they need to be inserted after
+   * the corresponding `storeLet` call, rather than prepended.
+   */
+  localLetRefs: Map<ir.XrefId, LocalLetVariable> | null;
+}
+
+/**
  * Process a view and generate a `Scope` representing the variables available for reference within
  * that view.
  */
 function getScopeForView(view: ViewCompilationUnit, parent: Scope | null): Scope {
+  const slotMap = new Map<ir.XrefId, ir.SlotHandle>();
   const scope: Scope = {
     view: view.xref,
     viewContextVariable: {
@@ -141,6 +189,7 @@ function getScopeForView(view: ViewCompilationUnit, parent: Scope | null): Scope
     contextVariables: new Map<string, ir.SemanticVariable>(),
     aliases: view.aliases,
     references: [],
+    letReferences: new Map<ir.XrefId, LetReference>(),
     parent,
   };
 
@@ -153,6 +202,10 @@ function getScopeForView(view: ViewCompilationUnit, parent: Scope | null): Scope
   }
 
   for (const op of view.create) {
+    if (ir.hasConsumesSlotTrait(op)) {
+      slotMap.set(op.xref, op.handle);
+    }
+
     switch (op.kind) {
       case ir.OpKind.ElementStart:
       case ir.OpKind.Template:
@@ -178,6 +231,31 @@ function getScopeForView(view: ViewCompilationUnit, parent: Scope | null): Scope
     }
   }
 
+  for (const op of view.update) {
+    if (op.kind === ir.OpKind.StoreLet) {
+      if (!slotMap.has(op.target)) {
+        throw new Error(`AssertionError: reference to unknown slot for @let ${op.target}`);
+      }
+
+      if (scope.letReferences.has(op.target)) {
+        throw new Error(
+          `AssertionError: reference to @let ${op.target} has already been processed`,
+        );
+      }
+
+      scope.letReferences.set(op.target, {
+        targetSlot: slotMap.get(op.target)!,
+        variable: {
+          kind: ir.SemanticVariableKind.LetReference,
+          name: null,
+          target: op.target,
+          identifier: op.name,
+          view: view.xref,
+        },
+      });
+    }
+  }
+
   return scope;
 }
 
@@ -190,14 +268,16 @@ function getScopeForView(view: ViewCompilationUnit, parent: Scope | null): Scope
 function generateVariablesInScopeForView(
   view: ViewCompilationUnit,
   scope: Scope,
-): ir.VariableOp<ir.UpdateOp>[] {
-  const newOps: ir.VariableOp<ir.UpdateOp>[] = [];
+  isListener: boolean,
+): GeneratedVariables {
+  const prepend: ir.VariableOp<ir.UpdateOp>[] = [];
+  let localLetRefs: Map<ir.XrefId, LocalLetVariable> | null = null;
 
   if (scope.view !== view.xref) {
     // Before generating variables for a parent view, we need to switch to the context of the parent
     // view with a `nextContext` expression. This context switching operation itself declares a
     // variable, because the context of the view may be referenced directly.
-    newOps.push(
+    prepend.push(
       ir.createVariableOp(
         view.job.allocateXrefId(),
         scope.viewContextVariable,
@@ -214,7 +294,7 @@ function generateVariablesInScopeForView(
     // We either read the context, or, if the variable is CTX_REF, use the context directly.
     const variable = value === ir.CTX_REF ? context : new o.ReadPropExpr(context, value);
     // Add the variable declaration.
-    newOps.push(
+    prepend.push(
       ir.createVariableOp(
         view.job.allocateXrefId(),
         scope.contextVariables.get(name)!,
@@ -225,7 +305,7 @@ function generateVariablesInScopeForView(
   }
 
   for (const alias of scopeView.aliases) {
-    newOps.push(
+    prepend.push(
       ir.createVariableOp(
         view.job.allocateXrefId(),
         alias,
@@ -237,7 +317,7 @@ function generateVariablesInScopeForView(
 
   // Add variables for all local references declared for elements in this scope.
   for (const ref of scope.references) {
-    newOps.push(
+    prepend.push(
       ir.createVariableOp(
         view.job.allocateXrefId(),
         ref.variable,
@@ -247,9 +327,29 @@ function generateVariablesInScopeForView(
     );
   }
 
-  if (scope.parent !== null) {
-    // Recursively add variables from the parent scope.
-    newOps.push(...generateVariablesInScopeForView(view, scope.parent));
+  for (const [target, ref] of scope.letReferences) {
+    const isLocalRef = scope.view === view.xref && !isListener;
+    const letVarOp = ir.createVariableOp<ir.UpdateOp>(
+      view.job.allocateXrefId(),
+      ref.variable,
+      isLocalRef
+        ? new ir.LocalLetReferenceExpr(ref.targetSlot)
+        : new ir.ContextLetReferenceExpr(target, ref.targetSlot),
+      ir.VariableFlags.None,
+    );
+
+    if (isLocalRef) {
+      localLetRefs ??= new Map();
+      localLetRefs.set(target, letVarOp as LocalLetVariable);
+    } else {
+      prepend.push(letVarOp);
+    }
   }
-  return newOps;
+
+  if (scope.parent !== null) {
+    // Recursively add variables from the parent scope. Local let references aren't inherited.
+    const parentOps = generateVariablesInScopeForView(view, scope.parent, false);
+    prepend.push(...parentOps.prepend);
+  }
+  return {prepend, localLetRefs};
 }

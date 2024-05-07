@@ -169,6 +169,10 @@ export {
   ɵsetUnknownElementStrictMode,
   ɵgetUnknownPropertyStrictMode,
   ɵsetUnknownPropertyStrictMode,
+  ɵɵdeclareLet,
+  ɵɵstoreLet,
+  ɵɵreadLocalLet,
+  ɵɵreadContextLet,
 } from './instructions/all';
 export {
   DEFER_BLOCK_DEPENDENCY_INTERCEPTOR as ɵDEFER_BLOCK_DEPENDENCY_INTERCEPTOR,

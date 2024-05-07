@@ -401,6 +401,22 @@ export function deferWhen(
   return call(prefetch ? Identifiers.deferPrefetchWhen : Identifiers.deferWhen, [expr], sourceSpan);
 }
 
+export function declareLet(slot: number, sourceSpan: ParseSourceSpan): ir.CreateOp {
+  return call(Identifiers.declareLet, [o.literal(slot)], sourceSpan);
+}
+
+export function storeLet(value: o.Expression, sourceSpan: ParseSourceSpan): ir.UpdateOp {
+  return call(Identifiers.storeLet, [value], sourceSpan);
+}
+
+export function readLocalLet(slot: number): o.Expression {
+  return o.importExpr(Identifiers.readLocalLet).callFn([o.literal(slot)]);
+}
+
+export function readContextLet(slot: number): o.Expression {
+  return o.importExpr(Identifiers.readContextLet).callFn([o.literal(slot)]);
+}
+
 export function i18n(
   slot: number,
   constIndex: number,

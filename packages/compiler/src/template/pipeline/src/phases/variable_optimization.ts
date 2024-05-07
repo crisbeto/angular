@@ -321,6 +321,7 @@ function fencesForIrExpression(expr: ir.Expression): Fence {
     case ir.ExpressionKind.RestoreView:
       return Fence.ViewContextRead | Fence.ViewContextWrite | Fence.SideEffectful;
     case ir.ExpressionKind.Reference:
+    case ir.ExpressionKind.ContextLetReference:
       return Fence.ViewContextRead;
     default:
       return Fence.None;
@@ -519,6 +520,8 @@ function allowConservativeInlining(
     case ir.SemanticVariableKind.Context:
       // Context can only be inlined into other variables.
       return target.kind === ir.OpKind.Variable;
+    case ir.SemanticVariableKind.LetReference:
+      return false;
     default:
       return true;
   }

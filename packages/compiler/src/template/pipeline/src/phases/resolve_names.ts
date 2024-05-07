@@ -8,7 +8,7 @@
 
 import * as o from '../../../../output/output_ast';
 import * as ir from '../../ir';
-import {CompilationJob, CompilationUnit, ViewCompilationUnit} from '../compilation';
+import {CompilationJob, CompilationUnit} from '../compilation';
 
 /**
  * Resolves lexical references in views (`ir.LexicalReadExpr`) to either a target variable or to
@@ -34,7 +34,8 @@ function processLexicalScope(
   //
   // Since variables are generated in each view for the entire lexical scope (including any
   // identifiers from parent templates) only local variables need be considered here.
-  const scope = new Map<string, ir.XrefId>();
+  const scope = new Map<string, ir.VariableOp<ir.CreateOp | ir.UpdateOp>>();
+  const letDecls = new Map<ir.XrefId, ir.StoreLetOp>();
 
   // First, step through the operations list and:
   // 1) build up the `scope` mapping
@@ -45,11 +46,12 @@ function processLexicalScope(
         switch (op.variable.kind) {
           case ir.SemanticVariableKind.Identifier:
           case ir.SemanticVariableKind.Alias:
+          case ir.SemanticVariableKind.LetReference:
             // This variable represents some kind of identifier which can be used in the template.
             if (scope.has(op.variable.identifier)) {
               continue;
             }
-            scope.set(op.variable.identifier, op.xref);
+            scope.set(op.variable.identifier, op);
             break;
           case ir.SemanticVariableKind.SavedView:
             // This variable represents a snapshot of the current view context, and can be used to
@@ -60,6 +62,9 @@ function processLexicalScope(
             };
             break;
         }
+        break;
+      case ir.OpKind.StoreLet:
+        letDecls.set(op.target, op);
         break;
       case ir.OpKind.Listener:
       case ir.OpKind.TwoWayListener:
@@ -86,8 +91,27 @@ function processLexicalScope(
           // Either that name is defined within the current view, or it represents a property from the
           // main component context.
           if (scope.has(expr.name)) {
+            const varOp = scope.get(expr.name)!;
+            const targetLetDecl =
+              varOp.variable.kind === ir.SemanticVariableKind.LetReference &&
+              letDecls.has(varOp.variable.target)
+                ? letDecls.get(varOp.variable.target)!
+                : null;
+
+            // Special case! It's not allowed to access a `@let` declaration before it has been
+            // defined. This is enforced already via template type checking, however it can trip
+            // some of the assertions in the pipeline. E.g. the naming phase can fail because we
+            // resolved the variable here, but the variable doesn't exist anymore because the
+            // optimization phase removed it since it's invalid. To avoid surfacing confusing
+            // errors to users in the case where template type checking isn't running (e.g.
+            // in JIT mode) we detect illegal forward references and replace them with undefined.
+            // Eventually they should see the proper error from the template type checker.
+            if (targetLetDecl !== null && isIllegalForwardLetReference(op, varOp, targetLetDecl)) {
+              return o.literal(undefined);
+            }
+
             // This was a defined variable in the current scope.
-            return new ir.ReadVariableExpr(scope.get(expr.name)!);
+            return new ir.ReadVariableExpr(varOp.xref);
           } else {
             // Reading from the component context.
             return new o.ReadPropExpr(new ir.ContextExpr(unit.job.root.xref), expr.name);
@@ -118,6 +142,35 @@ function processLexicalScope(
       }
     });
   }
+}
+
+/**
+ * Determines if a reference to a `@let` declaration from a specific op is illegal.
+ * @param expressionOp Op that is referring to a `@let` declaration.
+ * @param target Variable representing the resolve value of the `@let` declaration that
+ *    the expression is targeting.
+ * @param letDeclaration Op that declared the `@let`.
+ */
+function isIllegalForwardLetReference(
+  expressionOp: ir.CreateOp | ir.UpdateOp,
+  target: ir.VariableOp<ir.CreateOp | ir.UpdateOp>,
+  letDeclaration: ir.StoreLetOp,
+): boolean {
+  if (
+    expressionOp.kind !== ir.OpKind.Listener &&
+    expressionOp.kind !== ir.OpKind.TwoWayListener &&
+    target.variable.kind === ir.SemanticVariableKind.LetReference
+  ) {
+    let current = letDeclaration as ir.UpdateOp | null;
+    while (current) {
+      if (current === expressionOp) {
+        return true;
+      }
+      current = current.prev;
+    }
+  }
+
+  return false;
 }
 
 /**

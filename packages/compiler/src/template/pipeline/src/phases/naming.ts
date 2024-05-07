@@ -193,7 +193,9 @@ function getVariableName(
         } else {
           variable.name = `${variable.identifier}_i${state.index++}`;
         }
-
+        break;
+      case ir.SemanticVariableKind.LetReference:
+        variable.name = `${variable.identifier}_${state.index++}`;
         break;
       default:
         // TODO: Prefix increment for compatibility only.
