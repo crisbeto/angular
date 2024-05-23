@@ -919,6 +919,387 @@ describe('component', () => {
       },
     );
 
+    describe('attaching directives to root component', () => {
+      it('should be able to attach directives when creating a component', () => {
+        const logs: string[] = [];
+
+        @Directive({
+          standalone: true,
+          host: {
+            'class': 'class-1',
+            'attr-one': 'one',
+          },
+        })
+        class Dir1 {
+          constructor() {
+            logs.push('Dir1');
+          }
+        }
+
+        @Directive({
+          standalone: true,
+          host: {
+            'class': 'class-2',
+            'attr-two': 'two',
+          },
+        })
+        class Dir2 {
+          constructor() {
+            logs.push('Dir2');
+          }
+        }
+
+        @Component({
+          standalone: true,
+          template: '',
+          host: {
+            'class': 'host',
+            'attr-three': 'host',
+          },
+        })
+        class HostComponent {
+          constructor() {
+            logs.push('HostComponent');
+          }
+        }
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+        createComponent(HostComponent, {
+          hostElement,
+          environmentInjector,
+          directives: [Dir1, Dir2],
+        });
+
+        expect(logs).toEqual(['HostComponent', 'Dir1', 'Dir2']);
+        expect(hostElement.className).toBe('host class-1 class-2');
+        expect(hostElement.getAttribute('attr-one')).toBe('one');
+        expect(hostElement.getAttribute('attr-two')).toBe('two');
+        expect(hostElement.getAttribute('attr-three')).toBe('host');
+      });
+
+      it('should support setting the value of a directive using setInput', () => {
+        let dirInstance: Dir;
+
+        @Directive({
+          standalone: true,
+        })
+        class Dir {
+          @Input() value: number | null = null;
+
+          constructor() {
+            dirInstance = this;
+          }
+        }
+
+        @Component({
+          standalone: true,
+          template: '',
+        })
+        class HostComponent {}
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+        const ref = createComponent(HostComponent, {
+          hostElement,
+          environmentInjector,
+          directives: [Dir],
+        });
+
+        expect(dirInstance!.value).toBe(null);
+
+        ref.setInput('value', 1);
+        expect(dirInstance!.value).toBe(1);
+
+        ref.setInput('value', 2);
+        expect(dirInstance!.value).toBe(2);
+      });
+
+      it('should execute host directives in the correct order', () => {
+        const logs: string[] = [];
+
+        @Directive({
+          standalone: true,
+        })
+        class Chain1_3 {
+          constructor() {
+            logs.push('Chain1 - level 3');
+          }
+        }
+
+        @Directive({
+          standalone: true,
+          hostDirectives: [Chain1_3],
+        })
+        class Chain1_2 {
+          constructor() {
+            logs.push('Chain1 - level 2');
+          }
+        }
+
+        @Directive({
+          standalone: true,
+          hostDirectives: [Chain1_2],
+        })
+        class Chain1 {
+          constructor() {
+            logs.push('Chain1 - level 1');
+          }
+        }
+
+        @Directive({
+          standalone: true,
+        })
+        class Chain2_2 {
+          constructor() {
+            logs.push('Chain2 - level 2');
+          }
+        }
+
+        @Directive({
+          standalone: true,
+          hostDirectives: [Chain2_2],
+        })
+        class Chain2 {
+          constructor() {
+            logs.push('Chain2 - level 1');
+          }
+        }
+
+        @Directive({standalone: true})
+        class Chain3_2 {
+          constructor() {
+            logs.push('Chain3 - level 2');
+          }
+        }
+
+        @Directive({standalone: true, hostDirectives: [Chain3_2]})
+        class Chain3 {
+          constructor() {
+            logs.push('Chain3 - level 1');
+          }
+        }
+
+        @Component({
+          selector: 'my-comp',
+          template: '',
+          hostDirectives: [Chain1, Chain2, Chain3],
+        })
+        class HostComponent {
+          constructor() {
+            logs.push('HostComponent');
+          }
+        }
+
+        @Directive({standalone: true})
+        class Dir1 {
+          constructor() {
+            logs.push('Dir1');
+          }
+        }
+
+        @Directive({
+          standalone: true,
+        })
+        class Dir2 {
+          constructor() {
+            logs.push('Dir2');
+          }
+        }
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+        createComponent(HostComponent, {
+          hostElement,
+          environmentInjector,
+          directives: [Dir1, Dir2],
+        });
+
+        expect(logs).toEqual([
+          'Chain1 - level 3',
+          'Chain1 - level 2',
+          'Chain1 - level 1',
+          'Chain2 - level 2',
+          'Chain2 - level 1',
+          'Chain3 - level 2',
+          'Chain3 - level 1',
+          'HostComponent',
+          'Dir1',
+          'Dir2',
+        ]);
+      });
+
+      it('should destroy the attached directives when the component ref is destroyed', () => {
+        const logs: string[] = [];
+
+        @Directive({
+          standalone: true,
+        })
+        class Dir1 implements OnDestroy {
+          ngOnDestroy() {
+            logs.push('Dir1');
+          }
+        }
+
+        @Directive({
+          standalone: true,
+        })
+        class Dir2 implements OnDestroy {
+          ngOnDestroy() {
+            logs.push('Dir2');
+          }
+        }
+
+        @Component({
+          standalone: true,
+          template: '',
+        })
+        class HostComponent implements OnDestroy {
+          ngOnDestroy() {
+            logs.push('HostComponent');
+          }
+        }
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+        const ref = createComponent(HostComponent, {
+          hostElement,
+          environmentInjector,
+          directives: [Dir1, Dir2],
+        });
+
+        ref.destroy();
+        expect(logs).toEqual(['HostComponent', 'Dir1', 'Dir2']);
+      });
+
+      it('should be able to inject the attached directive', () => {
+        let createdInstance: Dir | undefined;
+        let injectedInstance: Dir | undefined;
+
+        @Directive({
+          standalone: true,
+        })
+        class Dir {
+          constructor() {
+            createdInstance = this;
+          }
+        }
+
+        @Component({
+          standalone: true,
+          template: '',
+        })
+        class HostComponent {
+          constructor() {
+            injectedInstance = inject(Dir);
+          }
+        }
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+        createComponent(HostComponent, {
+          hostElement,
+          environmentInjector,
+          directives: [Dir],
+        });
+
+        expect(createdInstance).toBeTruthy();
+        expect(injectedInstance).toBeTruthy();
+        expect(createdInstance).toBe(injectedInstance);
+      });
+
+      it('should throw if the same directive is attached multiple times', () => {
+        @Directive({
+          standalone: true,
+        })
+        class Dir {}
+
+        @Component({
+          standalone: true,
+          template: '',
+        })
+        class HostComponent {}
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+
+        expect(() => {
+          createComponent(HostComponent, {
+            hostElement,
+            environmentInjector,
+            directives: [Dir, Dir],
+          });
+        }).toThrowError(/Directive Dir matches multiple times on the same element/);
+      });
+
+      it('should throw if the same directive is attached multiple times', () => {
+        @Directive({
+          standalone: true,
+        })
+        class Dir {}
+
+        @Component({
+          standalone: true,
+          template: '',
+        })
+        class HostComponent {}
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+
+        expect(() => {
+          createComponent(HostComponent, {
+            hostElement,
+            environmentInjector,
+            directives: [Dir, Dir],
+          });
+        }).toThrowError(/Directive Dir matches multiple times on the same element/);
+      });
+
+      it('should throw if a non-directive class is attached', () => {
+        class NotADir {}
+
+        @Component({
+          standalone: true,
+          template: '',
+        })
+        class HostComponent {}
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+
+        expect(() => {
+          createComponent(HostComponent, {
+            hostElement,
+            environmentInjector,
+            directives: [NotADir],
+          });
+        }).toThrowError(/Class NotADir is not a directive/);
+      });
+
+      it('should throw if a component class is attached', () => {
+        @Component({template: '', standalone: true})
+        class NotADir {}
+
+        @Component({
+          standalone: true,
+          template: '',
+        })
+        class HostComponent {}
+
+        const hostElement = document.createElement('div');
+        const environmentInjector = TestBed.inject(EnvironmentInjector);
+
+        expect(() => {
+          createComponent(HostComponent, {
+            hostElement,
+            environmentInjector,
+            directives: [NotADir],
+          });
+        }).toThrowError(/Class NotADir is not a directive/);
+      });
+    });
+
     describe('error checking', () => {
       it('should throw when provided class is not a component', () => {
         class NotAComponent {}

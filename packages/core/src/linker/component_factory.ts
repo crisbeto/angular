@@ -121,5 +121,6 @@ export abstract class ComponentFactory<C> {
     projectableNodes?: any[][],
     rootSelectorOrNode?: string | any,
     environmentInjector?: EnvironmentInjector | NgModuleRef<any>,
+    directives?: Type<unknown>[],
   ): ComponentRef<C>;
 }

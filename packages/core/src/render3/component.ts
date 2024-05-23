@@ -81,6 +81,7 @@ export function createComponent<C>(
     hostElement?: Element;
     elementInjector?: Injector;
     projectableNodes?: Node[][];
+    directives?: Type<unknown>[];
   },
 ): ComponentRef<C> {
   ngDevMode && assertComponentDef(component);
@@ -92,6 +93,7 @@ export function createComponent<C>(
     options.projectableNodes,
     options.hostElement,
     options.environmentInjector,
+    options.directives,
   );
 }
 

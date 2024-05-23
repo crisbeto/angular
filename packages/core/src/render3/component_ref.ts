@@ -37,7 +37,7 @@ import {NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR} from '../view/provider_flags';
 import {AfterRenderEventManager} from './after_render_hooks';
 import {assertComponentType, assertNoDuplicateDirectives} from './assert';
 import {attachPatchData} from './context_discovery';
-import {getComponentDef} from './definition';
+import {getComponentDef, getDirectiveDef} from './definition';
 import {depsTracker} from './deps_tracker/deps_tracker';
 import {getNodeInjectable, NodeInjector} from './di';
 import {registerPostOrderHooks} from './hooks';
@@ -227,6 +227,7 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
     projectableNodes?: any[][] | undefined,
     rootSelectorOrNode?: any,
     environmentInjector?: NgModuleRef<any> | EnvironmentInjector | undefined,
+    directives?: Type<unknown>[],
   ): AbstractComponentRef<T> {
     const prevConsumer = setActiveConsumer(null);
     try {
@@ -353,22 +354,34 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
 
       try {
         const rootComponentDef = this.componentDef;
-        let rootDirectives: DirectiveDef<unknown>[];
+        const rootDirectives: DirectiveDef<unknown>[] = [rootComponentDef];
+        let hostDirectiveMatches: DirectiveDef<unknown>[] | null = null;
         let hostDirectiveDefs: HostDirectiveDefs | null = null;
 
-        if (rootComponentDef.findHostDirectiveDefs) {
-          rootDirectives = [];
-          hostDirectiveDefs = new Map();
-          rootComponentDef.findHostDirectiveDefs(
-            rootComponentDef,
-            rootDirectives,
-            hostDirectiveDefs,
-          );
-          rootDirectives.push(rootComponentDef);
-          ngDevMode && assertNoDuplicateDirectives(rootDirectives);
-        } else {
-          rootDirectives = [rootComponentDef];
+        if (directives) {
+          for (const current of directives) {
+            const def = getDirectiveDef(current);
+            if (def === null) {
+              // TODO(crisbeto): better message and use RuntimeError here
+              throw new Error(`Class ${current.name} is not a directive`);
+            }
+            rootDirectives.push(def);
+          }
         }
+
+        for (const dir of rootDirectives) {
+          if (dir.findHostDirectiveDefs) {
+            hostDirectiveDefs ??= new Map();
+            hostDirectiveMatches ??= [];
+            dir.findHostDirectiveDefs(rootComponentDef, hostDirectiveMatches, hostDirectiveDefs);
+          }
+        }
+
+        if (hostDirectiveMatches !== null) {
+          rootDirectives.unshift(...hostDirectiveMatches);
+        }
+
+        ngDevMode && assertNoDuplicateDirectives(rootDirectives);
 
         const hostTNode = createRootComponentTNode(rootLView, hostRNode);
         const componentView = createRootComponentView(
