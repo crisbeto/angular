@@ -143,9 +143,23 @@ describe('HtmlLexer', () => {
   });
 
   describe('doctype', () => {
-    it('should parse doctypes', () => {
+    it('should parse doctype', () => {
       expect(tokenizeAndHumanizeParts('<!DOCTYPE html>')).toEqual([
-        [TokenType.DOC_TYPE, 'DOCTYPE html'],
+        [TokenType.DOC_TYPE, ' html'],
+        [TokenType.EOF],
+      ]);
+    });
+
+    it('should parse empty doctype', () => {
+      expect(tokenizeAndHumanizeParts('<!DOCTYPE>')).toEqual([
+        [TokenType.DOC_TYPE, ''],
+        [TokenType.EOF],
+      ]);
+    });
+
+    it('should parse lowercase doctype', () => {
+      expect(tokenizeAndHumanizeParts('<!doctype html>')).toEqual([
+        [TokenType.DOC_TYPE, ' html'],
         [TokenType.EOF],
       ]);
     });
@@ -160,6 +174,9 @@ describe('HtmlLexer', () => {
     it('should report missing end doctype', () => {
       expect(tokenizeAndHumanizeErrors('<!')).toEqual([
         [TokenType.DOC_TYPE, 'Unexpected character "EOF"', '0:2'],
+      ]);
+      expect(tokenizeAndHumanizeErrors('<!DOCTYPE')).toEqual([
+        [TokenType.DOC_TYPE, 'Unexpected character "EOF"', '0:9'],
       ]);
     });
   });

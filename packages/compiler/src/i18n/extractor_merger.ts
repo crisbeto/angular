@@ -334,6 +334,8 @@ class _Visitor implements html.Visitor {
 
   visitLetDeclaration(decl: html.LetDeclaration, context: any) {}
 
+  visitDocType(decl: html.DocType, context: any) {}
+
   private _init(mode: _VisitorMode, interpolationConfig: InterpolationConfig): void {
     this._mode = mode;
     this._inI18nBlock = false;

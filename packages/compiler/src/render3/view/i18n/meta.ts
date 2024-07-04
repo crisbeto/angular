@@ -191,6 +191,10 @@ export class I18nMetaVisitor implements html.Visitor {
     return decl;
   }
 
+  visitDocType(node: html.DocType, context: any) {
+    return node;
+  }
+
   /**
    * Parse the general form `meta` passed into extract the explicit metadata needed to create a
    * `Message`.

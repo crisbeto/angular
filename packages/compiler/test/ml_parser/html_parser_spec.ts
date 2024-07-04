@@ -1103,6 +1103,24 @@ describe('HtmlParser', () => {
       });
     });
 
+    describe('doctype', () => {
+      it('should parse a doctype', () => {
+        expect(humanizeDom(parser.parse('<!DOCTYPE html>', 'TestCmp'))).toEqual([
+          [html.DocType, 'html', 0],
+        ]);
+      });
+
+      it('should store the source location of a doctype', () => {
+        expect(
+          humanizeDomSourceSpans(parser.parse('before <!DOCTYPE html> after', 'TestCmp')),
+        ).toEqual([
+          [html.Text, 'before ', 0, ['before '], 'before '],
+          [html.DocType, 'html', 0, '<!DOCTYPE html>'],
+          [html.Text, ' after', 0, [' after'], ' after'],
+        ]);
+      });
+    });
+
     describe('source spans', () => {
       it('should store the location', () => {
         expect(
@@ -1354,6 +1372,7 @@ describe('HtmlParser', () => {
           }
           visitBlockParameter(parameter: html.BlockParameter, context: any) {}
           visitLetDeclaration(decl: html.LetDeclaration, context: any) {}
+          visitDocType(node: html.DocType, context: any) {}
         })();
 
         html.visitAll(visitor, result.rootNodes);
@@ -1398,6 +1417,9 @@ describe('HtmlParser', () => {
             throw Error('Unexpected');
           }
           visitLetDeclaration(decl: html.LetDeclaration, context: any) {
+            throw Error('Unexpected');
+          }
+          visitDocType(node: html.DocType, context: any) {
             throw Error('Unexpected');
           }
         })();

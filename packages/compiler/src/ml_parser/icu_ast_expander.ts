@@ -117,6 +117,10 @@ class _Expander implements html.Visitor {
   visitLetDeclaration(decl: html.LetDeclaration, context: any) {
     return decl;
   }
+
+  visitDocType(node: html.DocType, context: any) {
+    return node;
+  }
 }
 
 // Plural forms are expanded to `NgPlural` and `NgPluralCase`s

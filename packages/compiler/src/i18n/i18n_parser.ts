@@ -243,6 +243,10 @@ class _I18nVisitor implements html.Visitor {
     return null;
   }
 
+  visitDocType(node: html.DocType, context: any) {
+    return null;
+  }
+
   /**
    * Convert, text and interpolated tokens up into text and placeholder pieces.
    *

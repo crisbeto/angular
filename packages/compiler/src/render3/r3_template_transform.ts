@@ -408,6 +408,10 @@ class HtmlAstToIvyAst implements html.Visitor {
     return null;
   }
 
+  visitDocType(node: html.DocType, context: any) {
+    return null;
+  }
+
   visitBlock(block: html.Block, context: html.Node[]) {
     const index = Array.isArray(context) ? context.indexOf(block) : -1;
 
@@ -911,6 +915,10 @@ class NonBindableVisitor implements html.Visitor {
 
   visitLetDeclaration(decl: html.LetDeclaration, context: any) {
     return new t.Text(`@let ${decl.name} = ${decl.value};`, decl.sourceSpan);
+  }
+
+  visitDocType(node: html.DocType, context: any) {
+    return null;
   }
 }
 

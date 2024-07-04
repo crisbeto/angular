@@ -54,6 +54,10 @@ class _SerializerVisitor implements html.Visitor {
     return `@let ${decl.name} = ${decl.value};`;
   }
 
+  visitDocType(node: html.DocType, context: any) {
+    return `<!DOCTYPE ${node.value}>`;
+  }
+
   private _visitAll(nodes: html.Node[], separator = '', prefix = ''): string {
     return nodes.length > 0 ? prefix + nodes.map((a) => a.visit(this, null)).join(separator) : '';
   }

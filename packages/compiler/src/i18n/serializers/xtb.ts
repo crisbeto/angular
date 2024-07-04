@@ -160,6 +160,8 @@ class XtbParser implements ml.Visitor {
 
   visitLetDeclaration(decl: ml.LetDeclaration, context: any) {}
 
+  visitDocType(node: ml.DocType, context: any) {}
+
   private _addError(node: ml.Node, message: string): void {
     this._errors.push(new I18nError(node.sourceSpan, message));
   }
@@ -229,6 +231,8 @@ class XmlToI18n implements ml.Visitor {
   visitBlockParameter(block: ml.BlockParameter, context: any) {}
 
   visitLetDeclaration(decl: ml.LetDeclaration, context: any) {}
+
+  visitDocType(node: ml.DocType, context: any) {}
 
   private _addError(node: ml.Node, message: string): void {
     this._errors.push(new I18nError(node.sourceSpan, message));

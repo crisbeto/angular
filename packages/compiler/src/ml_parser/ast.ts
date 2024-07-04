@@ -24,7 +24,8 @@ export type Node =
   | ExpansionCase
   | Text
   | Block
-  | BlockParameter;
+  | BlockParameter
+  | DocType;
 
 export abstract class NodeWithI18n implements BaseNode {
   constructor(
@@ -166,6 +167,17 @@ export class LetDeclaration implements BaseNode {
   }
 }
 
+export class DocType implements BaseNode {
+  constructor(
+    public value: string,
+    public sourceSpan: ParseSourceSpan,
+  ) {}
+
+  visit(visitor: Visitor, context: any): any {
+    return visitor.visitDocType(this, context);
+  }
+}
+
 export interface Visitor {
   // Returning a truthy value from `visit()` will prevent `visitAll()` from the call to the typed
   // method and result returned will become the result included in `visitAll()`s result array.
@@ -180,6 +192,7 @@ export interface Visitor {
   visitBlock(block: Block, context: any): any;
   visitBlockParameter(parameter: BlockParameter, context: any): any;
   visitLetDeclaration(decl: LetDeclaration, context: any): any;
+  visitDocType(node: DocType, context: any): any;
 }
 
 export function visitAll(visitor: Visitor, nodes: Node[], context: any = null): any[] {
@@ -229,6 +242,8 @@ export class RecursiveVisitor implements Visitor {
   visitBlockParameter(ast: BlockParameter, context: any): any {}
 
   visitLetDeclaration(decl: LetDeclaration, context: any) {}
+
+  visitDocType(node: DocType, context: any) {}
 
   private visitChildren<T extends Node>(
     context: any,

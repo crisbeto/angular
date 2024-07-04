@@ -10,6 +10,7 @@ import {
   Block,
   BlockParameter,
   Comment,
+  DocType,
   Element,
   Expansion,
   ExpansionCase,
@@ -33,4 +34,5 @@ export class BaseVisitor implements Visitor {
   visitBlock(_block: Block, _context: any) {}
   visitBlockParameter(_parameter: BlockParameter, _context: any) {}
   visitLetDeclaration(_decl: LetDeclaration, _context: any) {}
+  visitDocType(_node: DocType, _context: any) {}
 }

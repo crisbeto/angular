@@ -20,6 +20,7 @@ import {
   BlockParameterToken,
   CdataStartToken,
   CommentStartToken,
+  DocTypeToken,
   ExpansionCaseExpressionEndToken,
   ExpansionCaseExpressionStartToken,
   ExpansionCaseValueToken,
@@ -113,6 +114,9 @@ class _TreeBuilder {
       } else if (this._peek.type === TokenType.COMMENT_START) {
         this._closeVoidElement();
         this._consumeComment(this._advance());
+      } else if (this._peek.type === TokenType.DOC_TYPE) {
+        this._closeVoidElement();
+        this._consumeDoctype(this._advance());
       } else if (
         this._peek.type === TokenType.TEXT ||
         this._peek.type === TokenType.RAW_TEXT ||
@@ -192,6 +196,10 @@ class _TreeBuilder {
             token.sourceSpan.fullStart,
           );
     this._addToParent(new html.Comment(value, sourceSpan));
+  }
+
+  private _consumeDoctype(token: DocTypeToken) {
+    this._addToParent(new html.DocType(token.parts[0].trim(), token.sourceSpan));
   }
 
   private _consumeExpansion(token: ExpansionFormStartToken) {

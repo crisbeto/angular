@@ -178,7 +178,7 @@ export interface AttributeValueInterpolationToken extends TokenBase {
 
 export interface DocTypeToken extends TokenBase {
   type: TokenType.DOC_TYPE;
-  parts: [content: string];
+  parts: [value: string];
 }
 
 export interface ExpansionFormStartToken extends TokenBase {

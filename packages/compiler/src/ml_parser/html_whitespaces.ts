@@ -129,6 +129,10 @@ export class WhitespaceVisitor implements html.Visitor {
   visitLetDeclaration(decl: html.LetDeclaration, context: any) {
     return decl;
   }
+
+  visitDocType(node: html.DocType, context: any) {
+    return node;
+  }
 }
 
 function createWhitespaceProcessedTextToken({type, parts, sourceSpan}: TextToken): TextToken {

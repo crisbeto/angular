@@ -725,6 +725,7 @@ class _Tokenizer {
 
   private _consumeDocType(start: CharacterCursor) {
     this._beginToken(TokenType.DOC_TYPE, start);
+    this._attemptStrCaseInsensitive('doctype');
     const contentStart = this._cursor.clone();
     this._attemptUntilChar(chars.$GT);
     const content = this._cursor.getChars(contentStart);
