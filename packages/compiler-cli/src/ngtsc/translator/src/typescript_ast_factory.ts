@@ -89,7 +89,27 @@ export class TypeScriptAstFactory implements AstFactory<ts.Statement, ts.Express
     operator: BinaryOperator,
     rightOperand: ts.Expression,
   ): ts.Expression {
-    return ts.factory.createBinaryExpression(leftOperand, BINARY_OPERATORS[operator], rightOperand);
+    if (operator === '**') {
+      debugger;
+    }
+
+    const ast = ts.factory.createBinaryExpression(
+      leftOperand,
+      BINARY_OPERATORS[operator],
+      rightOperand,
+    );
+
+    const printed = ts
+      .createPrinter()
+      .printNode(
+        ts.EmitHint.Unspecified,
+        ast,
+        ts.createSourceFile('foo.ts', '', ts.ScriptTarget.Latest),
+      );
+
+    // console.log(ast);
+
+    return ast;
   }
 
   createBlock(body: ts.Statement[]): ts.Statement {

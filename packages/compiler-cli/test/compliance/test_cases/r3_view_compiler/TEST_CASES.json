@@ -37,6 +37,10 @@
     },
     {
       "description": "should handle exponentiation operator",
+      "focusTest": true,
+      "compilerOptions": {
+        "target": "ES2017"
+      },
       "inputFiles": [
         "exponentiation.ts"
       ],

@@ -929,6 +929,12 @@ class _ParseAST {
       const operator = this.next.strValue;
       switch (operator) {
         case '**':
+          this.advance();
+          // TODO: parseExpression works for the most part, but ends up moving the parentheses
+          // in more complex expressions. Parse prefix adds unnecessary parens.
+          let r = this.parseExpression();
+          result = new Binary(this.span(start), this.sourceSpan(start), operator, result, r);
+          continue;
         case '*':
         case '%':
         case '/':

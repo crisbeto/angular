@@ -385,6 +385,7 @@ export class ExpressionTranslatorVisitor<TFile, TStatement, TExpression>
     if (!BINARY_OPERATORS.has(ast.operator)) {
       throw new Error(`Unknown binary operator: ${o.BinaryOperator[ast.operator]}`);
     }
+
     return this.factory.createBinaryExpression(
       ast.lhs.visitExpression(this, context),
       BINARY_OPERATORS.get(ast.operator)!,

@@ -1173,13 +1173,26 @@ export class UnaryOperatorExpr extends Expression {
 
 export class BinaryOperatorExpr extends Expression {
   public lhs: Expression;
+
+  get operator() {
+    // if (this._operator === BinaryOperator.Exponentiation) {
+    //   debugger;
+    // }
+
+    return this._operator;
+  }
+
+  set operator(value: BinaryOperator) {
+    this._operator = value;
+  }
+
   constructor(
-    public operator: BinaryOperator,
+    private _operator: BinaryOperator,
     lhs: Expression,
     public rhs: Expression,
     type?: Type | null,
     sourceSpan?: ParseSourceSpan | null,
-    public parens: boolean = true,
+    public parens: boolean = _operator !== BinaryOperator.Exponentiation,
   ) {
     super(type || lhs.type, sourceSpan);
     this.lhs = lhs;

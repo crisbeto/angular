@@ -204,6 +204,10 @@ describe('parser', () => {
         checkAction('a.a.a = 1 + 2');
       });
 
+      fit('', () => {
+        console.log(parseAction('a ** b ** c ** d').ast);
+      });
+
       describe('malformed property writes', () => {
         it('should recover on empty rvalues', () => {
           checkActionWithError('a.a = ', 'a.a = ', 'Unexpected end of expression');
