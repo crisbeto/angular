@@ -164,11 +164,10 @@ function createDeferBlockInjector(
  */
 export function renderDeferBlockState(
   newState: DeferBlockState,
+  hostLView: LView,
   tNode: TNode,
-  lContainer: LContainer,
   skipTimerScheduling = false,
 ): void {
-  const hostLView = lContainer[PARENT];
   const hostTView = hostLView[TVIEW];
 
   // Check if this view is not destroyed. Since the loading process was async,
@@ -213,7 +212,7 @@ export function renderDeferBlockState(
       ? applyDeferBlockStateWithSchedulingImpl!
       : applyDeferBlockState;
     try {
-      applyStateFn(newState, lDetails, lContainer, tNode, hostLView);
+      applyStateFn(newState, lDetails, tNode, hostLView);
     } catch (error: unknown) {
       handleError(hostLView, error);
     }
@@ -246,7 +245,6 @@ function findMatchingDehydratedViewForDeferBlock(
 function applyDeferBlockState(
   newState: DeferBlockState,
   lDetails: LDeferBlockDetails,
-  unused: LContainer,
   tNode: TNode,
   hostLView: LView<unknown>,
 ) {
@@ -337,7 +335,6 @@ function applyDeferBlockState(
 function applyDeferBlockStateWithScheduling(
   newState: DeferBlockState,
   lDetails: LDeferBlockDetails,
-  lContainer: LContainer,
   tNode: TNode,
   hostLView: LView<unknown>,
 ) {
@@ -354,13 +351,7 @@ function applyDeferBlockStateWithScheduling(
       // Trying to render loading, but it has an `after` config,
       // so schedule an update action after a timeout.
       lDetails[NEXT_DEFER_BLOCK_STATE] = newState;
-      const cleanupFn = scheduleDeferBlockUpdate(
-        loadingAfter,
-        lDetails,
-        tNode,
-        lContainer,
-        hostLView,
-      );
+      const cleanupFn = scheduleDeferBlockUpdate(loadingAfter, lDetails, tNode, hostLView);
       lDetails[LOADING_AFTER_CLEANUP_FN] = cleanupFn;
     } else {
       // If we transition to a complete or an error state and there is a pending
@@ -372,12 +363,12 @@ function applyDeferBlockStateWithScheduling(
         lDetails[NEXT_DEFER_BLOCK_STATE] = null;
       }
 
-      applyDeferBlockState(newState, lDetails, lContainer, tNode, hostLView);
+      applyDeferBlockState(newState, lDetails, tNode, hostLView);
 
       const duration = getMinimumDurationForState(tDetails, newState);
       if (duration !== null) {
         lDetails[STATE_IS_FROZEN_UNTIL] = now + duration;
-        scheduleDeferBlockUpdate(duration, lDetails, tNode, lContainer, hostLView);
+        scheduleDeferBlockUpdate(duration, lDetails, tNode, hostLView);
       }
     }
   } else {
@@ -395,7 +386,6 @@ function scheduleDeferBlockUpdate(
   timeout: number,
   lDetails: LDeferBlockDetails,
   tNode: TNode,
-  lContainer: LContainer,
   hostLView: LView<unknown>,
 ): VoidFunction {
   const callback = () => {
@@ -403,7 +393,7 @@ function scheduleDeferBlockUpdate(
     lDetails[STATE_IS_FROZEN_UNTIL] = null;
     lDetails[NEXT_DEFER_BLOCK_STATE] = null;
     if (nextState !== null) {
-      renderDeferBlockState(nextState, tNode, lContainer);
+      renderDeferBlockState(nextState, hostLView, tNode);
     }
   };
   return scheduleTimerTrigger(timeout, callback, hostLView[INJECTOR]);
@@ -427,10 +417,7 @@ function isValidStateChange(
 
 /** Utility function to render placeholder content (if present) */
 export function renderPlaceholder(lView: LView, tNode: TNode) {
-  const lContainer = lView[tNode.index];
-  ngDevMode && assertLContainer(lContainer);
-
-  renderDeferBlockState(DeferBlockState.Placeholder, tNode, lContainer);
+  renderDeferBlockState(DeferBlockState.Placeholder, lView, tNode);
 }
 
 /**
@@ -443,7 +430,7 @@ export function renderPlaceholder(lView: LView, tNode: TNode) {
 export function renderDeferStateAfterResourceLoading(
   tDetails: TDeferBlockDetails,
   tNode: TNode,
-  lContainer: LContainer,
+  hostLView: LView,
 ) {
   ngDevMode &&
     assertDefined(tDetails.loadingPromise, 'Expected loading Promise to exist on this defer block');
@@ -453,9 +440,9 @@ export function renderDeferStateAfterResourceLoading(
       ngDevMode && assertDeferredDependenciesLoaded(tDetails);
 
       // Everything is loaded, show the primary block content
-      renderDeferBlockState(DeferBlockState.Complete, tNode, lContainer);
+      renderDeferBlockState(DeferBlockState.Complete, hostLView, tNode);
     } else if (tDetails.loadingState === DeferDependenciesLoadingState.FAILED) {
-      renderDeferBlockState(DeferBlockState.Error, tNode, lContainer);
+      renderDeferBlockState(DeferBlockState.Error, hostLView, tNode);
     }
   });
 }

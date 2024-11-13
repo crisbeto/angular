@@ -47,7 +47,7 @@ export class DeferBlockFixture {
     // If the `render` method is used explicitly - skip timer-based scheduling for
     // `@placeholder` and `@loading` blocks and render them immediately.
     const skipTimerScheduling = true;
-    renderDeferBlockState(state, this.block.tNode, this.block.lContainer, skipTimerScheduling);
+    renderDeferBlockState(state, this.block.lView, this.block.tNode, skipTimerScheduling);
     this.componentFixture.detectChanges();
   }
 

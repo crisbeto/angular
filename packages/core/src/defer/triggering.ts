@@ -316,7 +316,7 @@ export function triggerDeferBlock(triggerType: TriggerType, lView: LView, tNode:
 
   switch (tDetails.loadingState) {
     case DeferDependenciesLoadingState.NOT_STARTED:
-      renderDeferBlockState(DeferBlockState.Loading, tNode, lContainer);
+      renderDeferBlockState(DeferBlockState.Loading, lView, tNode);
       triggerResourceLoading(tDetails, lView, tNode);
 
       // The `loadingState` might have changed to "loading".
@@ -324,23 +324,23 @@ export function triggerDeferBlock(triggerType: TriggerType, lView: LView, tNode:
         (tDetails.loadingState as DeferDependenciesLoadingState) ===
         DeferDependenciesLoadingState.IN_PROGRESS
       ) {
-        renderDeferStateAfterResourceLoading(tDetails, tNode, lContainer);
+        renderDeferStateAfterResourceLoading(tDetails, tNode, lView);
       }
       break;
     case DeferDependenciesLoadingState.IN_PROGRESS:
-      renderDeferBlockState(DeferBlockState.Loading, tNode, lContainer);
-      renderDeferStateAfterResourceLoading(tDetails, tNode, lContainer);
+      renderDeferBlockState(DeferBlockState.Loading, lView, tNode);
+      renderDeferStateAfterResourceLoading(tDetails, tNode, lView);
       break;
     case DeferDependenciesLoadingState.COMPLETE:
       ngDevMode && assertDeferredDependenciesLoaded(tDetails);
-      renderDeferBlockState(DeferBlockState.Complete, tNode, lContainer);
+      renderDeferBlockState(DeferBlockState.Complete, lView, tNode);
       break;
     case DeferDependenciesLoadingState.FAILED:
-      renderDeferBlockState(DeferBlockState.Error, tNode, lContainer);
+      renderDeferBlockState(DeferBlockState.Error, lView, tNode);
       break;
     default:
       if (ngDevMode) {
-        throwError('Unknown defer block state');
+        throwError(`Unknown defer block state: ${tDetails.loadingState}`);
       }
   }
 }
