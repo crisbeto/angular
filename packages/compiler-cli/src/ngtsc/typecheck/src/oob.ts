@@ -13,6 +13,10 @@ import {
   PropertyWrite,
   TmplAstBoundAttribute,
   TmplAstBoundEvent,
+  TmplAstDeferredBlock,
+  TmplAstDeferredBlockError,
+  TmplAstDeferredBlockLoading,
+  TmplAstDeferredBlockPlaceholder,
   TmplAstElement,
   TmplAstForLoopBlock,
   TmplAstForLoopBlockEmpty,
@@ -34,6 +38,17 @@ import {TemplateDiagnostic, TemplateId} from '../api';
 import {makeTemplateDiagnostic} from '../diagnostics';
 
 import {TemplateSourceResolver} from './tcb_util';
+
+/** Block nodes that support content projection. */
+export type ProjectableBlockNode =
+  | TmplAstIfBlockBranch
+  | TmplAstSwitchBlockCase
+  | TmplAstForLoopBlock
+  | TmplAstForLoopBlockEmpty
+  | TmplAstDeferredBlock
+  | TmplAstDeferredBlockPlaceholder
+  | TmplAstDeferredBlockLoading
+  | TmplAstDeferredBlockError;
 
 /**
  * Collects `ts.Diagnostic`s on problems which occur in the template which aren't directly sourced
@@ -164,11 +179,7 @@ export interface OutOfBandDiagnosticRecorder {
     projectionNode: TmplAstElement | TmplAstTemplate,
     componentName: string,
     slotSelector: string,
-    controlFlowNode:
-      | TmplAstIfBlockBranch
-      | TmplAstSwitchBlockCase
-      | TmplAstForLoopBlock
-      | TmplAstForLoopBlockEmpty,
+    blockNode: ProjectableBlockNode,
     preservesWhitespaces: boolean,
   ): void;
 
@@ -565,14 +576,10 @@ export class OutOfBandDiagnosticRecorderImpl implements OutOfBandDiagnosticRecor
     projectionNode: TmplAstElement | TmplAstTemplate,
     componentName: string,
     slotSelector: string,
-    controlFlowNode:
-      | TmplAstIfBlockBranch
-      | TmplAstSwitchBlockCase
-      | TmplAstForLoopBlock
-      | TmplAstForLoopBlockEmpty,
+    blockNode: ProjectableBlockNode,
     preservesWhitespaces: boolean,
   ): void {
-    const blockName = controlFlowNode.nameSpan.toString().trim();
+    const blockName = blockNode.nameSpan.toString().trim();
     const lines = [
       `Node matches the "${slotSelector}" slot of the "${componentName}" component, but will not be projected into the specific slot because the surrounding ${blockName} has more than one node at its root. To project the node in the right slot, you can:\n`,
       `1. Wrap the content of the ${blockName} block in an <ng-container/> that matches the "${slotSelector}" selector.`,

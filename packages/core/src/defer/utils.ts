@@ -6,7 +6,8 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {assertIndexInDeclRange} from '../render3/assert';
+import {assertIndexInDeclRange, assertLContainer} from '../render3/assert';
+import {LContainer} from '../render3/interfaces/container';
 import {DependencyDef} from '../render3/interfaces/definition';
 import {TContainerNode, TNode} from '../render3/interfaces/node';
 import {HEADER_OFFSET, LView, TVIEW, TView} from '../render3/interfaces/view';
@@ -180,4 +181,21 @@ export function isDeferBlock(tView: TView, tNode: TNode): boolean {
     tDetails = getTDeferBlockDetails(tView, tNode);
   }
   return !!tDetails && isTDeferBlockDetails(tDetails);
+}
+
+/**
+ * Gets the LContainer that corresponds to a specific defer block state.
+ * @param state State for which to resolve the container.
+ * @param hostLView View in which the defer block is placed.
+ * @param tNode TNode corresponding to the defer block.
+ */
+export function getDeferStateLContainer(
+  state: DeferBlockState,
+  hostLView: LView,
+  tNode: TNode,
+): LContainer {
+  const stateIndex = getTemplateIndexForState(state, hostLView, tNode);
+  const lContainer = stateIndex === null ? null : hostLView[stateIndex + HEADER_OFFSET];
+  ngDevMode && assertLContainer(lContainer);
+  return lContainer;
 }

@@ -582,8 +582,8 @@ describe('runtime i18n', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.innerHTML).toEqual(
-      '<div>Contenido: <!--container-->' +
-        '<!--container-->!before<div>marcador de posición</div>after<!--container--></div>',
+      '<div>Contenido: <!--container-->before<div>marcador de posición</div>after' +
+        '<!--container-->!<!--container--></div>',
     );
 
     const deferBlock = (await fixture.getDeferBlocks())[0];
@@ -592,8 +592,8 @@ describe('runtime i18n', () => {
     await deferBlock.render(DeferBlockState.Complete);
 
     expect(fixture.nativeElement.innerHTML).toEqual(
-      '<div>Contenido: <!--container-->' +
-        '<!--container-->!before<span>medio</span>after<!--container--></div>',
+      '<div>Contenido: before<span>medio</span>after' +
+        '<!--container--><!--container-->!<!--container--></div>',
     );
   });
 

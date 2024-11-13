@@ -35,7 +35,6 @@ import {
   TmplAstDeferredBlockTriggers,
   TmplAstElement,
   TmplAstForLoopBlock,
-  TmplAstForLoopBlockEmpty,
   TmplAstHoverDeferredTrigger,
   TmplAstIcu,
   TmplAstIfBlock,
@@ -70,7 +69,7 @@ import {
 import {DomSchemaChecker} from './dom';
 import {Environment} from './environment';
 import {astToTypescript, ANY_EXPRESSION} from './expression';
-import {OutOfBandDiagnosticRecorder} from './oob';
+import {OutOfBandDiagnosticRecorder, ProjectableBlockNode} from './oob';
 import {
   tsCallMethod,
   tsCastToAny,
@@ -1221,9 +1220,7 @@ class TcbControlFlowContentProjectionOp extends TcbOp {
   }
 
   private findPotentialControlFlowNodes() {
-    const result: Array<
-      TmplAstIfBlockBranch | TmplAstSwitchBlockCase | TmplAstForLoopBlock | TmplAstForLoopBlockEmpty
-    > = [];
+    const result: ProjectableBlockNode[] = [];
 
     for (const child of this.element.children) {
       if (child instanceof TmplAstForLoopBlock) {
@@ -1244,6 +1241,22 @@ class TcbControlFlowContentProjectionOp extends TcbOp {
           if (this.shouldCheck(current)) {
             result.push(current);
           }
+        }
+      } else if (child instanceof TmplAstDeferredBlock) {
+        if (this.shouldCheck(child)) {
+          result.push(child);
+        }
+
+        if (child.loading !== null && this.shouldCheck(child.loading)) {
+          result.push(child.loading);
+        }
+
+        if (child.placeholder !== null && this.shouldCheck(child.placeholder)) {
+          result.push(child.placeholder);
+        }
+
+        if (child.error !== null && this.shouldCheck(child.error)) {
+          result.push(child.error);
         }
       }
     }

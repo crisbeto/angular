@@ -29,7 +29,7 @@ import {
   DeferBlockState,
   TriggerType,
 } from './interfaces';
-import {getLDeferBlockDetails} from './utils';
+import {getDeferStateLContainer, getLDeferBlockDetails} from './utils';
 
 /** Configuration object used to register passive and capturing events. */
 const eventListenerOptions: AddEventListenerOptions = {
@@ -228,8 +228,15 @@ export function getTriggerLView(
   }
 
   // If the value is negative, it means that the trigger is inside the placeholder.
-  const deferredContainer = deferredHostLView[deferredTNode.index];
-  ngDevMode && assertLContainer(deferredContainer);
+  const lDetails = getLDeferBlockDetails(deferredHostLView, deferredTNode);
+  if (lDetails[DEFER_BLOCK_STATE] === DeferBlockInternalState.Initial) {
+    return null;
+  }
+  const deferredContainer = getDeferStateLContainer(
+    lDetails[DEFER_BLOCK_STATE],
+    deferredHostLView,
+    deferredTNode,
+  );
   const triggerLView = deferredContainer[CONTAINER_HEADER_OFFSET] ?? null;
 
   // We need to null check, because the placeholder might not have been rendered yet.

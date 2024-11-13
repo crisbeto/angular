@@ -1297,6 +1297,119 @@ describe('@defer', () => {
       // Nested defer block was triggered and the `CmpB` content got rendered.
       expect(fixture.nativeElement.outerHTML).toContain('<cmp-b>CmpB</cmp-b>');
     });
+
+    it('should project the root nodes of defer-related blocks', async () => {
+      @Component({
+        selector: 'projection-cmp',
+        template:
+          'Catch-all: <ng-content/> Main: <ng-content select="my-lazy-cmp"/> ' +
+          'Loading: <ng-content select="[loading]"/> Placeholder: <ng-content select="[placeholder]"/>',
+      })
+      class ProjectionCmp {}
+
+      @Component({
+        selector: 'my-lazy-cmp',
+        template: 'Main block',
+      })
+      class MyLazyCmp {}
+
+      @Component({
+        selector: 'simple-app',
+        imports: [ProjectionCmp, MyLazyCmp],
+        template: `
+          <projection-cmp>
+            @defer (when isVisible) {
+              <my-lazy-cmp/>
+            } @loading {
+              <span loading>Loading block</span>
+            } @placeholder {
+              <span placeholder>Placeholder block</span>
+            }
+          </projection-cmp>
+        `,
+      })
+      class MyCmp {
+        isVisible = false;
+      }
+
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain(
+        'Catch-all:  Main:  Loading:  Placeholder: Placeholder block',
+      );
+
+      fixture.componentInstance.isVisible = true;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain(
+        'Catch-all:  Main:  Loading: Loading block Placeholder: ',
+      );
+
+      // Wait for dependencies to load.
+      await allPendingDynamicImports();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain(
+        'Catch-all:  Main: Main block Loading:  Placeholder: ',
+      );
+    });
+
+    it('should project the root of an error block', async () => {
+      @Component({
+        selector: 'projection-cmp',
+        template: `Catch-all: <ng-content/> Error block: <ng-content select="[error]"/>`,
+      })
+      class ProjectionCmp {}
+
+      @Component({
+        selector: 'nested-cmp',
+        template: 'Main block',
+      })
+      class NestedCmp {}
+
+      @Component({
+        imports: [ProjectionCmp, NestedCmp],
+        template: `
+          <projection-cmp>
+            @defer (when isVisible) {
+              <nested-cmp/>
+            } @placeholder {
+              Placeholder block
+            } @error {
+              <span error>Error block</span>
+            }
+          </projection-cmp>
+        `,
+      })
+      class MyCmp {
+        isVisible = false;
+      }
+
+      const deferDepsInterceptor = {
+        intercept() {
+          return () => [failedDynamicImport()];
+        },
+      };
+
+      TestBed.configureTestingModule({
+        providers: [{provide: ɵDEFER_BLOCK_DEPENDENCY_INTERCEPTOR, useValue: deferDepsInterceptor}],
+      });
+
+      const fixture = TestBed.createComponent(MyCmp);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain(
+        'Catch-all:  Placeholder block  Error block: ',
+      );
+
+      fixture.componentInstance.isVisible = true;
+      fixture.detectChanges();
+      await allPendingDynamicImports();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('Catch-all:  Error block: Error block');
+    });
   });
 
   describe('nested blocks', () => {

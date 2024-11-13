@@ -50,6 +50,7 @@ import {
 import {scheduleTimerTrigger} from './timer_scheduler';
 import {
   assertDeferredDependenciesLoaded,
+  getDeferStateLContainer,
   getLDeferBlockDetails,
   getLoadingBlockAfter,
   getMinimumDurationForState,
@@ -245,25 +246,30 @@ function findMatchingDehydratedViewForDeferBlock(
 function applyDeferBlockState(
   newState: DeferBlockState,
   lDetails: LDeferBlockDetails,
-  lContainer: LContainer,
+  unused: LContainer,
   tNode: TNode,
   hostLView: LView<unknown>,
 ) {
   const stateTmplIndex = getTemplateIndexForState(newState, hostLView, tNode);
 
   if (stateTmplIndex !== null) {
+    // There is only 1 view that can be present in an LContainer that
+    // represents a defer block, so always refer to the first one.
+    const viewIndex = 0;
+
+    if (lDetails[DEFER_BLOCK_STATE] !== DeferBlockInternalState.Initial) {
+      const prevLContainer = getDeferStateLContainer(lDetails[DEFER_BLOCK_STATE], hostLView, tNode);
+      removeLViewFromLContainer(prevLContainer, viewIndex);
+    }
+
     lDetails[DEFER_BLOCK_STATE] = newState;
     const hostTView = hostLView[TVIEW];
     const adjustedIndex = stateTmplIndex + HEADER_OFFSET;
 
     // The TNode that represents a template that will activated in the defer block
     const activeBlockTNode = getTNode(hostTView, adjustedIndex) as TContainerNode;
-
-    // There is only 1 view that can be present in an LContainer that
-    // represents a defer block, so always refer to the first one.
-    const viewIndex = 0;
-
-    removeLViewFromLContainer(lContainer, viewIndex);
+    const lContainer = hostLView[adjustedIndex];
+    ngDevMode && assertLContainer(lContainer);
 
     let injector: Injector | undefined;
     if (newState === DeferBlockState.Complete) {

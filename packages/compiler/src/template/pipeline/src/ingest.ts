@@ -476,7 +476,7 @@ function ingestIfBlock(unit: ViewCompilationUnit, ifBlock: t.IfBlock): void {
   for (let i = 0; i < ifBlock.branches.length; i++) {
     const ifCase = ifBlock.branches[i];
     const cView = unit.job.allocateView(unit.xref);
-    const tagName = ingestControlFlowInsertionPoint(unit, cView.xref, ifCase);
+    const tagName = ingestBlockInsertionPoint(unit, cView.xref, ifCase.children);
 
     if (ifCase.expressionAlias !== null) {
       cView.contextVariables.set(ifCase.expressionAlias.name, ir.CTX_REF);
@@ -532,7 +532,7 @@ function ingestSwitchBlock(unit: ViewCompilationUnit, switchBlock: t.SwitchBlock
   let conditions: Array<ir.ConditionalCaseExpr> = [];
   for (const switchCase of switchBlock.cases) {
     const cView = unit.job.allocateView(unit.xref);
-    const tagName = ingestControlFlowInsertionPoint(unit, cView.xref, switchCase);
+    const tagName = ingestBlockInsertionPoint(unit, cView.xref, switchCase.children);
     let switchCaseI18nMeta: i18n.BlockPlaceholder | undefined = undefined;
     if (switchCase.i18n !== undefined) {
       if (!(switchCase.i18n instanceof i18n.BlockPlaceholder)) {
@@ -591,11 +591,12 @@ function ingestDeferView(
     return null;
   }
   const secondaryView = unit.job.allocateView(unit.xref);
+  const tagName = ingestBlockInsertionPoint(unit, secondaryView.xref, children);
   ingestNodes(secondaryView, children);
   const templateOp = ir.createTemplateOp(
     secondaryView.xref,
     ir.TemplateKind.Block,
-    null,
+    tagName,
     `Defer${suffix}`,
     ir.Namespace.HTML,
     i18nMeta,
@@ -900,7 +901,7 @@ function ingestForBlock(unit: ViewCompilationUnit, forBlock: t.ForLoopBlock): vo
   if (forBlock.empty !== null) {
     emptyView = unit.job.allocateView(unit.xref);
     ingestNodes(emptyView, forBlock.empty.children);
-    emptyTagName = ingestControlFlowInsertionPoint(unit, emptyView.xref, forBlock.empty);
+    emptyTagName = ingestBlockInsertionPoint(unit, emptyView.xref, forBlock.empty.children);
   }
 
   const varNames: ir.RepeaterVarNames = {
@@ -920,7 +921,7 @@ function ingestForBlock(unit: ViewCompilationUnit, forBlock: t.ForLoopBlock): vo
   const i18nPlaceholder = forBlock.i18n;
   const emptyI18nPlaceholder = forBlock.empty?.i18n;
 
-  const tagName = ingestControlFlowInsertionPoint(unit, repeaterView.xref, forBlock);
+  const tagName = ingestBlockInsertionPoint(unit, repeaterView.xref, forBlock.children);
   const repeaterCreate = ir.createRepeaterCreateOp(
     repeaterView.xref,
     emptyView?.xref ?? null,
@@ -1742,18 +1743,18 @@ function convertSourceSpan(
  *    workaround, because it'll include an additional text node as the first child. We can work
  *    around it here, but in a discussion it was decided not to, because the user explicitly opted
  *    into preserving the whitespace and we would have to drop it from the generated code.
- *    The diagnostic mentioned point in #1 will flag such cases to users.
+ *    The diagnostic mentioned in point #1 will flag such cases to users.
  *
  * @returns Tag name to be used for the control flow template.
  */
-function ingestControlFlowInsertionPoint(
+function ingestBlockInsertionPoint(
   unit: ViewCompilationUnit,
   xref: ir.XrefId,
-  node: t.IfBlockBranch | t.SwitchBlockCase | t.ForLoopBlock | t.ForLoopBlockEmpty,
+  children: t.Node[],
 ): string | null {
   let root: t.Element | t.Template | null = null;
 
-  for (const child of node.children) {
+  for (const child of children) {
     // Skip over comment nodes and @let declarations since
     // it doesn't matter where they end up in the DOM.
     if (child instanceof t.Comment || child instanceof t.LetDeclaration) {
