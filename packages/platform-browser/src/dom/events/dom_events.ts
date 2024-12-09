@@ -28,7 +28,7 @@ export class DomEventsPlugin extends EventManagerPlugin {
     return () => this.removeEventListener(element, eventName, handler as EventListener);
   }
 
-  removeEventListener(target: any, eventName: string, callback: Function): void {
-    return target.removeEventListener(eventName, callback as EventListener);
+  removeEventListener(target: any, eventName: string, callback: Function, options?: any): void {
+    return target.removeEventListener(eventName, callback as EventListener, options);
   }
 }
