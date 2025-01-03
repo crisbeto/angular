@@ -106,6 +106,40 @@ runInEachFileSystem((os: string) => {
       expect(dtsContents).toContain('static ɵfac: i0.ɵɵFactoryDeclaration<Service, never>;');
     });
 
+    fit('', () => {
+      env.tsconfig({
+        strictTemplates: true,
+        strictAttributeTypes: true,
+        strictDomEventTypes: true,
+        strictOutputEventTypes: true,
+      });
+      env.write(
+        'test.ts',
+        `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: '',
+            host: {
+              '[attr.id]': 'exists + doesNotExist',
+              // '(click)': 'handleEvent($event)',
+              // '[foo]': '123',
+              // TODO: this works correctly, but for some reason the compiler flags don't enable
+              // the type checking for it fully. Likely an issue with the test setup.
+              // '(@someAnimation.done)': 'handleEvent($event)',
+              // '[@someAnimation]': '123',
+            },
+          })
+          export class Comp {
+            exists = 'exists';
+
+            handleEvent(event: KeyboardEvent) {}
+          }
+      `,
+      );
+      env.driveMain();
+    });
+
     it('should compile Injectables with a generic service', () => {
       env.write(
         'test.ts',

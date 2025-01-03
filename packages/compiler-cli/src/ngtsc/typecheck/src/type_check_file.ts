@@ -64,6 +64,7 @@ export class TypeCheckFile extends Environment {
     domSchemaChecker: DomSchemaChecker,
     oobRecorder: OutOfBandDiagnosticRecorder,
     genericContextBehavior: TcbGenericContextBehavior,
+    disableElementChecK: boolean,
   ): void {
     const fnId = ts.factory.createIdentifier(`_tcb${this.nextTcbId++}`);
     const fn = generateTypeCheckBlock(
@@ -74,6 +75,7 @@ export class TypeCheckFile extends Environment {
       domSchemaChecker,
       oobRecorder,
       genericContextBehavior,
+      disableElementChecK,
     );
     this.tcbStatements.push(fn);
   }

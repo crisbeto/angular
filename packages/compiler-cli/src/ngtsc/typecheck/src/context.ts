@@ -12,6 +12,7 @@ import {
   ParseSourceFile,
   R3TargetBinder,
   SchemaMetadata,
+  TmplAstElement,
   TmplAstNode,
 } from '@angular/compiler';
 import MagicString from 'magic-string';
@@ -239,6 +240,55 @@ export class TypeCheckContextImpl implements TypeCheckContext {
     isStandalone: boolean,
     preserveWhitespaces: boolean,
   ): void {
+    this.addNodes(
+      ref,
+      binder,
+      template,
+      pipes,
+      schemas,
+      sourceMapping,
+      file,
+      parseErrors,
+      isStandalone,
+      preserveWhitespaces,
+      false,
+    );
+  }
+
+  addHostElement(
+    ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
+    binder: R3TargetBinder<TypeCheckableDirectiveMeta>,
+    element: TmplAstElement,
+    sourceMapping: TemplateSourceMapping,
+  ): void {
+    this.addNodes(
+      ref,
+      binder,
+      [element],
+      null,
+      [],
+      sourceMapping,
+      element.sourceSpan.start.file,
+      null,
+      false,
+      false,
+      true,
+    );
+  }
+
+  private addNodes(
+    ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
+    binder: R3TargetBinder<TypeCheckableDirectiveMeta>,
+    nodes: TmplAstNode[],
+    pipes: Map<string, PipeMeta> | null,
+    schemas: SchemaMetadata[],
+    sourceMapping: TemplateSourceMapping,
+    file: ParseSourceFile,
+    parseErrors: ParseError[] | null,
+    isStandalone: boolean,
+    preserveWhitespaces: boolean,
+    disableElementCheck: boolean,
+  ): void {
     if (!this.host.shouldCheckComponent(ref.node)) {
       return;
     }
@@ -253,7 +303,7 @@ export class TypeCheckContextImpl implements TypeCheckContext {
       templateDiagnostics.push(...getTemplateDiagnostics(parseErrors, templateId, sourceMapping));
     }
 
-    const boundTarget = binder.bind({template});
+    const boundTarget = binder.bind({template: nodes});
 
     if (this.inlining === InliningMode.InlineOps) {
       // Get all of the directives used in the template and record inline type constructors when
@@ -284,17 +334,20 @@ export class TypeCheckContextImpl implements TypeCheckContext {
     }
 
     shimData.templates.set(templateId, {
-      template,
+      template: nodes,
       boundTarget,
       templateDiagnostics,
     });
 
     const usedPipes: Reference<ClassDeclaration<ts.ClassDeclaration>>[] = [];
-    for (const name of boundTarget.getUsedPipes()) {
-      if (!pipes.has(name)) {
-        continue;
+
+    if (pipes !== null) {
+      for (const name of boundTarget.getUsedPipes()) {
+        if (!pipes.has(name)) {
+          continue;
+        }
+        usedPipes.push(pipes.get(name)!.ref as Reference<ClassDeclaration<ts.ClassDeclaration>>);
       }
-      usedPipes.push(pipes.get(name)!.ref as Reference<ClassDeclaration<ts.ClassDeclaration>>);
     }
 
     const inliningRequirement = requiresInlineTypeCheckBlock(
@@ -336,7 +389,7 @@ export class TypeCheckContextImpl implements TypeCheckContext {
     ) {
       // This class didn't meet the requirements for external type checking, so generate an inline
       // TCB for the class.
-      this.addInlineTypeCheckBlock(fileData, shimData, ref, meta);
+      this.addInlineTypeCheckBlock(fileData, shimData, ref, meta, disableElementCheck);
     } else if (
       inliningRequirement === TcbInliningRequirement.ShouldInlineForGenericBounds &&
       this.inlining === InliningMode.Error
@@ -352,6 +405,7 @@ export class TypeCheckContextImpl implements TypeCheckContext {
         shimData.domSchemaChecker,
         shimData.oobRecorder,
         TcbGenericContextBehavior.FallbackToAny,
+        disableElementCheck,
       );
     } else {
       shimData.file.addTypeCheckBlock(
@@ -360,6 +414,7 @@ export class TypeCheckContextImpl implements TypeCheckContext {
         shimData.domSchemaChecker,
         shimData.oobRecorder,
         TcbGenericContextBehavior.UseEmitter,
+        disableElementCheck,
       );
     }
   }
@@ -504,6 +559,7 @@ export class TypeCheckContextImpl implements TypeCheckContext {
     shimData: PendingShimData,
     ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
     tcbMeta: TypeCheckBlockMetadata,
+    disableElementCheck: boolean,
   ): void {
     const sf = ref.node.getSourceFile();
     if (!this.opMap.has(sf)) {
@@ -518,6 +574,7 @@ export class TypeCheckContextImpl implements TypeCheckContext {
         this.reflector,
         shimData.domSchemaChecker,
         shimData.oobRecorder,
+        disableElementCheck,
       ),
     );
     fileData.hasInlines = true;
@@ -622,6 +679,7 @@ class InlineTcbOp implements Op {
     readonly reflector: ReflectionHost,
     readonly domSchemaChecker: DomSchemaChecker,
     readonly oobRecorder: OutOfBandDiagnosticRecorder,
+    private readonly disableElementCheck: boolean,
   ) {}
 
   /**
@@ -650,6 +708,7 @@ class InlineTcbOp implements Op {
       this.domSchemaChecker,
       this.oobRecorder,
       TcbGenericContextBehavior.CopyClassNodes,
+      this.disableElementCheck,
     );
 
     return printer.printNode(ts.EmitHint.Unspecified, fn, sf);

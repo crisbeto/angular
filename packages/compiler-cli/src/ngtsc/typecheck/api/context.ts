@@ -11,6 +11,7 @@ import {
   ParseSourceFile,
   R3TargetBinder,
   SchemaMetadata,
+  TmplAstElement,
   TmplAstNode,
 } from '@angular/compiler';
 import ts from 'typescript';
@@ -58,6 +59,13 @@ export interface TypeCheckContext {
     parseErrors: ParseError[] | null,
     isStandalone: boolean,
     preserveWhitespaces: boolean,
+  ): void;
+
+  addHostElement(
+    ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
+    binder: R3TargetBinder<TypeCheckableDirectiveMeta>,
+    element: TmplAstElement,
+    sourceMapping: TemplateSourceMapping,
   ): void;
 }
 

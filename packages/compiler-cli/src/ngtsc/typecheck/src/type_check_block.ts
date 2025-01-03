@@ -142,6 +142,8 @@ export function generateTypeCheckBlock(
   domSchemaChecker: DomSchemaChecker,
   oobRecorder: OutOfBandDiagnosticRecorder,
   genericContextBehavior: TcbGenericContextBehavior,
+  // TODO: this should probably be some sort of enum like `TypeCheckMode.Template|Host`
+  disableElementCheck: boolean,
 ): ts.FunctionDeclaration {
   const tcb = new Context(
     env,
@@ -153,6 +155,7 @@ export function generateTypeCheckBlock(
     meta.schemas,
     meta.isStandalone,
     meta.preserveWhitespaces,
+    disableElementCheck,
   );
   const scope = Scope.forNodes(tcb, null, null, tcb.boundTarget.target.template!, /* guard */ null);
   const ctxRawType = env.referenceType(ref);
@@ -1936,10 +1939,11 @@ export class Context {
     readonly oobRecorder: OutOfBandDiagnosticRecorder,
     readonly id: TemplateId,
     readonly boundTarget: BoundTarget<TypeCheckableDirectiveMeta>,
-    private pipes: Map<string, PipeMeta>,
+    private pipes: Map<string, PipeMeta> | null,
     readonly schemas: SchemaMetadata[],
     readonly hostIsStandalone: boolean,
     readonly hostPreserveWhitespaces: boolean,
+    readonly disableElementCheck: boolean,
   ) {}
 
   /**
@@ -1953,7 +1957,7 @@ export class Context {
   }
 
   getPipeByName(name: string): PipeMeta | null {
-    if (!this.pipes.has(name)) {
+    if (this.pipes === null || !this.pipes.has(name)) {
       return null;
     }
     return this.pipes.get(name)!;
@@ -2429,7 +2433,12 @@ class Scope {
       if (node instanceof TmplAstElement) {
         this.opQueue.push(new TcbUnclaimedInputsOp(this.tcb, this, node, claimedInputs));
         this.opQueue.push(
-          new TcbDomSchemaCheckerOp(this.tcb, node, /* checkElement */ true, claimedInputs),
+          new TcbDomSchemaCheckerOp(
+            this.tcb,
+            node,
+            /* checkElement */ !this.tcb.disableElementCheck,
+            claimedInputs,
+          ),
         );
       }
       return;
@@ -2491,7 +2500,7 @@ class Scope {
       // web component), and should be checked against the DOM schema. If any directives match,
       // we must assume that the element could be custom (either a component, or a directive like
       // <router-outlet>) and shouldn't validate the element name itself.
-      const checkElement = directives.length === 0;
+      const checkElement = !this.tcb.disableElementCheck && directives.length === 0;
       this.opQueue.push(new TcbDomSchemaCheckerOp(this.tcb, node, checkElement, claimedInputs));
     }
   }
@@ -2548,7 +2557,14 @@ class Scope {
             }
           }
         }
-        this.opQueue.push(new TcbDomSchemaCheckerOp(this.tcb, node, !hasDirectives, claimedInputs));
+        this.opQueue.push(
+          new TcbDomSchemaCheckerOp(
+            this.tcb,
+            node,
+            !this.tcb.disableElementCheck && !hasDirectives,
+            claimedInputs,
+          ),
+        );
       }
 
       this.appendDeepSchemaChecks(node.children);
