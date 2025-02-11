@@ -11,7 +11,7 @@ import ts from 'typescript';
 
 import {NgCompilerOptions} from '../../../../core/api';
 import {ErrorCode, ExtendedTemplateDiagnosticName} from '../../../../diagnostics';
-import {NgTemplateDiagnostic, SymbolKind} from '../../../api';
+import {NgTemplateDiagnostic, SymbolKind, TypeCheckLocation} from '../../../api';
 import {TemplateCheckFactory, TemplateCheckWithVisitor, TemplateContext} from '../../api';
 
 /**
@@ -31,7 +31,11 @@ class NullishCoalescingNotNullableCheck extends TemplateCheckWithVisitor<ErrorCo
   ): NgTemplateDiagnostic<ErrorCode.NULLISH_COALESCING_NOT_NULLABLE>[] {
     if (!(node instanceof Binary) || node.operation !== '??') return [];
 
-    const symbolLeft = ctx.templateTypeChecker.getSymbolOfNode(node.left, component);
+    const symbolLeft = ctx.templateTypeChecker.getSymbolOfNode(
+      node.left,
+      component,
+      TypeCheckLocation.TEMPLATE,
+    );
     if (symbolLeft === null || symbolLeft.kind !== SymbolKind.Expression) {
       return [];
     }
@@ -47,7 +51,11 @@ class NullishCoalescingNotNullableCheck extends TemplateCheckWithVisitor<ErrorCo
     // report.
     if (typeLeft.getNonNullableType() !== typeLeft) return [];
 
-    const symbol = ctx.templateTypeChecker.getSymbolOfNode(node, component)!;
+    const symbol = ctx.templateTypeChecker.getSymbolOfNode(
+      node,
+      component,
+      TypeCheckLocation.TEMPLATE,
+    )!;
     if (symbol.kind !== SymbolKind.Expression) {
       return [];
     }

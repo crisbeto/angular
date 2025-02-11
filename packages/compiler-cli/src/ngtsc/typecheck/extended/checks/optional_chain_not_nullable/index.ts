@@ -11,7 +11,7 @@ import ts from 'typescript';
 
 import {NgCompilerOptions} from '../../../../core/api';
 import {ErrorCode, ExtendedTemplateDiagnosticName} from '../../../../diagnostics';
-import {NgTemplateDiagnostic, SymbolKind} from '../../../api';
+import {NgTemplateDiagnostic, SymbolKind, TypeCheckLocation} from '../../../api';
 import {TemplateCheckFactory, TemplateCheckWithVisitor, TemplateContext} from '../../api';
 
 /**
@@ -36,7 +36,11 @@ class OptionalChainNotNullableCheck extends TemplateCheckWithVisitor<ErrorCode.O
     )
       return [];
 
-    const symbolLeft = ctx.templateTypeChecker.getSymbolOfNode(node.receiver, component);
+    const symbolLeft = ctx.templateTypeChecker.getSymbolOfNode(
+      node.receiver,
+      component,
+      TypeCheckLocation.TEMPLATE,
+    );
     if (symbolLeft === null || symbolLeft.kind !== SymbolKind.Expression) {
       return [];
     }
@@ -52,7 +56,11 @@ class OptionalChainNotNullableCheck extends TemplateCheckWithVisitor<ErrorCode.O
     // report.
     if (typeLeft.getNonNullableType() !== typeLeft) return [];
 
-    const symbol = ctx.templateTypeChecker.getSymbolOfNode(node, component)!;
+    const symbol = ctx.templateTypeChecker.getSymbolOfNode(
+      node,
+      component,
+      TypeCheckLocation.TEMPLATE,
+    )!;
     if (symbol.kind !== SymbolKind.Expression) {
       return [];
     }

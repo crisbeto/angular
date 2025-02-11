@@ -26,6 +26,7 @@ import {
   Symbol,
   SymbolKind,
   TcbLocation,
+  TypeCheckLocation,
   VariableSymbol,
 } from '@angular/compiler-cli/src/ngtsc/typecheck/api';
 import ts from 'typescript';
@@ -54,8 +55,9 @@ export class QuickInfoBuilder {
     private readonly tsLS: ts.LanguageService,
     private readonly compiler: NgCompiler,
     private readonly component: ts.ClassDeclaration,
-    private node: TmplAstNode | AST,
+    private readonly node: TmplAstNode | AST,
     private readonly positionDetails: TemplateTarget,
+    private readonly location: TypeCheckLocation,
   ) {
     this.typeChecker = this.compiler.getCurrentProgram().getTypeChecker();
     this.parent = this.positionDetails.parent;
@@ -68,7 +70,7 @@ export class QuickInfoBuilder {
 
     const symbol = this.compiler
       .getTemplateTypeChecker()
-      .getSymbolOfNode(this.node, this.component);
+      .getSymbolOfNode(this.node, this.component, this.location);
     if (symbol !== null) {
       return this.getQuickInfoForSymbol(symbol);
     }

@@ -15,7 +15,7 @@ import {
 import ts from 'typescript';
 
 import {TemplateId, TemplateSourceMapping} from '../api';
-import {getTemplateId} from '../diagnostics';
+import {getHostBindingsId, getTemplateId} from '../diagnostics';
 
 import {computeLineStartsMap, getLineAndCharacterFromPosition} from './line_mappings';
 import {TemplateSourceResolver} from './tcb_util';
@@ -69,14 +69,12 @@ export class TemplateSourceManager implements TemplateSourceResolver {
     return getTemplateId(node);
   }
 
-  captureSource(
-    node: ts.ClassDeclaration,
-    mapping: TemplateSourceMapping,
-    file: ParseSourceFile,
-  ): TemplateId {
-    const id = getTemplateId(node);
+  getHostBindingsId(node: ts.ClassDeclaration): TemplateId {
+    return getHostBindingsId(node);
+  }
+
+  captureSource(id: TemplateId, mapping: TemplateSourceMapping, file: ParseSourceFile): void {
     this.templateSources.set(id, new TemplateSource(mapping, file));
-    return id;
   }
 
   getSourceMapping(id: TemplateId): TemplateSourceMapping {

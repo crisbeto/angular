@@ -31,6 +31,13 @@ import {GlobalCompletion} from './completion';
 import {PotentialDirective, PotentialImport, PotentialImportMode, PotentialPipe} from './scope';
 import {ElementSymbol, Symbol, TcbLocation, TemplateSymbol} from './symbols';
 
+// TODO: something like "context" would be better, but there's already a TypeCheckContext interface.
+// "location" isn't ideal, because it sounds like a location in the source code. Maybe "type"?
+export enum TypeCheckLocation {
+  TEMPLATE,
+  HOST,
+}
+
 /**
  * Interface to the Angular Template Type Checker to extract diagnostics and intelligence from the
  * compiler's understanding of component templates.
@@ -49,6 +56,9 @@ export interface TemplateTypeChecker {
    * Retrieve the template in use for the given component.
    */
   getTemplate(component: ts.ClassDeclaration, optimizeFor?: OptimizeFor): TmplAstNode[] | null;
+
+  // TODO: better name
+  getHostBindings(component: ts.ClassDeclaration, optimizeFor?: OptimizeFor): TmplAstNode[] | null;
 
   /**
    * Get all `ts.Diagnostic`s currently available for the given `ts.SourceFile`.
@@ -99,7 +109,7 @@ export interface TemplateTypeChecker {
    *
    * This method always runs in `OptimizeFor.SingleFile` mode.
    */
-  getTypeCheckBlock(component: ts.ClassDeclaration): ts.Node | null;
+  getTypeCheckBlock(component: ts.ClassDeclaration, location: TypeCheckLocation): ts.Node | null;
 
   /**
    * Retrieves a `Symbol` for the node in a component's template.
@@ -108,9 +118,21 @@ export interface TemplateTypeChecker {
    *
    * @see Symbol
    */
-  getSymbolOfNode(node: TmplAstElement, component: ts.ClassDeclaration): ElementSymbol | null;
-  getSymbolOfNode(node: TmplAstTemplate, component: ts.ClassDeclaration): TemplateSymbol | null;
-  getSymbolOfNode(node: AST | TmplAstNode, component: ts.ClassDeclaration): Symbol | null;
+  getSymbolOfNode(
+    node: TmplAstElement,
+    component: ts.ClassDeclaration,
+    context: TypeCheckLocation,
+  ): ElementSymbol | null;
+  getSymbolOfNode(
+    node: TmplAstTemplate,
+    component: ts.ClassDeclaration,
+    context: TypeCheckLocation,
+  ): TemplateSymbol | null;
+  getSymbolOfNode(
+    node: AST | TmplAstNode,
+    component: ts.ClassDeclaration,
+    context: TypeCheckLocation,
+  ): Symbol | null;
 
   /**
    * Get "global" `Completion`s in the given context.
@@ -125,6 +147,7 @@ export interface TemplateTypeChecker {
     context: TmplAstTemplate | null,
     component: ts.ClassDeclaration,
     node: AST | TmplAstNode,
+    location: TypeCheckLocation,
   ): GlobalCompletion | null;
 
   /**
@@ -134,6 +157,7 @@ export interface TemplateTypeChecker {
   getExpressionCompletionLocation(
     expr: PropertyRead | SafePropertyRead,
     component: ts.ClassDeclaration,
+    location: TypeCheckLocation,
   ): TcbLocation | null;
 
   /**
@@ -144,6 +168,7 @@ export interface TemplateTypeChecker {
   getLiteralCompletionLocation(
     strNode: LiteralPrimitive | TmplAstTextAttribute,
     component: ts.ClassDeclaration,
+    location: TypeCheckLocation,
   ): TcbLocation | null;
 
   /**
@@ -234,7 +259,11 @@ export interface TemplateTypeChecker {
    * Gets the target of a template expression, if possible.
    * See `BoundTarget.getExpressionTarget` for more information.
    */
-  getExpressionTarget(expression: AST, clazz: ts.ClassDeclaration): TemplateEntity | null;
+  getExpressionTarget(
+    expression: AST,
+    clazz: ts.ClassDeclaration,
+    location: TypeCheckLocation,
+  ): TemplateEntity | null;
 
   /**
    * Constructs a `ts.Diagnostic` for a given `ParseSourceSpan` within a template.

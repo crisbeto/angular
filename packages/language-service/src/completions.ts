@@ -41,6 +41,7 @@ import {
   SymbolKind,
   TemplateDeclarationSymbol,
   TemplateTypeChecker,
+  TypeCheckLocation,
 } from '@angular/compiler-cli/src/ngtsc/typecheck/api';
 import ts from 'typescript';
 
@@ -136,6 +137,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
     private readonly component: ts.ClassDeclaration,
     private readonly node: N,
     private readonly targetDetails: TemplateTarget,
+    private readonly location: TypeCheckLocation,
   ) {
     this.typeChecker = this.compiler.getCurrentProgram().getTypeChecker();
     this.templateTypeChecker = this.compiler.getTemplateTypeChecker();
@@ -151,6 +153,8 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
   getCompletionsAtPosition(
     options: ts.GetCompletionsAtPositionOptions | undefined,
   ): ts.WithMetadata<ts.CompletionInfo> | undefined {
+    debugger;
+
     if (this.isPropertyExpressionCompletion()) {
       return this.getPropertyExpressionCompletion(options);
     } else if (this.isElementTagCompletion()) {
@@ -247,7 +251,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
   ): ts.WithMetadata<ts.CompletionInfo> | undefined {
     const location = this.compiler
       .getTemplateTypeChecker()
-      .getLiteralCompletionLocation(this.node, this.component);
+      .getLiteralCompletionLocation(this.node, this.component, this.location);
     if (location === null) {
       return undefined;
     }
@@ -375,6 +379,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       const location = this.templateTypeChecker.getExpressionCompletionLocation(
         this.node,
         this.component,
+        this.location,
       );
       if (location === null) {
         return undefined;
@@ -396,7 +401,11 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
         options?.includeCompletionsWithInsertText &&
         options.includeAutomaticOptionalChainCompletions !== false
       ) {
-        const symbol = this.templateTypeChecker.getSymbolOfNode(this.node.receiver, this.component);
+        const symbol = this.templateTypeChecker.getSymbolOfNode(
+          this.node.receiver,
+          this.component,
+          this.location,
+        );
         if (symbol?.kind === SymbolKind.Expression) {
           const type = symbol.tsType;
           const nonNullableType = this.typeChecker.getNonNullableType(type);
@@ -449,7 +458,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
     } else {
       const location = this.compiler
         .getTemplateTypeChecker()
-        .getExpressionCompletionLocation(this.node, this.component);
+        .getExpressionCompletionLocation(this.node, this.component, this.location);
       if (location === null) {
         return undefined;
       }
@@ -486,7 +495,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
     } else {
       const location = this.compiler
         .getTemplateTypeChecker()
-        .getExpressionCompletionLocation(this.node, this.component);
+        .getExpressionCompletionLocation(this.node, this.component, this.location);
       if (location === null) {
         return undefined;
       }
@@ -510,6 +519,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       this.template,
       this.component,
       this.node,
+      this.location,
     );
     if (completions === null) {
       return undefined;
@@ -608,6 +618,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       this.template,
       this.component,
       this.node,
+      this.location,
     );
     if (completions === null) {
       return undefined;
@@ -621,6 +632,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       const symbol = this.templateTypeChecker.getSymbolOfNode(
         entry.node,
         this.component,
+        this.location,
       ) as TemplateDeclarationSymbol | null;
       if (symbol === null) {
         return undefined;
@@ -664,6 +676,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       this.template,
       this.component,
       this.node,
+      this.location,
     );
     if (completions === null) {
       return undefined;
@@ -675,6 +688,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       const symbol = this.templateTypeChecker.getSymbolOfNode(
         node,
         this.component,
+        this.location,
       ) as TemplateDeclarationSymbol | null;
       if (symbol === null || symbol.tsSymbol === null) {
         return undefined;
@@ -960,6 +974,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       this.component,
       element,
       this.compiler.getTemplateTypeChecker(),
+      this.location,
     );
 
     let entries: ts.CompletionEntry[] = [];
@@ -1056,6 +1071,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       this.component,
       element,
       this.compiler.getTemplateTypeChecker(),
+      this.location,
     );
 
     if (!attrTable.has(name)) {
@@ -1147,6 +1163,7 @@ export class CompletionBuilder<N extends TmplAstNode | AST> {
       this.component,
       element,
       this.compiler.getTemplateTypeChecker(),
+      this.location,
     );
 
     if (!attrTable.has(name)) {

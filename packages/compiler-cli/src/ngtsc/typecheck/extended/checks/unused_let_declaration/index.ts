@@ -10,7 +10,7 @@ import {AST, ASTWithSource, TmplAstLetDeclaration, TmplAstNode} from '@angular/c
 import ts from 'typescript';
 
 import {ErrorCode, ExtendedTemplateDiagnosticName} from '../../../../diagnostics';
-import {NgTemplateDiagnostic} from '../../../api';
+import {NgTemplateDiagnostic, TypeCheckLocation} from '../../../api';
 import {TemplateCheckFactory, TemplateCheckWithVisitor, TemplateContext} from '../../api';
 
 interface ClassAnalysis {
@@ -59,7 +59,11 @@ class UnusedLetDeclarationCheck extends TemplateCheckWithVisitor<ErrorCode.UNUSE
       this.getAnalysis(component).allLetDeclarations.add(node);
     } else if (node instanceof AST) {
       const unwrappedNode = node instanceof ASTWithSource ? node.ast : node;
-      const target = ctx.templateTypeChecker.getExpressionTarget(unwrappedNode, component);
+      const target = ctx.templateTypeChecker.getExpressionTarget(
+        unwrappedNode,
+        component,
+        TypeCheckLocation.TEMPLATE,
+      );
 
       if (target !== null && target instanceof TmplAstLetDeclaration) {
         this.getAnalysis(component).usedLetDeclarations.add(target);

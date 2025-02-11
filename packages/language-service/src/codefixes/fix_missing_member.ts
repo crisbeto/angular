@@ -12,6 +12,7 @@ import {getTcbNodesOfTemplateAtPosition} from '../template_target';
 import {getTemplateInfoAtPosition} from '../utils';
 
 import {CodeActionMeta, convertFileTextChangeInTcb, FixIdForCodeFixesAll} from './utils';
+import {TypeCheckLocation} from '@angular/compiler-cli/src/ngtsc/typecheck/api';
 
 const errorCodes: number[] = [
   2551, // https://github.com/microsoft/TypeScript/blob/8e6e87fea6463e153822e88431720f846c3b8dfa/src/compiler/diagnosticMessages.json#L2493
@@ -96,7 +97,9 @@ export const missingMemberMeta: CodeActionMeta = {
       }
       seen.add(componentClass);
 
-      const tcb = compiler.getTemplateTypeChecker().getTypeCheckBlock(componentClass);
+      const tcb = compiler
+        .getTemplateTypeChecker()
+        .getTypeCheckBlock(componentClass, TypeCheckLocation.TEMPLATE);
       if (tcb === null) {
         continue;
       }

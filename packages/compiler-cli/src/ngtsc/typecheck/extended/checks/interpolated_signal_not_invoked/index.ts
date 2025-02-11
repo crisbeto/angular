@@ -18,7 +18,7 @@ import {
 import ts from 'typescript';
 
 import {ErrorCode, ExtendedTemplateDiagnosticName} from '../../../../diagnostics';
-import {NgTemplateDiagnostic, SymbolKind} from '../../../api';
+import {NgTemplateDiagnostic, SymbolKind, TypeCheckLocation} from '../../../api';
 import {isSignalReference} from '../../../src/symbol_util';
 import {TemplateCheckFactory, TemplateCheckWithVisitor, TemplateContext} from '../../api';
 
@@ -94,7 +94,11 @@ function buildDiagnosticForSignal(
   component: ts.ClassDeclaration,
 ): Array<NgTemplateDiagnostic<ErrorCode.INTERPOLATED_SIGNAL_NOT_INVOKED>> {
   // check for `{{ mySignal }}`
-  const symbol = ctx.templateTypeChecker.getSymbolOfNode(node, component);
+  const symbol = ctx.templateTypeChecker.getSymbolOfNode(
+    node,
+    component,
+    TypeCheckLocation.TEMPLATE,
+  );
   if (symbol !== null && symbol.kind === SymbolKind.Expression && isSignalReference(symbol)) {
     const templateMapping = ctx.templateTypeChecker.getTemplateMappingAtTcbLocation(
       symbol.tcbLocation,
@@ -109,7 +113,11 @@ function buildDiagnosticForSignal(
   // error.
   // We also check for `{{ mySignal.set }}` or `{{ mySignal.update }}` or
   // `{{ mySignal.asReadonly }}` as these are the names of instance properties of Signal
-  const symbolOfReceiver = ctx.templateTypeChecker.getSymbolOfNode(node.receiver, component);
+  const symbolOfReceiver = ctx.templateTypeChecker.getSymbolOfNode(
+    node.receiver,
+    component,
+    TypeCheckLocation.TEMPLATE,
+  );
   if (
     (isFunctionInstanceProperty(node.name) || isSignalInstanceProperty(node.name)) &&
     symbolOfReceiver !== null &&

@@ -87,7 +87,7 @@ export interface TypeCheckBlockMetadata {
   /*
    * Pipes used in the template of the component.
    */
-  pipes: Map<string, PipeMeta>;
+  pipes: Map<string, PipeMeta> | null;
 
   /**
    * Schemas that apply to this template.
@@ -377,7 +377,7 @@ export type TemplateSourceMapping =
  */
 export interface DirectTemplateSourceMapping {
   type: 'direct';
-  node: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral;
+  node: ts.Expression;
 }
 
 /**

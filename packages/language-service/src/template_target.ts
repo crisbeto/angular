@@ -346,7 +346,6 @@ interface TcbNodesInfoForTemplate {
 
 /**
  * Return the nodes in `TCB` of the node at the specified cursor `position`.
- *
  */
 export function getTcbNodesOfTemplateAtPosition(
   templateInfo: TemplateInfo,
@@ -358,7 +357,10 @@ export function getTcbNodesOfTemplateAtPosition(
     return null;
   }
 
-  const tcb = compiler.getTemplateTypeChecker().getTypeCheckBlock(templateInfo.component);
+  const tcb = compiler
+    .getTemplateTypeChecker()
+    .getTypeCheckBlock(templateInfo.component, templateInfo.location);
+
   if (tcb === null) {
     return null;
   }

@@ -169,7 +169,7 @@ export class LanguageService {
     position: number,
   ): readonly ts.DefinitionInfo[] | undefined {
     return this.withCompilerAndPerfTracing(PerfPhase.LsDefinition, (compiler) => {
-      if (!isTemplateContext(compiler.getCurrentProgram(), fileName, position)) {
+      if (!isInTypeCheckContext(compiler.getCurrentProgram(), fileName, position)) {
         return undefined;
       }
       return new DefinitionBuilder(this.tsLS, compiler).getTypeDefinitionsAtPosition(
@@ -190,7 +190,7 @@ export class LanguageService {
     position: number,
     compiler: NgCompiler,
   ): ts.QuickInfo | undefined {
-    if (!isTemplateContext(compiler.getCurrentProgram(), fileName, position)) {
+    if (!isInTypeCheckContext(compiler.getCurrentProgram(), fileName, position)) {
       return undefined;
     }
 
@@ -216,6 +216,7 @@ export class LanguageService {
       templateInfo.component,
       node,
       positionDetails,
+      templateInfo.location,
     ).get();
   }
 
@@ -287,6 +288,7 @@ export class LanguageService {
       templateInfo.component,
       node,
       positionDetails,
+      templateInfo.location,
     );
   }
 
@@ -306,7 +308,7 @@ export class LanguageService {
     options: ts.GetCompletionsAtPositionOptions | undefined,
     compiler: NgCompiler,
   ): ts.WithMetadata<ts.CompletionInfo> | undefined {
-    if (!isTemplateContext(compiler.getCurrentProgram(), fileName, position)) {
+    if (!isInTypeCheckContext(compiler.getCurrentProgram(), fileName, position)) {
       return undefined;
     }
 
@@ -326,7 +328,7 @@ export class LanguageService {
     data: ts.CompletionEntryData | undefined,
   ): ts.CompletionEntryDetails | undefined {
     return this.withCompilerAndPerfTracing(PerfPhase.LsCompletions, (compiler) => {
-      if (!isTemplateContext(compiler.getCurrentProgram(), fileName, position)) {
+      if (!isInTypeCheckContext(compiler.getCurrentProgram(), fileName, position)) {
         return undefined;
       }
 
@@ -344,7 +346,7 @@ export class LanguageService {
     options?: ts.SignatureHelpItemsOptions,
   ): ts.SignatureHelpItems | undefined {
     return this.withCompilerAndPerfTracing(PerfPhase.LsSignatureHelp, (compiler) => {
-      if (!isTemplateContext(compiler.getCurrentProgram(), fileName, position)) {
+      if (!isInTypeCheckContext(compiler.getCurrentProgram(), fileName, position)) {
         return undefined;
       }
 
@@ -364,7 +366,7 @@ export class LanguageService {
     entryName: string,
   ): ts.Symbol | undefined {
     return this.withCompilerAndPerfTracing(PerfPhase.LsCompletions, (compiler) => {
-      if (!isTemplateContext(compiler.getCurrentProgram(), fileName, position)) {
+      if (!isInTypeCheckContext(compiler.getCurrentProgram(), fileName, position)) {
         return undefined;
       }
 
@@ -797,7 +799,7 @@ function getOrCreateTypeCheckScriptInfo(
   return scriptInfo;
 }
 
-function isTemplateContext(program: ts.Program, fileName: string, position: number): boolean {
+function isInTypeCheckContext(program: ts.Program, fileName: string, position: number): boolean {
   if (!isTypeScriptFile(fileName)) {
     // If we aren't in a TS file, we must be in an HTML file, which we treat as template context
     return true;
@@ -808,11 +810,51 @@ function isTemplateContext(program: ts.Program, fileName: string, position: numb
     return false;
   }
 
-  let asgn = getPropertyAssignmentFromValue(node, 'template');
-  if (asgn === null) {
+  const assignment = getPropertyAssignmentFromValue(node, 'template');
+  if (assignment !== null) {
+    return getClassDeclFromDecoratorProp(assignment) !== null;
+  }
+  return isHostBindingExpression(node);
+}
+
+function isHostBindingExpression(node: ts.Node): boolean {
+  if (!ts.isStringLiteralLike(node)) {
     return false;
   }
-  return getClassDeclFromDecoratorProp(asgn) !== null;
+
+  const assignment = closestNode(node, ts.isPropertyAssignment);
+  if (assignment === null || assignment.initializer !== node) {
+    return false;
+  }
+
+  const literal = closestNode(assignment, ts.isObjectLiteralExpression);
+  if (literal === null) {
+    return false;
+  }
+
+  const parentAssignment = getPropertyAssignmentFromValue(literal, 'host');
+  if (parentAssignment === null || parentAssignment.initializer !== literal) {
+    return false;
+  }
+
+  return getClassDeclFromDecoratorProp(parentAssignment) !== null;
+}
+
+function closestNode<T extends ts.Node>(
+  start: ts.Node,
+  predicate: (node: ts.Node) => node is T,
+): T | null {
+  let current = start.parent;
+
+  while (current) {
+    if (predicate(current)) {
+      return current;
+    } else {
+      current = current.parent;
+    }
+  }
+
+  return null;
 }
 
 function isInAngularContext(program: ts.Program, fileName: string, position: number) {
@@ -823,6 +865,9 @@ function isInAngularContext(program: ts.Program, fileName: string, position: num
   const node = findTightestNodeAtPosition(program, fileName, position);
   if (node === undefined) {
     return false;
+  }
+  if (isHostBindingExpression(node)) {
+    return true;
   }
 
   const assignment =

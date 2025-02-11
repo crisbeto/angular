@@ -27,6 +27,7 @@ import {
   TcbLocation,
   TemplateSymbol,
   TemplateTypeChecker,
+  TypeCheckLocation,
 } from '@angular/compiler-cli/src/ngtsc/typecheck/api';
 import ts from 'typescript';
 
@@ -112,6 +113,7 @@ export class DefinitionBuilder {
     node,
     parent,
     component,
+    location,
   }: DefinitionMeta & TemplateInfo): readonly ts.DefinitionInfo[] | undefined {
     switch (symbol.kind) {
       case SymbolKind.Directive:
@@ -138,7 +140,12 @@ export class DefinitionBuilder {
         const bindingDefs = this.getDefinitionsForSymbols(...symbol.bindings);
         // Also attempt to get directive matches for the input name. If there is a directive that
         // has the input name as part of the selector, we want to return that as well.
-        const directiveDefs = this.getDirectiveTypeDefsForBindingNode(node, parent, component);
+        const directiveDefs = this.getDirectiveTypeDefsForBindingNode(
+          node,
+          parent,
+          component,
+          location,
+        );
         return [...bindingDefs, ...directiveDefs];
       }
       case SymbolKind.LetDeclaration:
@@ -250,6 +257,7 @@ export class DefinitionBuilder {
             node,
             parent,
             templateInfo.component,
+            templateInfo.location,
           );
           definitions.push(...directiveDefs);
           break;
@@ -322,6 +330,7 @@ export class DefinitionBuilder {
     node: TmplAstNode | AST,
     parent: TmplAstNode | AST | null,
     component: ts.ClassDeclaration,
+    location: TypeCheckLocation,
   ) {
     if (
       !(node instanceof TmplAstBoundAttribute) &&
@@ -338,7 +347,7 @@ export class DefinitionBuilder {
     }
     const templateOrElementSymbol = this.compiler
       .getTemplateTypeChecker()
-      .getSymbolOfNode(parent, component);
+      .getSymbolOfNode(parent, component, location);
     if (
       templateOrElementSymbol === null ||
       (templateOrElementSymbol.kind !== SymbolKind.Template &&
@@ -362,7 +371,7 @@ export class DefinitionBuilder {
   }
 
   private getDefinitionMetaAtPosition(
-    {template, component}: TemplateInfo,
+    {template, component, location}: TemplateInfo,
     position: number,
   ): DefinitionMeta[] | undefined {
     const target = getTargetAtPosition(template, position);
@@ -376,7 +385,9 @@ export class DefinitionBuilder {
 
     const definitionMetas: DefinitionMeta[] = [];
     for (const node of nodes) {
-      const symbol = this.compiler.getTemplateTypeChecker().getSymbolOfNode(node, component);
+      const symbol = this.compiler
+        .getTemplateTypeChecker()
+        .getSymbolOfNode(node, component, location);
       if (symbol === null) {
         continue;
       }

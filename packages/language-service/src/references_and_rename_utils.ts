@@ -83,7 +83,7 @@ export interface TemplateLocationDetails {
  * the targeted template node.
  */
 export function getTargetDetailsAtTemplatePosition(
-  {template, component}: TemplateInfo,
+  {template, component, location}: TemplateInfo,
   position: number,
   templateTypeChecker: TemplateTypeChecker,
 ): TemplateLocationDetails[] | null {
@@ -102,7 +102,7 @@ export function getTargetDetailsAtTemplatePosition(
 
   for (const node of nodes) {
     // Get the information about the TCB at the template position.
-    const symbol = templateTypeChecker.getSymbolOfNode(node, component);
+    const symbol = templateTypeChecker.getSymbolOfNode(node, component, location);
     if (symbol === null) {
       continue;
     }

@@ -9,7 +9,7 @@
 import {ErrorCode, ngErrorCode} from '../../diagnostics';
 import {absoluteFrom, absoluteFromSourceFile, getSourceFileOrError} from '../../file_system';
 import {runInEachFileSystem} from '../../file_system/testing';
-import {OptimizeFor} from '../api';
+import {OptimizeFor, TypeCheckLocation} from '../api';
 
 import {getClass, setup, TestDeclaration} from '../testing';
 
@@ -77,7 +77,7 @@ runInEachFileSystem(() => {
       ]);
 
       const cmp1 = getClass(getSourceFileOrError(program, file1), 'Cmp1');
-      const block = templateTypeChecker.getTypeCheckBlock(cmp1);
+      const block = templateTypeChecker.getTypeCheckBlock(cmp1, TypeCheckLocation.TEMPLATE);
       expect(block).not.toBeNull();
       expect(block!.getText()).toMatch(/: i[0-9]\.Cmp1/);
       expect(block!.getText()).toContain(`value`);
@@ -120,16 +120,22 @@ runInEachFileSystem(() => {
       const sf2 = getSourceFileOrError(program, file2);
       const cmpB = getClass(sf2, 'CmpB');
       // Prime the TemplateTypeChecker by asking for a TCB from file1.
-      expect(templateTypeChecker.getTypeCheckBlock(cmpA)).not.toBeNull();
+      expect(
+        templateTypeChecker.getTypeCheckBlock(cmpA, TypeCheckLocation.TEMPLATE),
+      ).not.toBeNull();
 
       // Next, ask for a TCB from file2. This operation should clear data on TCBs generated for
       // file1.
-      expect(templateTypeChecker.getTypeCheckBlock(cmpB)).not.toBeNull();
+      expect(
+        templateTypeChecker.getTypeCheckBlock(cmpB, TypeCheckLocation.TEMPLATE),
+      ).not.toBeNull();
 
       // This can be detected by asking for a TCB again from file1. Since no data should be
       // available for file1, this should cause another type-checking program step.
       const prevTtcProgram = programStrategy.getProgram();
-      expect(templateTypeChecker.getTypeCheckBlock(cmpA)).not.toBeNull();
+      expect(
+        templateTypeChecker.getTypeCheckBlock(cmpA, TypeCheckLocation.TEMPLATE),
+      ).not.toBeNull();
       expect(programStrategy.getProgram()).not.toBe(prevTtcProgram);
     });
 

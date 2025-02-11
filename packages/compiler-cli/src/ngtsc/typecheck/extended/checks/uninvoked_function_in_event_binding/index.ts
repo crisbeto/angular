@@ -22,7 +22,7 @@ import {
 import ts from 'typescript';
 
 import {ErrorCode, ExtendedTemplateDiagnosticName} from '../../../../diagnostics';
-import {NgTemplateDiagnostic, SymbolKind} from '../../../api';
+import {NgTemplateDiagnostic, SymbolKind, TypeCheckLocation} from '../../../api';
 import {TemplateCheckFactory, TemplateCheckWithVisitor, TemplateContext} from '../../api';
 
 /**
@@ -87,7 +87,11 @@ function assertExpressionInvoked(
     return []; // If the expression is not a property read, skip it.
   }
 
-  const symbol = ctx.templateTypeChecker.getSymbolOfNode(expression, component);
+  const symbol = ctx.templateTypeChecker.getSymbolOfNode(
+    expression,
+    component,
+    TypeCheckLocation.TEMPLATE,
+  );
 
   if (symbol !== null && symbol.kind === SymbolKind.Expression) {
     if (symbol.tsType.getCallSignatures()?.length > 0) {

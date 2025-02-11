@@ -13,6 +13,8 @@ import {
   TemplateSymbol,
   TemplateTypeChecker,
   TypeCheckableDirectiveMeta,
+  TypeCheckContext,
+  TypeCheckLocation,
 } from '@angular/compiler-cli/src/ngtsc/typecheck/api';
 import ts from 'typescript';
 
@@ -210,14 +212,17 @@ export function buildAttributeCompletionTable(
   component: ts.ClassDeclaration,
   element: TmplAstElement | TmplAstTemplate,
   checker: TemplateTypeChecker,
+  location: TypeCheckLocation,
 ): Map<string, AttributeCompletion> {
   const table = new Map<string, AttributeCompletion>();
 
   // Use the `ElementSymbol` or `TemplateSymbol` to iterate over directives present on the node, and
   // their inputs/outputs. These have the highest priority of completion results.
-  const symbol: ElementSymbol | TemplateSymbol = checker.getSymbolOfNode(element, component) as
-    | ElementSymbol
-    | TemplateSymbol;
+  const symbol: ElementSymbol | TemplateSymbol = checker.getSymbolOfNode(
+    element,
+    component,
+    location,
+  ) as ElementSymbol | TemplateSymbol;
   const presentDirectives = new Set<ts.ClassDeclaration>();
   if (symbol !== null) {
     // An `ElementSymbol` was available. This means inputs and outputs for directives on the

@@ -46,7 +46,7 @@ export function getSignatureHelp(
 
   const symbol = compiler
     .getTemplateTypeChecker()
-    .getSymbolOfNode(targetInfo.context.node, templateInfo.component);
+    .getSymbolOfNode(targetInfo.context.node, templateInfo.component, templateInfo.location);
   if (symbol === null || symbol.kind !== SymbolKind.Expression) {
     return undefined;
   }

@@ -12,7 +12,7 @@ import ts from 'typescript';
 import {absoluteFrom, getSourceFileOrError} from '../../file_system';
 import {runInEachFileSystem} from '../../file_system/testing';
 import {getTokenAtPosition} from '../../util/src/typescript';
-import {CompletionKind, GlobalCompletion, TemplateTypeChecker} from '../api';
+import {CompletionKind, GlobalCompletion, TemplateTypeChecker, TypeCheckLocation} from '../api';
 import {getClass, setup} from '../testing';
 
 runInEachFileSystem(() => {
@@ -179,7 +179,12 @@ function setupCompletions(
     context = tmpl;
   }
 
-  const completions = templateTypeChecker.getGlobalCompletions(context, SomeCmp, null!)!;
+  const completions = templateTypeChecker.getGlobalCompletions(
+    context,
+    SomeCmp,
+    null!,
+    TypeCheckLocation.TEMPLATE,
+  )!;
   expect(completions).toBeDefined();
   return {
     completions,

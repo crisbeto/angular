@@ -34,7 +34,11 @@ import {
 } from '@angular/compiler-cli/src/ngtsc/file_system';
 import {isExternalResource} from '@angular/compiler-cli/src/ngtsc/metadata';
 import {DeclarationNode} from '@angular/compiler-cli/src/ngtsc/reflection';
-import {DirectiveSymbol, TemplateTypeChecker} from '@angular/compiler-cli/src/ngtsc/typecheck/api';
+import {
+  DirectiveSymbol,
+  TemplateTypeChecker,
+  TypeCheckLocation,
+} from '@angular/compiler-cli/src/ngtsc/typecheck/api';
 import ts from 'typescript';
 
 import {
@@ -117,8 +121,10 @@ export function isExpressionNode(node: TmplAstNode | AST): node is AST {
 export interface TemplateInfo {
   template: TmplAstNode[];
   component: ts.ClassDeclaration;
+  location: TypeCheckLocation;
 }
 
+// TODO: maybe rename this?
 function getInlineTemplateInfoAtPosition(
   sf: ts.SourceFile,
   position: number,
@@ -149,9 +155,36 @@ function getInlineTemplateInfoAtPosition(
     return undefined;
   }
 
-  return {template, component: classDecl};
+  return {template, component: classDecl, location: TypeCheckLocation.TEMPLATE};
 }
 
+function getHostBindingsAtPosition(
+  sf: ts.SourceFile,
+  position: number,
+  compiler: NgCompiler,
+): TemplateInfo | undefined {
+  const expression = findTightestNode(sf, position);
+  if (expression === undefined) {
+    return undefined;
+  }
+  const classDecl = getParentClassDeclaration(expression);
+  if (classDecl === undefined) {
+    return undefined;
+  }
+
+  // TODO: this needs to verify that it's inside a `host` literal or decorator, similar to how
+  // `getInlineTemplateInfoAtPosition` verifies that the node matches the component's name.
+  // TODO: naming
+  const template = compiler.getTemplateTypeChecker().getHostBindings(classDecl);
+  if (template === null) {
+    return undefined;
+  }
+
+  return {template, component: classDecl, location: TypeCheckLocation.HOST};
+}
+
+// TODO: maybe rename this?
+// TODO: rename the return type?
 /**
  * Retrieves the `ts.ClassDeclaration` at a location along with its template nodes.
  */
@@ -160,16 +193,19 @@ export function getTemplateInfoAtPosition(
   position: number,
   compiler: NgCompiler,
 ): TemplateInfo | undefined {
-  if (isTypeScriptFile(fileName)) {
-    const sf = compiler.getCurrentProgram().getSourceFile(fileName);
-    if (sf === undefined) {
-      return undefined;
-    }
-
-    return getInlineTemplateInfoAtPosition(sf, position, compiler);
-  } else {
+  if (!isTypeScriptFile(fileName)) {
     return getFirstComponentForTemplateFile(fileName, compiler);
   }
+
+  const sf = compiler.getCurrentProgram().getSourceFile(fileName);
+  if (sf === undefined) {
+    return undefined;
+  }
+
+  return (
+    getInlineTemplateInfoAtPosition(sf, position, compiler) ||
+    getHostBindingsAtPosition(sf, position, compiler)
+  );
 }
 
 /**
@@ -203,7 +239,7 @@ export function getFirstComponentForTemplateFile(
     if (template === null) {
       continue;
     }
-    return {template, component};
+    return {template, component, location: TypeCheckLocation.TEMPLATE};
   }
 
   return undefined;

@@ -8,7 +8,11 @@
 
 import ts from 'typescript';
 
-import {SymbolKind, TemplateTypeChecker} from '@angular/compiler-cli/src/ngtsc/typecheck/api';
+import {
+  SymbolKind,
+  TemplateTypeChecker,
+  TypeCheckLocation,
+} from '@angular/compiler-cli/src/ngtsc/typecheck/api';
 import {
   AST,
   BindingType,
@@ -336,7 +340,11 @@ export class TemplateExpressionReferenceVisitor<
       return false;
     }
 
-    const symbol = this.templateTypeChecker.getSymbolOfNode(ast, this.componentClass);
+    const symbol = this.templateTypeChecker.getSymbolOfNode(
+      ast,
+      this.componentClass,
+      TypeCheckLocation.TEMPLATE,
+    );
     if (symbol?.kind !== SymbolKind.Expression || symbol.tsSymbol === null) {
       return false;
     }
@@ -380,7 +388,11 @@ export class TemplateExpressionReferenceVisitor<
     const expressionTemplateTarget =
       this.templateTypeChecker === null
         ? null
-        : this.templateTypeChecker.getExpressionTarget(ast, this.componentClass);
+        : this.templateTypeChecker.getExpressionTarget(
+            ast,
+            this.componentClass,
+            TypeCheckLocation.TEMPLATE,
+          );
 
     // Skip checking if:
     // - the reference resolves to a template variable or local ref. No way to resolve without TCB.

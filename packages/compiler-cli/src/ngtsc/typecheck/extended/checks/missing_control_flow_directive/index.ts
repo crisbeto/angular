@@ -11,7 +11,7 @@ import ts from 'typescript';
 
 import {NgCompilerOptions} from '../../../../core/api';
 import {ErrorCode, ExtendedTemplateDiagnosticName} from '../../../../diagnostics';
-import {NgTemplateDiagnostic} from '../../../api';
+import {NgTemplateDiagnostic, TypeCheckLocation} from '../../../api';
 import {TemplateCheckFactory, TemplateCheckWithVisitor, TemplateContext} from '../../api';
 
 /**
@@ -67,7 +67,11 @@ class MissingControlFlowDirectiveCheck extends TemplateCheckWithVisitor<ErrorCod
     );
     if (!controlFlowAttr) return [];
 
-    const symbol = ctx.templateTypeChecker.getSymbolOfNode(node, component);
+    const symbol = ctx.templateTypeChecker.getSymbolOfNode(
+      node,
+      component,
+      TypeCheckLocation.TEMPLATE,
+    );
     if (symbol === null || symbol.directives.length > 0) {
       return [];
     }

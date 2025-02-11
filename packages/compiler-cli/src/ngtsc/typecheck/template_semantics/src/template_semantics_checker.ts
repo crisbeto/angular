@@ -23,7 +23,7 @@ import {
 import ts from 'typescript';
 
 import {ErrorCode, ngErrorCode} from '../../../diagnostics';
-import {TemplateDiagnostic, TemplateTypeChecker} from '../../api';
+import {TemplateDiagnostic, TemplateTypeChecker, TypeCheckLocation} from '../../api';
 import {isSignalReference} from '../../src/symbol_util';
 import {TemplateSemanticsChecker} from '../api/api';
 
@@ -91,7 +91,11 @@ class ExpressionsSemanticsVisitor extends RecursiveAstVisitor {
       return;
     }
 
-    const target = this.templateTypeChecker.getExpressionTarget(ast, this.component);
+    const target = this.templateTypeChecker.getExpressionTarget(
+      ast,
+      this.component,
+      TypeCheckLocation.TEMPLATE,
+    );
     if (target instanceof TmplAstVariable) {
       const errorMessage = `Cannot use variable '${target.name}' as the left-hand side of an assignment expression. Template variables are read-only.`;
       this.diagnostics.push(this.makeIllegalTemplateVarDiagnostic(target, context, errorMessage));
@@ -109,7 +113,11 @@ class ExpressionsSemanticsVisitor extends RecursiveAstVisitor {
       return;
     }
 
-    const target = this.templateTypeChecker.getExpressionTarget(ast, this.component);
+    const target = this.templateTypeChecker.getExpressionTarget(
+      ast,
+      this.component,
+      TypeCheckLocation.TEMPLATE,
+    );
     const isVariable = target instanceof TmplAstVariable;
     const isLet = target instanceof TmplAstLetDeclaration;
 
@@ -118,7 +126,11 @@ class ExpressionsSemanticsVisitor extends RecursiveAstVisitor {
     }
 
     // Two-way bindings to template variables are only allowed if the variables are signals.
-    const symbol = this.templateTypeChecker.getSymbolOfNode(target, this.component);
+    const symbol = this.templateTypeChecker.getSymbolOfNode(
+      target,
+      this.component,
+      TypeCheckLocation.TEMPLATE,
+    );
     if (symbol !== null && !isSignalReference(symbol)) {
       let errorMessage: string;
 

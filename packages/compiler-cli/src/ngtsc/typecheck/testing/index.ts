@@ -448,6 +448,7 @@ export function tcb(
     new NoopSchemaChecker(),
     new NoopOobRecorder(),
     TcbGenericContextBehavior.UseEmitter,
+    false,
   );
 
   const rendered = env.render(!options.emitSpans /* removeComments */);
