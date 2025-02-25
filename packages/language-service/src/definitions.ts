@@ -412,7 +412,15 @@ function getDefinitionForExpressionAtPosition(
     return;
   }
 
-  const allResources = [...componentResources.styles, componentResources.template];
+  const allResources = [...componentResources.styles];
+
+  if (componentResources.template) {
+    allResources.push(componentResources.template);
+  }
+
+  if (componentResources.hostBindings) {
+    allResources.push(...componentResources.hostBindings);
+  }
 
   const resourceForExpression = allResources.find((resource) => resource.expression === expression);
   if (resourceForExpression === undefined || !isExternalResource(resourceForExpression)) {

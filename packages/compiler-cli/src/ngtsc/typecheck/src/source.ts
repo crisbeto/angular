@@ -65,18 +65,18 @@ export class TemplateSourceManager implements TemplateSourceResolver {
    */
   private templateSources = new Map<TemplateId, TemplateSource>();
 
+  private hostBindingSources = new Map<TemplateId, TemplateSourceMapping>();
+
   getTemplateId(node: ts.ClassDeclaration): TemplateId {
     return getTemplateId(node);
   }
 
-  captureSource(
-    node: ts.ClassDeclaration,
-    mapping: TemplateSourceMapping,
-    file: ParseSourceFile,
-  ): TemplateId {
-    const id = getTemplateId(node);
+  captureSource(id: TemplateId, mapping: TemplateSourceMapping, file: ParseSourceFile): void {
     this.templateSources.set(id, new TemplateSource(mapping, file));
-    return id;
+  }
+
+  captureHostBindingsMapping(id: TemplateId, mapping: TemplateSourceMapping): void {
+    this.hostBindingSources.set(id, mapping);
   }
 
   getSourceMapping(id: TemplateId): TemplateSourceMapping {
@@ -84,6 +84,13 @@ export class TemplateSourceManager implements TemplateSourceResolver {
       throw new Error(`Unexpected unknown template ID: ${id}`);
     }
     return this.templateSources.get(id)!.mapping;
+  }
+
+  getHostBindingsMapping(id: TemplateId): TemplateSourceMapping {
+    if (!this.hostBindingSources.has(id)) {
+      throw new Error(`Unexpected unknown template ID: ${id}`);
+    }
+    return this.hostBindingSources.get(id)!;
   }
 
   toParseSourceSpan(id: TemplateId, span: AbsoluteSourceSpan): ParseSourceSpan | null {

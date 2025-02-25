@@ -140,31 +140,84 @@ export class R3TargetBinder<DirectiveT extends DirectiveMeta> implements TargetB
    * metadata about the types referenced in the template.
    */
   bind(target: Target): BoundTarget<DirectiveT> {
-    if (!target.template) {
-      // TODO(alxhub): handle targets which contain things like HostBindings, etc.
-      throw new Error('Binding without a template not yet supported');
+    if (!target.template && !target.host) {
+      throw new Error('Empty bound targets are not supported');
     }
 
-    // First, parse the template into a `Scope` structure. This operation captures the syntactic
-    // scopes in the template and makes them available for later use.
-    const scope = Scope.apply(target.template);
+    const directives = new Map<Template | Element, DirectiveT[]>();
+    const eagerDirectives: DirectiveT[] = [];
+    const bindings = new Map<
+      BoundAttribute | BoundEvent | TextAttribute,
+      DirectiveT | Template | Element
+    >();
+    const references = new Map<
+      Reference,
+      | Template
+      | Element
+      | {
+          directive: DirectiveT;
+          node: Element | Template;
+        }
+    >();
+    const scopedNodeEntities = new Map<ScopedNode | null, Set<TemplateEntity>>();
+    const expressions = new Map<AST, TemplateEntity>();
+    const symbols = new Map<TemplateEntity, Template>();
+    const nestingLevel = new Map<ScopedNode, number>();
+    const usedPipes = new Set<string>();
+    const eagerPipes = new Set<string>();
+    const deferBlocks: [DeferredBlock, Scope][] = [];
 
-    // Use the `Scope` to extract the entities present at every level of the template.
-    const scopedNodeEntities = extractScopedNodeEntities(scope);
+    if (target.template) {
+      // First, parse the template into a `Scope` structure. This operation captures the syntactic
+      // scopes in the template and makes them available for later use.
+      const scope = Scope.apply(target.template);
 
-    // Next, perform directive matching on the template using the `DirectiveBinder`. This returns:
-    //   - directives: Map of nodes (elements & ng-templates) to the directives on them.
-    //   - bindings: Map of inputs, outputs, and attributes to the directive/element that claims
-    //     them. TODO(alxhub): handle multiple directives claiming an input/output/etc.
-    //   - references: Map of #references to their targets.
-    const {directives, eagerDirectives, bindings, references} = DirectiveBinder.apply(
-      target.template,
-      this.directiveMatcher,
-    );
-    // Finally, run the TemplateBinder to bind references, variables, and other entities within the
-    // template. This extracts all the metadata that doesn't depend on directive matching.
-    const {expressions, symbols, nestingLevel, usedPipes, eagerPipes, deferBlocks} =
-      TemplateBinder.applyWithScope(target.template, scope);
+      // Use the `Scope` to extract the entities present at every level of the template.
+      extractScopedNodeEntities(scope, scopedNodeEntities);
+
+      // Next, perform directive matching on the template using the `DirectiveBinder`. This returns:
+      //   - directives: Map of nodes (elements & ng-templates) to the directives on them.
+      //   - bindings: Map of inputs, outputs, and attributes to the directive/element that claims
+      //     them. TODO(alxhub): handle multiple directives claiming an input/output/etc.
+      //   - references: Map of #references to their targets.
+      DirectiveBinder.apply(
+        target.template,
+        this.directiveMatcher,
+        directives,
+        eagerDirectives,
+        bindings,
+        references,
+      );
+
+      // Finally, run the TemplateBinder to bind references, variables, and other entities within the
+      // template. This extracts all the metadata that doesn't depend on directive matching.
+      TemplateBinder.applyWithScope(
+        target.template,
+        scope,
+        expressions,
+        symbols,
+        nestingLevel,
+        usedPipes,
+        eagerPipes,
+        deferBlocks,
+      );
+    }
+
+    if (target.host) {
+      // TODO: this is likely incorrect. The host node needs to be scoped.
+      const hostScope = Scope.apply(target.host);
+      TemplateBinder.applyWithScope(
+        target.host,
+        hostScope,
+        expressions,
+        symbols,
+        nestingLevel,
+        usedPipes,
+        eagerPipes,
+        deferBlocks,
+      );
+    }
+
     return new R3BoundTarget(
       target,
       directives,
@@ -439,25 +492,14 @@ class DirectiveBinder<DirectiveT extends DirectiveMeta> implements Visitor {
   static apply<DirectiveT extends DirectiveMeta>(
     template: Node[],
     selectorMatcher: SelectorMatcher<DirectiveT[]>,
-  ): {
-    directives: Map<Element | Template, DirectiveT[]>;
-    eagerDirectives: DirectiveT[];
-    bindings: Map<BoundAttribute | BoundEvent | TextAttribute, DirectiveT | Element | Template>;
+    directives: Map<Element | Template, DirectiveT[]>,
+    eagerDirectives: DirectiveT[],
+    bindings: Map<BoundAttribute | BoundEvent | TextAttribute, DirectiveT | Element | Template>,
     references: Map<
       Reference,
       {directive: DirectiveT; node: Element | Template} | Element | Template
-    >;
-  } {
-    const directives = new Map<Element | Template, DirectiveT[]>();
-    const bindings = new Map<
-      BoundAttribute | BoundEvent | TextAttribute,
-      DirectiveT | Element | Template
-    >();
-    const references = new Map<
-      Reference,
-      {directive: DirectiveT; node: Element | Template} | Element | Template
-    >();
-    const eagerDirectives: DirectiveT[] = [];
+    >,
+  ): void {
     const matcher = new DirectiveBinder(
       selectorMatcher,
       directives,
@@ -466,7 +508,6 @@ class DirectiveBinder<DirectiveT extends DirectiveMeta> implements Visitor {
       references,
     );
     matcher.ingest(template);
-    return {directives, eagerDirectives, bindings, references};
   }
 
   private ingest(template: Node[]): void {
@@ -679,21 +720,14 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
   static applyWithScope(
     nodes: Node[],
     scope: Scope,
-  ): {
-    expressions: Map<AST, TemplateEntity>;
-    symbols: Map<TemplateEntity, Template>;
-    nestingLevel: Map<ScopedNode, number>;
-    usedPipes: Set<string>;
-    eagerPipes: Set<string>;
-    deferBlocks: [DeferredBlock, Scope][];
-  } {
-    const expressions = new Map<AST, TemplateEntity>();
-    const symbols = new Map<TemplateEntity, Template>();
-    const nestingLevel = new Map<ScopedNode, number>();
-    const usedPipes = new Set<string>();
-    const eagerPipes = new Set<string>();
+    expressions: Map<AST, TemplateEntity>,
+    symbols: Map<TemplateEntity, Template>,
+    nestingLevel: Map<ScopedNode, number>,
+    usedPipes: Set<string>,
+    eagerPipes: Set<string>,
+    deferBlocks: [DeferredBlock, Scope][],
+  ): void {
     const template = nodes instanceof Template ? nodes : null;
-    const deferBlocks: [DeferredBlock, Scope][] = [];
     // The top-level template has nesting level 0.
     const binder = new TemplateBinder(
       expressions,
@@ -707,7 +741,6 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
       0,
     );
     binder.ingest(nodes);
-    return {expressions, symbols, nestingLevel, usedPipes, eagerPipes, deferBlocks};
   }
 
   private ingest(nodeOrNodes: ScopedNode | Node[]): void {
@@ -1142,7 +1175,10 @@ export class R3BoundTarget<DirectiveT extends DirectiveMeta> implements BoundTar
   }
 }
 
-function extractScopedNodeEntities(rootScope: Scope): Map<ScopedNode | null, Set<TemplateEntity>> {
+function extractScopedNodeEntities(
+  rootScope: Scope,
+  templateEntities: Map<ScopedNode | null, Set<TemplateEntity>>,
+): void {
   const entityMap = new Map<ScopedNode | null, Map<string, TemplateEntity>>();
 
   function extractScopeEntities(scope: Scope): Map<string, TemplateEntity> {
@@ -1172,9 +1208,7 @@ function extractScopedNodeEntities(rootScope: Scope): Map<ScopedNode | null, Set
     extractScopeEntities(scope);
   }
 
-  const templateEntities = new Map<ScopedNode | null, Set<TemplateEntity>>();
   for (const [template, entities] of entityMap) {
     templateEntities.set(template, new Set(entities.values()));
   }
-  return templateEntities;
 }

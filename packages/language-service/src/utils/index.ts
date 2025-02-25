@@ -114,8 +114,9 @@ export function isExpressionNode(node: TmplAstNode | AST): node is AST {
   return node instanceof AST;
 }
 
+// TODO: rename this
 export interface TemplateInfo {
-  template: TmplAstNode[];
+  template: TmplAstNode[]; // TODO: rename this
   component: ts.ClassDeclaration;
 }
 
@@ -136,20 +137,44 @@ function getInlineTemplateInfoAtPosition(
   // Return `undefined` if the position is not on the template expression or the template resource
   // is not inline.
   const resources = compiler.getComponentResources(classDecl);
+  if (resources === null) {
+    return undefined;
+  }
+
   if (
-    resources === null ||
-    isExternalResource(resources.template) ||
-    expression !== resources.template.expression
+    resources.template !== null &&
+    !isExternalResource(resources.template) &&
+    expression === resources.template.expression
   ) {
-    return undefined;
+    const template = compiler.getTemplateTypeChecker().getTemplate(classDecl);
+
+    if (template === null) {
+      return undefined;
+    }
+
+    return {template, component: classDecl};
   }
 
-  const template = compiler.getTemplateTypeChecker().getTemplate(classDecl);
-  if (template === null) {
-    return undefined;
+  if (resources.hostBindings !== null) {
+    const start = expression.getStart();
+    const end = expression.getEnd();
+
+    for (const binding of resources.hostBindings) {
+      if (
+        !isExternalResource(binding) &&
+        start >= binding.expression.getStart() &&
+        end <= binding.expression.getEnd()
+      ) {
+        const hostBindings = compiler.getTemplateTypeChecker().getHostBindings(classDecl);
+
+        if (hostBindings !== null) {
+          return {template: hostBindings, component: classDecl};
+        }
+      }
+    }
   }
 
-  return {template, component: classDecl};
+  return undefined;
 }
 
 /**

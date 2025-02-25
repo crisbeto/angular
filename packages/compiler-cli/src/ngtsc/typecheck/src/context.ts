@@ -26,6 +26,8 @@ import {FileUpdate} from '../../program_driver';
 import {ClassDeclaration, ReflectionHost} from '../../reflection';
 import {ImportManager} from '../../translator';
 import {
+  HostBindingsContext,
+  TemplateContext,
   TemplateDiagnostic,
   TemplateId,
   TemplateSourceMapping,
@@ -92,6 +94,8 @@ export interface TemplateData {
    * Errors found while parsing them template, which have been converted to diagnostics.
    */
   templateDiagnostics: TemplateDiagnostic[];
+
+  hostBindings: TmplAstNode[] | null;
 }
 
 /**
@@ -157,7 +161,7 @@ export interface TypeCheckingHost {
    * example, the component may have results already available from a prior pass or from a previous
    * program.
    */
-  shouldCheckComponent(node: ts.ClassDeclaration): boolean;
+  shouldCheckComponent(node: ts.ClassDeclaration): boolean; // TODO: probably rename this
 
   /**
    * Report data from a shim generated from the given input file path.
@@ -230,12 +234,10 @@ export class TypeCheckContextImpl implements TypeCheckContext {
   addTemplate(
     ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
     binder: R3TargetBinder<TypeCheckableDirectiveMeta>,
-    template: TmplAstNode[],
+    templateContext: TemplateContext,
+    hostBindingContext: HostBindingsContext | null,
     pipes: Map<string, PipeMeta>,
     schemas: SchemaMetadata[],
-    sourceMapping: TemplateSourceMapping,
-    file: ParseSourceFile,
-    parseErrors: ParseError[] | null,
     isStandalone: boolean,
     preserveWhitespaces: boolean,
   ): void {
@@ -249,11 +251,20 @@ export class TypeCheckContextImpl implements TypeCheckContext {
 
     const templateDiagnostics: TemplateDiagnostic[] = [];
 
-    if (parseErrors !== null) {
-      templateDiagnostics.push(...getTemplateDiagnostics(parseErrors, templateId, sourceMapping));
+    if (templateContext.parseErrors !== null) {
+      templateDiagnostics.push(
+        ...getTemplateDiagnostics(
+          templateContext.parseErrors,
+          templateId,
+          templateContext.sourceMapping,
+        ),
+      );
     }
 
-    const boundTarget = binder.bind({template});
+    const boundTarget = binder.bind({
+      template: templateContext.nodes,
+      host: hostBindingContext?.nodes,
+    });
 
     if (this.inlining === InliningMode.InlineOps) {
       // Get all of the directives used in the template and record inline type constructors when
@@ -284,9 +295,10 @@ export class TypeCheckContextImpl implements TypeCheckContext {
     }
 
     shimData.templates.set(templateId, {
-      template,
+      template: templateContext.nodes,
       boundTarget,
       templateDiagnostics,
+      hostBindings: hostBindingContext?.nodes ?? null,
     });
 
     const usedPipes: Reference<ClassDeclaration<ts.ClassDeclaration>>[] = [];
@@ -321,8 +333,21 @@ export class TypeCheckContextImpl implements TypeCheckContext {
       return;
     }
 
+    fileData.sourceManager.captureSource(
+      templateId,
+      templateContext.sourceMapping,
+      templateContext.file,
+    );
+
+    if (hostBindingContext !== null) {
+      fileData.sourceManager.captureHostBindingsMapping(
+        templateId,
+        hostBindingContext.sourceMapping,
+      );
+    }
+
     const meta = {
-      id: fileData.sourceManager.captureSource(ref.node, sourceMapping, file),
+      id: templateId,
       boundTarget,
       pipes,
       schemas,

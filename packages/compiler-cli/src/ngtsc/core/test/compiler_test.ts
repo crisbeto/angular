@@ -279,7 +279,7 @@ runInEachFileSystem(() => {
         );
         const resources = compiler.getComponentResources(CmpA);
         expect(resources).not.toBeNull();
-        const {template, styles} = resources!;
+        const {template, styles} = resources!; // TODO
         expect(template!.path).toEqual(templateFile);
         expect(styles.size).toEqual(2);
         const actualPaths = new Set(Array.from(styles).map((r) => r.path));

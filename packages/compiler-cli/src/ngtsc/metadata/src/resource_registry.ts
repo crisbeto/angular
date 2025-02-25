@@ -37,8 +37,9 @@ export function isExternalResource(resource: Resource): resource is ExternalReso
  * A resource with a `path` of `null` is considered inline.
  */
 export interface ComponentResources {
-  template: Resource;
+  template: Resource | null;
   styles: ReadonlySet<Resource>;
+  hostBindings: ReadonlySet<Resource> | null;
 }
 
 /**
@@ -49,10 +50,12 @@ export interface ComponentResources {
  * assistance.
  */
 export class ResourceRegistry {
+  // TODO: all of these need to be renamed.
   private externalTemplateToComponentsMap = new Map<AbsoluteFsPath, Set<ClassDeclaration>>();
   private componentToTemplateMap = new Map<ClassDeclaration, Resource>();
   private componentToStylesMap = new Map<ClassDeclaration, Set<Resource>>();
   private externalStyleToComponentsMap = new Map<AbsoluteFsPath, Set<ClassDeclaration>>();
+  private directiveToHostBindingsMap = new Map<ClassDeclaration, ReadonlySet<Resource>>();
 
   getComponentsWithTemplate(template: AbsoluteFsPath): ReadonlySet<ClassDeclaration> {
     if (!this.externalTemplateToComponentsMap.has(template)) {
@@ -68,6 +71,9 @@ export class ResourceRegistry {
     }
     for (const style of resources.styles) {
       this.registerStyle(style, component);
+    }
+    if (resources.hostBindings !== null) {
+      this.directiveToHostBindingsMap.set(component, resources.hostBindings);
     }
   }
 
@@ -116,5 +122,9 @@ export class ResourceRegistry {
     }
 
     return this.externalStyleToComponentsMap.get(styleUrl)!;
+  }
+
+  getHostBindings(directive: ClassDeclaration): ReadonlySet<Resource> | null {
+    return this.directiveToHostBindingsMap.get(directive) || null;
   }
 }

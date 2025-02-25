@@ -55,6 +55,8 @@ export interface TemplateSourceResolver {
    * absolute offsets and gives access to the original template source.
    */
   toParseSourceSpan(id: TemplateId, span: AbsoluteSourceSpan): ParseSourceSpan | null;
+
+  getHostBindingsMapping(id: TemplateId): TemplateSourceMapping;
 }
 
 /**
@@ -84,7 +86,7 @@ export enum TcbInliningRequirement {
 export function requiresInlineTypeCheckBlock(
   ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
   env: ReferenceEmitEnvironment,
-  usedPipes: Reference<ClassDeclaration<ts.ClassDeclaration>>[],
+  usedPipes: Reference<ClassDeclaration<ts.ClassDeclaration>>[] | null,
   reflector: ReflectionHost,
 ): TcbInliningRequirement {
   // In order to qualify for a declared TCB (not inline) two conditions must be met:
@@ -97,7 +99,7 @@ export function requiresInlineTypeCheckBlock(
     // Condition 2 is false, the class has constrained generic types. It should be checked with an
     // inline TCB if possible, but can potentially use fallbacks to avoid inlining if not.
     return TcbInliningRequirement.ShouldInlineForGenericBounds;
-  } else if (usedPipes.some((pipeRef) => !env.canReferenceType(pipeRef))) {
+  } else if (usedPipes?.some((pipeRef) => !env.canReferenceType(pipeRef))) {
     // If one of the pipes used by the component is not exported, a non-inline TCB will not be able
     // to import it, so this requires an inline TCB.
     return TcbInliningRequirement.MustInline;
@@ -119,14 +121,42 @@ export function getTemplateMapping(
     return null;
   }
 
-  const mapping = resolver.getSourceMapping(sourceLocation.id);
   const span = resolver.toParseSourceSpan(sourceLocation.id, sourceLocation.span);
   if (span === null) {
     return null;
   }
   // TODO(atscott): Consider adding a context span by walking up from `node` until we get a
   // different span.
-  return {sourceLocation, templateSourceMapping: mapping, span};
+  return {
+    sourceLocation,
+    templateSourceMapping: getSourceMapping(resolver, sourceLocation.id, node),
+    span,
+  };
+}
+
+function getSourceMapping(
+  resolver: TemplateSourceResolver,
+  id: TemplateId,
+  node: ts.Node,
+): TemplateSourceMapping {
+  let current = node;
+
+  while (current && !ts.isFunctionDeclaration(current)) {
+    if (
+      ts.isIfStatement(current) &&
+      ts.isBinaryExpression(current.expression) &&
+      current.expression.left.kind === ts.SyntaxKind.TrueKeyword &&
+      current.expression.operatorToken.kind === ts.SyntaxKind.BarBarToken &&
+      ts.isStringLiteral(current.expression.right) &&
+      current.expression.right.text === 'ngHost'
+    ) {
+      return resolver.getHostBindingsMapping(id);
+    }
+
+    current = current.parent;
+  }
+
+  return resolver.getSourceMapping(id);
 }
 
 export function findTypeCheckBlock(

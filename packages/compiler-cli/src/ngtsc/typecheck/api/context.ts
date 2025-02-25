@@ -21,11 +21,24 @@ import {ClassDeclaration} from '../../reflection';
 
 import {TemplateSourceMapping, TypeCheckableDirectiveMeta} from './api';
 
+export interface TemplateContext {
+  nodes: TmplAstNode[];
+  sourceMapping: TemplateSourceMapping;
+  file: ParseSourceFile;
+  parseErrors: ParseError[] | null;
+}
+
+export interface HostBindingsContext {
+  nodes: TmplAstNode[]; // TODO: should probably be just one node
+  sourceMapping: TemplateSourceMapping;
+}
+
 /**
  * A currently pending type checking operation, into which templates for type-checking can be
  * registered.
  */
 export interface TypeCheckContext {
+  // TODO: rename this method since it's dealing with more than just templates.
   /**
    * Register a template to potentially be type-checked.
    *
@@ -50,12 +63,10 @@ export interface TypeCheckContext {
   addTemplate(
     ref: Reference<ClassDeclaration<ts.ClassDeclaration>>,
     binder: R3TargetBinder<TypeCheckableDirectiveMeta>,
-    template: TmplAstNode[],
+    templateContext: TemplateContext,
+    hostBindingContext: HostBindingsContext | null,
     pipes: Map<string, PipeMeta>,
     schemas: SchemaMetadata[],
-    sourceMapping: TemplateSourceMapping,
-    file: ParseSourceFile,
-    parseErrors: ParseError[] | null,
     isStandalone: boolean,
     preserveWhitespaces: boolean,
   ): void;

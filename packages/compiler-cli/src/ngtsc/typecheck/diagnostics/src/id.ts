@@ -22,6 +22,7 @@ interface HasNextTemplateId {
   [NEXT_TEMPLATE_ID]: number;
 }
 
+// TODO: rename `TemplateId`?
 export function getTemplateId(clazz: DeclarationNode): TemplateId {
   const node = clazz as ts.Declaration & Partial<HasTemplateId>;
   if (node[TEMPLATE_ID] === undefined) {
