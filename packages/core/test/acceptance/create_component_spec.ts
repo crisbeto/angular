@@ -523,7 +523,7 @@ describe('createComponent', () => {
           environmentInjector,
           directives: [NotADir],
         });
-      }).toThrowError(/Class NotADir is not a directive/);
+      }).toThrowError(/Type NotADir does not have 'ɵdir' property/);
     });
 
     it('should throw if a component class is attached', () => {
@@ -542,7 +542,7 @@ describe('createComponent', () => {
           environmentInjector,
           directives: [NotADir],
         });
-      }).toThrowError(/Class NotADir is not a directive/);
+      }).toThrowError(/Type NotADir does not have 'ɵdir' property/);
     });
   });
 
