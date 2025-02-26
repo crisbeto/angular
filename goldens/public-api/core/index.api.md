@@ -193,6 +193,18 @@ export interface BaseResourceOptions<T, R> {
 }
 
 // @public
+export interface Binding {
+    // (undocumented)
+    readonly [BINDING]: {
+        readonly kind: string;
+        readonly requiredVars: number;
+    };
+    create?(): void;
+    readonly target?: unknown;
+    update?(): void;
+}
+
+// @public
 export function booleanAttribute(value: unknown): boolean;
 
 // @public
@@ -988,6 +1000,9 @@ export const Input: InputDecorator;
 
 // @public
 export const input: InputFunction;
+
+// @public
+export function inputBinding<T>(publicName: string, value: () => unknown): Binding;
 
 // @public (undocumented)
 export interface InputDecorator {
