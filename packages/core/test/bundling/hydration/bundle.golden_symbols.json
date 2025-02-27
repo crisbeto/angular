@@ -332,6 +332,7 @@
   "isFunction",
   "isHydrationSupportEnabled",
   "isInSkipHydrationBlock",
+  "isInputBinding",
   "isInteropObservable",
   "isIterable",
   "isLContainer",
