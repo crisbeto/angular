@@ -50,6 +50,8 @@ export interface TemplateTypeChecker {
    */
   getTemplate(component: ts.ClassDeclaration, optimizeFor?: OptimizeFor): TmplAstNode[] | null;
 
+  getHostBindings(directive: ts.ClassDeclaration, optimizeFor?: OptimizeFor): TmplAstNode[] | null;
+
   /**
    * Get all `ts.Diagnostic`s currently available for the given `ts.SourceFile`.
    *

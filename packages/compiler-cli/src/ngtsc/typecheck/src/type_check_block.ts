@@ -154,7 +154,6 @@ export function generateTypeCheckBlock(
     meta.isStandalone,
     meta.preserveWhitespaces,
   );
-  const scope = Scope.forNodes(tcb, null, null, tcb.boundTarget.target.template!, /* guard */ null);
   const ctxRawType = env.referenceType(ref);
   if (!ts.isTypeReferenceNode(ctxRawType)) {
     throw new Error(
@@ -195,15 +194,30 @@ export function generateTypeCheckBlock(
   }
 
   const paramList = [tcbThisParam(ctxRawType.typeName, typeArguments)];
+  const statements = [
+    createBlock(tcb, env, tcb.boundTarget.target.template!, ts.factory.createTrue(), false),
+  ];
 
-  const scopeStatements = scope.render();
-  const innerBody = ts.factory.createBlock([...env.getPreludeStatements(), ...scopeStatements]);
+  if (tcb.boundTarget.target.host) {
+    statements.push(
+      createBlock(
+        tcb,
+        env,
+        tcb.boundTarget.target.host,
+        // Produce `true || 'ngHost'` since just `ngHost` causes a "this expression is always true"
+        // diagnostic.
+        ts.factory.createBinaryExpression(
+          ts.factory.createTrue(),
+          ts.SyntaxKind.BarBarToken,
+          // TODO: probably needs something more unique
+          ts.factory.createStringLiteral('ngHost'),
+        ),
+        true,
+      ),
+    );
+  }
 
-  // Wrap the body in an "if (true)" expression. This is unnecessary but has the effect of causing
-  // the `ts.Printer` to format the type-check block nicely.
-  const body = ts.factory.createBlock([
-    ts.factory.createIfStatement(ts.factory.createTrue(), innerBody, undefined),
-  ]);
+  const body = ts.factory.createBlock(statements);
   const fnDecl = ts.factory.createFunctionDeclaration(
     /* modifiers */ undefined,
     /* asteriskToken */ undefined,
@@ -215,6 +229,23 @@ export function generateTypeCheckBlock(
   );
   addTemplateId(fnDecl, meta.id);
   return fnDecl;
+}
+
+function createBlock(
+  tcb: Context,
+  env: Environment,
+  nodes: TmplAstNode[],
+  wrapperExpression: ts.Expression,
+  disableElementChecks: boolean,
+): ts.Statement {
+  const scope = Scope.forNodes(tcb, null, null, nodes, /* guard */ null, disableElementChecks);
+  const scopeStatements = scope.render();
+  const innerBody = ts.factory.createBlock([...env.getPreludeStatements(), ...scopeStatements]);
+
+  // Wrap the body in an if statement. This serves two purposes:
+  // 1. It allows us to distinguish between the sections of the block (e.g. host or template).
+  // 2. It allows the `ts.Printer` to produce better-looking output.
+  return ts.factory.createIfStatement(wrapperExpression, innerBody);
 }
 
 /** Types that can referenced locally in a template. */
@@ -521,6 +552,7 @@ class TcbTemplateBodyOp extends TcbOp {
       this.template,
       this.template.children,
       guard,
+      this.scope.disableElementChecks,
     );
 
     // Render the template's `Scope` into its statements.
@@ -1651,7 +1683,14 @@ class TcbIfOp extends TcbOp {
     // that the body will inherit from. We do this, because we need to declare a separate variable
     // for the case where the expression has an alias _and_ because we need the processed
     // expression when generating the guard for the body.
-    const outerScope = Scope.forNodes(this.tcb, this.scope, branch, [], null);
+    const outerScope = Scope.forNodes(
+      this.tcb,
+      this.scope,
+      branch,
+      [],
+      null,
+      this.scope.disableElementChecks,
+    );
     outerScope.render().forEach((stmt) => this.scope.addStatement(stmt));
     this.expressionScopes.set(branch, outerScope);
 
@@ -1680,6 +1719,7 @@ class TcbIfOp extends TcbOp {
       null,
       checkBody ? branch.children : [],
       checkBody ? this.generateBranchGuard(index) : null,
+      this.scope.disableElementChecks,
     );
   }
 
@@ -1775,6 +1815,7 @@ class TcbSwitchOp extends TcbOp {
         null,
         checkBody ? current.children : [],
         checkBody ? this.generateGuard(current, switchExpression) : null,
+        this.scope.disableElementChecks,
       );
       const statements = [...clauseScope.render(), ts.factory.createBreakStatement()];
 
@@ -1874,6 +1915,7 @@ class TcbForOfOp extends TcbOp {
       this.block,
       this.tcb.env.config.checkControlFlowBodies ? this.block.children : [],
       null,
+      this.scope.disableElementChecks,
     );
     const initializerId = loopScope.resolve(this.block.item);
     if (!ts.isIdentifier(initializerId)) {
@@ -2050,6 +2092,7 @@ class Scope {
     private tcb: Context,
     private parent: Scope | null = null,
     private guard: ts.Expression | null = null,
+    readonly disableElementChecks: boolean,
   ) {}
 
   /**
@@ -2069,8 +2112,9 @@ class Scope {
     scopedNode: TmplAstTemplate | TmplAstIfBlockBranch | TmplAstForLoopBlock | null,
     children: TmplAstNode[],
     guard: ts.Expression | null,
+    disableElementChecks: boolean, // TODO: temporary
   ): Scope {
-    const scope = new Scope(tcb, parentScope, guard);
+    const scope = new Scope(tcb, parentScope, guard, disableElementChecks);
 
     if (parentScope === null && tcb.env.config.enableTemplateTypeChecker) {
       // Add an autocompletion point for the component context.
@@ -2429,7 +2473,13 @@ class Scope {
       if (node instanceof TmplAstElement) {
         this.opQueue.push(new TcbUnclaimedInputsOp(this.tcb, this, node, claimedInputs));
         this.opQueue.push(
-          new TcbDomSchemaCheckerOp(this.tcb, node, /* checkElement */ true, claimedInputs),
+          // TODO
+          new TcbDomSchemaCheckerOp(
+            this.tcb,
+            node,
+            /* checkElement */ !this.disableElementChecks,
+            claimedInputs,
+          ),
         );
       }
       return;
@@ -2491,7 +2541,7 @@ class Scope {
       // web component), and should be checked against the DOM schema. If any directives match,
       // we must assume that the element could be custom (either a component, or a directive like
       // <router-outlet>) and shouldn't validate the element name itself.
-      const checkElement = directives.length === 0;
+      const checkElement = !this.disableElementChecks && directives.length === 0;
       this.opQueue.push(new TcbDomSchemaCheckerOp(this.tcb, node, checkElement, claimedInputs));
     }
   }
@@ -2548,7 +2598,14 @@ class Scope {
             }
           }
         }
-        this.opQueue.push(new TcbDomSchemaCheckerOp(this.tcb, node, !hasDirectives, claimedInputs));
+        this.opQueue.push(
+          new TcbDomSchemaCheckerOp(
+            this.tcb,
+            node,
+            !hasDirectives && !this.disableElementChecks,
+            claimedInputs,
+          ),
+        );
       }
 
       this.appendDeepSchemaChecks(node.children);

@@ -44,6 +44,7 @@ export interface TypeCheckableDirectiveMeta extends DirectiveMeta, DirectiveType
   rawImports: ts.Expression | null;
 }
 
+// TODO: rename this to something like `TypeCheckId`.
 export type TemplateId = string & {__brand: 'TemplateId'};
 
 /**
@@ -377,7 +378,7 @@ export type TemplateSourceMapping =
  */
 export interface DirectTemplateSourceMapping {
   type: 'direct';
-  node: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral;
+  node: ts.Expression;
 }
 
 /**

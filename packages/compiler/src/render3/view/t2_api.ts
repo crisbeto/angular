@@ -68,6 +68,7 @@ export type TemplateEntity = Reference | Variable | LetDeclaration;
  */
 export interface Target {
   template?: Node[];
+  host?: Node[];
 }
 
 /**

@@ -41,6 +41,11 @@ import {
   SelectorMatcher,
   TmplAstDeferredBlock,
   ViewEncapsulation,
+  TmplAstBoundAttribute,
+  BindingType,
+  TmplAstElement,
+  TmplAstBoundEvent,
+  ParsedEvent,
 } from '@angular/compiler';
 import ts from 'typescript';
 
@@ -116,7 +121,13 @@ import {
   HandlerPrecedence,
   ResolveResult,
 } from '../../../transform';
-import {TemplateId, TypeCheckableDirectiveMeta, TypeCheckContext} from '../../../typecheck/api';
+import {
+  HostBindingsContext,
+  TemplateContext,
+  TemplateId,
+  TypeCheckableDirectiveMeta,
+  TypeCheckContext,
+} from '../../../typecheck/api';
 import {ExtendedTemplateChecker} from '../../../typecheck/extended/api';
 import {TemplateSemanticsChecker} from '../../../typecheck/template_semantics/api/api';
 import {getSourceFile} from '../../../util/src/typescript';
@@ -127,6 +138,7 @@ import {
   compileInputTransformFields,
   compileNgFactoryDefField,
   compileResults,
+  createSourceSpan,
   extractClassDebugInfo,
   extractClassMetadata,
   extractSchemas,
@@ -147,6 +159,7 @@ import {
   ResourceLoader,
   toFactoryMetadata,
   tryUnwrapForwardRef,
+  unwrapExpression,
   validateHostDirectives,
   wrapFunctionExpressionsInParens,
 } from '../../common';
@@ -162,6 +175,7 @@ import {
 import {
   _extractTemplateStyleUrls,
   extractComponentStyleUrls,
+  extractHostBindingResources,
   extractInlineStyleResources,
   extractTemplate,
   makeResourceNotFoundError,
@@ -727,6 +741,7 @@ export class ComponentDecoratorHandler
     let styles: string[] = [];
     const externalStyles: string[] = [];
 
+    const hostBindingResources = extractHostBindingResources(directiveResult.hostBindingNodes);
     const styleResources = extractInlineStyleResources(component);
     const styleUrls: StyleUrlMeta[] = [
       ...extractComponentStyleUrls(this.evaluator, component),
@@ -901,6 +916,7 @@ export class ComponentDecoratorHandler
         resources: {
           styles: styleResources,
           template: templateResource,
+          hostBindings: hostBindingResources,
         },
         isPoisoned,
         animationTriggerNames,
@@ -1039,17 +1055,188 @@ export class ComponentDecoratorHandler
     }
 
     const binder = new R3TargetBinder<TypeCheckableDirectiveMeta>(scope.matcher);
+    const ref = new Reference(node);
+    const argsExpr = unwrapExpression(
+      (meta.decorator!.expression as ts.CallExpression).arguments[0],
+    );
+
+    const noopSelector = new SelectorMatcher();
+    const noopBinder = new R3TargetBinder<TypeCheckableDirectiveMeta>(noopSelector);
+    let hostBindings: HostBindingsContext | null = null;
+
+    // TODO: this code should live somewhere else
+    // TODO: needs a compiler flag
+    // TODO: does not account for host binding decorators
+    // TODO: needs to run for directives as well
+    if (ts.isObjectLiteralExpression(argsExpr)) {
+      argsExpr.properties.forEach((prop) => {
+        if (
+          !ts.isPropertyAssignment(prop) ||
+          prop.name.getText() !== 'host' ||
+          !ts.isObjectLiteralExpression(prop.initializer)
+        ) {
+          return;
+        }
+
+        hostBindings = {
+          nodes: [this.getSyntheticHostElement(prop.initializer, meta.meta.selector)],
+          sourceMapping: {
+            type: 'direct',
+            node: prop.initializer,
+          },
+        };
+
+        // ctx.addHostElement(
+        //   ref,
+        //   noopBinder,
+        //   this.getSyntheticHostElement(prop.initializer, meta.meta.selector),
+        //   // TODO: account for indirect host bindings (e.g. resolved through the evaluator).
+        //   // TODO: diagnostics say `(Comp template)`, should be something like `(Comp host binding)`.
+        //   // TODO: relatedInformation says `Error occurs in the template of component Comp.`. Needs
+        //   // to be reworded.
+        //   // {
+        //   //   type: 'indirect',
+        //   //   componentClass: node,
+        //   //   node: prop.name as ts.Expression,
+        //   //   template: prop.getSourceFile().text,
+        //   // },
+        //   {
+        //     type: 'direct',
+        //     node: prop.initializer,
+        //   },
+        // );
+      });
+    }
+
     ctx.addTemplate(
-      new Reference(node),
+      ref,
       binder,
-      meta.template.diagNodes,
+      {
+        nodes: meta.template.diagNodes,
+        sourceMapping: meta.template.sourceMapping,
+        file: meta.template.file,
+        parseErrors: meta.template.errors,
+      },
+      hostBindings,
       scope.pipes,
       scope.schemas,
-      meta.template.sourceMapping,
-      meta.template.file,
-      meta.template.errors,
       meta.meta.isStandalone,
       meta.meta.template.preserveWhitespaces ?? false,
+    );
+  }
+
+  private getSyntheticHostElement(
+    hostBindings: ts.ObjectLiteralExpression,
+    selector: string | null,
+  ) {
+    const parser = makeBindingParser();
+    const inputs: TmplAstBoundAttribute[] = [];
+    const outputs: TmplAstBoundEvent[] = [];
+
+    for (const prop of hostBindings.properties) {
+      if (
+        !ts.isPropertyAssignment(prop) ||
+        !ts.isStringLiteralLike(prop.initializer) ||
+        (!ts.isIdentifier(prop.name) && !ts.isStringLiteralLike(prop.name))
+      ) {
+        continue;
+      }
+
+      const initializer = prop.initializer;
+      const key = prop.name.text;
+
+      // TODO: check that this accounts for something like `(document:click)`. `target` of the AST node should be filled out.
+      const sourceSpan = createSourceSpan(prop);
+      const keySpan = createSourceSpan(
+        prop.name,
+        prop.name.getStart() + (ts.isIdentifier(prop.name) ? 0 : 1),
+        prop.name.getEnd() - (ts.isIdentifier(prop.name) ? 0 : 1),
+      );
+
+      const valueSpan = createSourceSpan(
+        // Offset by one on both sides to skip over the quotes.
+        initializer,
+        initializer.getStart() + 1,
+        initializer.getEnd() - 1,
+      );
+
+      if (key.startsWith('(')) {
+        const events: ParsedEvent[] = [];
+        parser.parseEvent(
+          key.slice(1, -1),
+          initializer.text,
+          false,
+          sourceSpan,
+          valueSpan,
+          [],
+          events,
+          keySpan,
+        );
+
+        if (events.length !== 1) {
+          throw new Error('Failed to parse event binding');
+        }
+
+        outputs.push(TmplAstBoundEvent.fromParsedEvent(events[0]));
+      } else if (key.startsWith('[')) {
+        const attrPrefix = '[attr.';
+        const classPrefix = '[class.';
+        const stylePrefix = '[style.';
+        const animationPrefix = '[@';
+        let attrName: string;
+        let type: BindingType;
+
+        if (key.startsWith(attrPrefix)) {
+          attrName = key.slice(attrPrefix.length, -1);
+          type = BindingType.Attribute;
+        } else if (key.startsWith(classPrefix)) {
+          attrName = key.slice(classPrefix.length, -1);
+          type = BindingType.Class;
+        } else if (key.startsWith(stylePrefix)) {
+          attrName = key.slice(stylePrefix.length, -1);
+          type = BindingType.Style;
+        } else if (key.startsWith(animationPrefix)) {
+          attrName = key.slice(animationPrefix.length, -1);
+          type = BindingType.Animation;
+        } else {
+          attrName = key.slice(1, -1);
+          type = BindingType.Property;
+        }
+
+        inputs.push(
+          new TmplAstBoundAttribute(
+            attrName,
+            type,
+            0,
+            parser.parseBinding(initializer.text, true, valueSpan, valueSpan.start.offset),
+            null,
+            sourceSpan,
+            keySpan,
+            valueSpan,
+            undefined,
+          ),
+        );
+      }
+    }
+
+    const sourceSpan = createSourceSpan(hostBindings);
+    const tagName = selector === null ? null : CssSelector.parse(selector)[0].element;
+
+    // TODO: `document.createElement(null! as 'tag-1' | 'tag-2' ...)` allows us to get a union type
+    // from multiple tag names. It also gracefully falls back to `HTMLElement` if one of the
+    // tags isn't a native one.
+    // TODO: for event bindings we need to account for the target being something else
+    // (e.g. `(document:click)`).
+    return new TmplAstElement(
+      tagName ?? 'ng-component',
+      [],
+      inputs,
+      outputs,
+      [],
+      [],
+      sourceSpan,
+      sourceSpan,
+      null,
     );
   }
 

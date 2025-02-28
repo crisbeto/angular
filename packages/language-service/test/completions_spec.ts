@@ -2057,6 +2057,32 @@ describe('completions', () => {
       expectContain(completions, ts.ScriptElementKind.memberVariableElement, ['hasRing', 'size']);
     });
   });
+
+  describe('host bindings', () => {
+    it('should be able to complete a property host binding', () => {
+      const {appFile} = setupInlineTemplate(
+        '',
+        `title!: string; hero!: number;`,
+        undefined,
+        `host: {'[title]': 'ti'},`,
+      );
+      appFile.moveCursorToText(`'ti¦'`);
+      const completions = appFile.getCompletionsAtPosition();
+      expectContain(completions, ts.ScriptElementKind.memberVariableElement, ['title', 'hero']);
+    });
+
+    it('should be able to complete a listener host binding', () => {
+      const {appFile} = setupInlineTemplate(
+        '',
+        `title!: string; hero!: number;`,
+        undefined,
+        `host: {'(click)': 't'},`,
+      );
+      appFile.moveCursorToText(`'(click)': 't¦'`);
+      const completions = appFile.getCompletionsAtPosition();
+      expectContain(completions, ts.ScriptElementKind.memberVariableElement, ['title', 'hero']);
+    });
+  });
 });
 
 function expectContainInsertText(
@@ -2207,6 +2233,7 @@ function setupInlineTemplate(
   template: string,
   classContents: string,
   otherDeclarations: {[name: string]: string} = {},
+  componentMetadata = '',
 ): {
   appFile: OpenBuffer;
 } {
@@ -2222,6 +2249,7 @@ function setupInlineTemplate(
          @Component({
            template: '${template}',
            selector: 'app-cmp',
+           ${componentMetadata}
          })
          export class AppCmp {
            ${classContents}

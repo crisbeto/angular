@@ -169,7 +169,7 @@ export class R3TargetBinder<DirectiveT extends DirectiveMeta> implements TargetB
    * metadata about the types referenced in the template.
    */
   bind(target: Target): BoundTarget<DirectiveT> {
-    if (!target.template) {
+    if (!target.template && !target.host) {
       throw new Error('Empty bound targets are not supported');
     }
 
@@ -212,6 +212,21 @@ export class R3TargetBinder<DirectiveT extends DirectiveMeta> implements TargetB
       TemplateBinder.applyWithScope(
         target.template,
         scope,
+        expressions,
+        symbols,
+        nestingLevel,
+        usedPipes,
+        eagerPipes,
+        deferBlocks,
+      );
+    }
+
+    if (target.host) {
+      // TODO: this is likely incorrect. The host node needs to be scoped.
+      const hostScope = Scope.apply(target.host);
+      TemplateBinder.applyWithScope(
+        target.host,
+        hostScope,
         expressions,
         symbols,
         nestingLevel,

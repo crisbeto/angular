@@ -32,6 +32,7 @@ import {
   ResourceLoader,
   assertLocalCompilationUnresolvedConst,
 } from '../../common';
+import {HostBindingNodes} from '../../directive';
 
 /**
  * The literal style url extracted from the decorator, along with metadata for diagnostics.
@@ -720,4 +721,22 @@ export function _extractTemplateStyleUrls(template: ParsedTemplateWithSource): S
     source: ResourceTypeForDiagnostics.StylesheetFromTemplate,
     expression,
   }));
+}
+
+export function extractHostBindingResources(nodes: HostBindingNodes): ReadonlySet<Resource> {
+  const result = new Set<Resource>();
+
+  if (nodes.literal !== null) {
+    result.add({path: null, expression: nodes.literal});
+  }
+
+  for (const current of nodes.bindingDecorators) {
+    result.add({path: null, expression: current.expression});
+  }
+
+  for (const current of nodes.listenerDecorators) {
+    result.add({path: null, expression: current.expression});
+  }
+
+  return result;
 }

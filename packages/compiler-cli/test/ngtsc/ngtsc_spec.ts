@@ -106,6 +106,57 @@ runInEachFileSystem((os: string) => {
       expect(dtsContents).toContain('static ɵfac: i0.ɵɵFactoryDeclaration<Service, never>;');
     });
 
+    fit('', () => {
+      env.tsconfig({
+        strictTemplates: true,
+        strictAttributeTypes: true,
+        strictDomEventTypes: true,
+        strictOutputEventTypes: true,
+      });
+
+      env.write(
+        'some-dir.ts',
+        `
+        import {Directive} from '@angular/core';
+
+        @Directive({selector: '[dir]'})
+        export class SomeDir {}
+      `,
+      );
+
+      env.write('nested/template.html', `@let doesNotExist = 123; <div dir>{{doesNotExist}}</div>`);
+
+      env.write(
+        'test.ts',
+        `
+          import {Component} from '@angular/core';
+          import {SomeDir} from './some-dir';
+
+          @Component({
+            templateUrl: './nested/template.html',
+            // template: '<div dir>' + '{{doesNotExist}}</div>',
+            // template: '<div dir>{{1 + exists}}</div>',
+            host: {
+              '[attr.id]': 'exists + doesNotExist',
+              // '(click)': 'handleEvent($event)',
+              // '[foo]': '123',
+              // TODO: this works correctly, but for some reason the compiler flags don't enable
+              // the type checking for it fully. Likely an issue with the test setup.
+              // '(@someAnimation.done)': 'handleEvent($event)',
+              // '[@someAnimation]': '123',
+            },
+            imports: [SomeDir],
+          })
+          export class Comp {
+            exists = 'exists';
+
+            handleEvent(event: KeyboardEvent) {}
+          }
+      `,
+      );
+      env.driveMain();
+    });
+
     it('should compile Injectables with a generic service', () => {
       env.write(
         'test.ts',

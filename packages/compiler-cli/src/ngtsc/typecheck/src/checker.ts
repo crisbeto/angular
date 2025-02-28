@@ -151,10 +151,12 @@ export class TemplateTypeCheckerImpl implements TemplateTypeChecker {
 
   getTemplate(component: ts.ClassDeclaration, optimizeFor?: OptimizeFor): TmplAstNode[] | null {
     const {data} = this.getLatestComponentState(component, optimizeFor);
-    if (data === null) {
-      return null;
-    }
-    return data.template;
+    return data?.template || null;
+  }
+
+  getHostBindings(directive: ts.ClassDeclaration, optimizeFor?: OptimizeFor): TmplAstNode[] | null {
+    const {data} = this.getLatestComponentState(directive, optimizeFor);
+    return data?.hostBindings || null;
   }
 
   getUsedDirectives(component: ts.ClassDeclaration): TypeCheckableDirectiveMeta[] | null {
@@ -193,6 +195,8 @@ export class TemplateTypeCheckerImpl implements TemplateTypeChecker {
       return {data: null, tcb: null, tcbPath: shimPath, tcbIsShim: true};
     }
 
+    // TODO: templateId and id are the same?
+    // TODO: rename this to mention directives
     const templateId = fileRecord.sourceManager.getTemplateId(component);
     const shimRecord = fileRecord.shimData.get(shimPath)!;
     const id = fileRecord.sourceManager.getTemplateId(component);

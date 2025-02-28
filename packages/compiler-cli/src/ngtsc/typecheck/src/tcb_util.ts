@@ -55,6 +55,8 @@ export interface TemplateSourceResolver {
    * absolute offsets and gives access to the original template source.
    */
   toParseSourceSpan(id: TemplateId, span: AbsoluteSourceSpan): ParseSourceSpan | null;
+
+  getHostBindingsMapping(id: TemplateId): TemplateSourceMapping;
 }
 
 /**
@@ -119,14 +121,42 @@ export function getTemplateMapping(
     return null;
   }
 
-  const mapping = resolver.getSourceMapping(sourceLocation.id);
   const span = resolver.toParseSourceSpan(sourceLocation.id, sourceLocation.span);
   if (span === null) {
     return null;
   }
   // TODO(atscott): Consider adding a context span by walking up from `node` until we get a
   // different span.
-  return {sourceLocation, templateSourceMapping: mapping, span};
+  return {
+    sourceLocation,
+    templateSourceMapping: getSourceMapping(resolver, sourceLocation.id, node),
+    span,
+  };
+}
+
+function getSourceMapping(
+  resolver: TemplateSourceResolver,
+  id: TemplateId,
+  node: ts.Node,
+): TemplateSourceMapping {
+  let current = node;
+
+  while (current && !ts.isFunctionDeclaration(current)) {
+    if (
+      ts.isIfStatement(current) &&
+      ts.isBinaryExpression(current.expression) &&
+      current.expression.left.kind === ts.SyntaxKind.TrueKeyword &&
+      current.expression.operatorToken.kind === ts.SyntaxKind.BarBarToken &&
+      ts.isStringLiteral(current.expression.right) &&
+      current.expression.right.text === 'ngHost'
+    ) {
+      return resolver.getHostBindingsMapping(id);
+    }
+
+    current = current.parent;
+  }
+
+  return resolver.getSourceMapping(id);
 }
 
 export function findTypeCheckBlock(

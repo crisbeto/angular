@@ -871,6 +871,58 @@ describe('quick info', () => {
       const quickInfo2 = template.getQuickInfoAtPosition();
       expect(toText(quickInfo2!.displayParts)).toEqual('(property) SomeCmp.val2: number');
     });
+
+    describe('host bindings', () => {
+      function expectHostBindingsQuickInfo({
+        componentMetadata,
+        classContents,
+        moveTo,
+        expectedDisplayString,
+        expectedSpanText,
+      }: {
+        componentMetadata: string;
+        classContents: string;
+        moveTo: string;
+        expectedDisplayString: string;
+        expectedSpanText: string;
+      }) {
+        const source = `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: '',
+            selector: 'app-cmp',
+            ${componentMetadata}
+          })
+          export class AppCmp {
+            ${classContents}
+          }
+        `;
+        const project = env.addProject('host-bindings', {'host-bindings.ts': source});
+        const appFile = project.openFile('host-bindings.ts');
+
+        appFile.moveCursorToText(moveTo);
+        const quickInfo = appFile.getQuickInfoAtPosition();
+        expect(quickInfo).toBeTruthy();
+        const {textSpan, displayParts} = quickInfo!;
+        expect(source.substring(textSpan.start, textSpan.start + textSpan.length)).toEqual(
+          expectedSpanText,
+        );
+        expect(toText(displayParts)).toEqual(expectedDisplayString);
+      }
+
+      it('should handle proprety host bindings', () => {
+        expectHostBindingsQuickInfo({
+          componentMetadata: `host: {'[title]': 'myTitle'}`,
+          classContents: 'myTitle = "hello";',
+          moveTo: `'[title]': 'myT¦itle'`,
+          expectedSpanText: 'myTitle',
+          expectedDisplayString: '(property) AppCmp.myTitle: string',
+        });
+      });
+
+      // TODO: more tests
+    });
   });
 
   describe('generics', () => {

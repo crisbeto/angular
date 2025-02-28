@@ -96,6 +96,12 @@ export const queryDecoratorNames: QueryDecoratorName[] = [
   'ContentChildren',
 ];
 
+export interface HostBindingNodes {
+  literal: ts.ObjectLiteralExpression | null;
+  bindingDecorators: Set<ts.Decorator>;
+  listenerDecorators: Set<ts.Decorator>;
+}
+
 const QUERY_TYPES = new Set<string>(queryDecoratorNames);
 
 /**
@@ -129,6 +135,7 @@ export function extractDirectiveMetadata(
       hostDirectives: HostDirectiveMeta[] | null;
       rawHostDirectives: ts.Expression | null;
       inputFieldNamesFromMetadataArray: Set<string>;
+      hostBindingNodes: HostBindingNodes;
     }
   | {jitForced: true} {
   let directive: Map<string, ts.Expression>;
@@ -271,11 +278,17 @@ export function extractDirectiveMetadata(
     }
   }
 
+  const hostBindingNodes: HostBindingNodes = {
+    literal: null,
+    bindingDecorators: new Set<ts.Decorator>(),
+    listenerDecorators: new Set<ts.Decorator>(),
+  };
   const host = extractHostBindings(
     decoratedElements,
     evaluator,
     coreModule,
     compilationMode,
+    hostBindingNodes,
     directive,
   );
 
@@ -428,6 +441,7 @@ export function extractDirectiveMetadata(
     isStructural,
     hostDirectives,
     rawHostDirectives,
+    hostBindingNodes,
     // Track inputs from class metadata. This is useful for migration efforts.
     inputFieldNamesFromMetadataArray: new Set(
       Object.values(inputsFromMeta).map((i) => i.classPropertyName),
@@ -552,16 +566,21 @@ export function extractDecoratorQueryMetadata(
   };
 }
 
-export function extractHostBindings(
+function extractHostBindings(
   members: ClassMember[],
   evaluator: PartialEvaluator,
   coreModule: string | undefined,
   compilationMode: CompilationMode,
+  hostBindingNodes: HostBindingNodes,
   metadata?: Map<string, ts.Expression>,
 ): ParsedHostBindings {
   let bindings: ParsedHostBindings;
   if (metadata && metadata.has('host')) {
-    bindings = evaluateHostExpressionBindings(metadata.get('host')!, evaluator);
+    const hostExpression = metadata.get('host')!;
+    bindings = evaluateHostExpressionBindings(hostExpression, evaluator);
+    if (ts.isObjectLiteralExpression(hostExpression)) {
+      hostBindingNodes.literal = hostExpression;
+    }
   } else {
     bindings = parseHostBindings({});
   }
@@ -602,6 +621,10 @@ export function extractHostBindings(
           }
 
           hostPropertyName = resolved;
+
+          if (ts.isDecorator(decorator.node)) {
+            hostBindingNodes.bindingDecorators.add(decorator.node);
+          }
         }
 
         // Since this is a decorator, we know that the value is a class member. Always access it
@@ -662,6 +685,10 @@ export function extractHostBindings(
               );
             }
             args = resolvedArgs;
+          }
+
+          if (ts.isDecorator(decorator.node)) {
+            hostBindingNodes.listenerDecorators.add(decorator.node);
           }
         }
 

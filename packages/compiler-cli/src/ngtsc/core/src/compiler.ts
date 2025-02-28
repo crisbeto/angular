@@ -728,6 +728,7 @@ export class NgCompiler {
     return resourceRegistry.getComponentsWithStyle(resolve(styleFilePath));
   }
 
+  // TODO: can be a directive too
   /**
    * Retrieves external resources for the given component.
    */
@@ -738,11 +739,9 @@ export class NgCompiler {
     const {resourceRegistry} = this.ensureAnalyzed();
     const styles = resourceRegistry.getStyles(classDecl);
     const template = resourceRegistry.getTemplate(classDecl);
-    if (template === null) {
-      return null;
-    }
+    const hostBindings = resourceRegistry.getHostBindings(classDecl);
 
-    return {styles, template};
+    return {styles, template, hostBindings};
   }
 
   getMeta(classDecl: DeclarationNode): PipeMeta | DirectiveMeta | null {

@@ -76,6 +76,40 @@ describe('get typecheck block', () => {
     expect(content.substring(start, start + length)).toContain('myProp');
   });
 
+  it('should find type check block for a host binding', () => {
+    const files = {
+      'app.ts': `
+      import {Component} from '@angular/core';
+
+      @Component({
+        template: '',
+        standalone: false,
+        host: {'[id]': 'getId()'}
+      })
+      export class AppCmp {
+        getId() {
+          return 'test';
+        }
+      }`,
+    };
+    const env = LanguageServiceTestEnv.setup();
+    const project = createModuleAndProjectWithDeclarations(env, 'test', files);
+    project.expectNoSourceDiagnostics();
+
+    const appFile = project.openFile('app.ts');
+    appFile.moveCursorToText(`'get¦Id()'`);
+    const result = appFile.getTcb();
+    if (result === undefined) {
+      fail('Expected a valid TCB response');
+      return;
+    }
+
+    const {content, selections} = result;
+    expect(selections.length).toBe(1);
+    const {start, length} = selections[0];
+    expect(content.substring(start, start + length)).toContain('getId');
+  });
+
   it('should not find typecheck blocks outside a template', () => {
     const files = {
       'app.ts': `

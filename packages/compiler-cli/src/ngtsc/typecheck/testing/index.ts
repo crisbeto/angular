@@ -646,12 +646,15 @@ export function setup(
         ctx.addTemplate(
           classRef,
           binder,
-          nodes,
+          {
+            nodes,
+            sourceMapping,
+            parseErrors: errors,
+            file: templateFile,
+          },
+          null,
           pipes,
           [],
-          sourceMapping,
-          templateFile,
-          errors,
           false,
           false,
         );
