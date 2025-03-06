@@ -1497,6 +1497,52 @@ describe('find references and rename locations', () => {
     });
   });
 
+  describe('when cursor is on symbol referenced in component host binding', () => {
+    let appFile: OpenBuffer;
+
+    beforeEach(() => {
+      const files = {
+        'app.ts': `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: '',
+            standalone: false,
+            host: {
+              '[attr.id]': 'getId()',
+            }
+          })
+          export class AppCmp {
+            getId() {
+              return 'my-id';
+            }
+          }`,
+      };
+      env = LanguageServiceTestEnv.setup();
+      const project = createModuleAndProjectWithDeclarations(env, 'test', files, {
+        typeCheckHostBindings: true,
+      });
+      appFile = project.openFile('app.ts');
+      appFile.moveCursorToText('get¦Id() {');
+    });
+
+    it('gets component member reference', () => {
+      const refs = getReferencesAtPosition(appFile)!;
+      expect(refs.length).toBe(2);
+
+      assertFileNames(refs, ['app.ts']);
+      assertTextSpans(refs, ['getId']);
+    });
+
+    it('gets rename location', () => {
+      const renameLocations = getRenameLocationsAtPosition(appFile)!;
+      expect(renameLocations.length).toBe(2);
+
+      assertFileNames(renameLocations, ['app.ts']);
+      assertTextSpans(renameLocations, ['getId']);
+    });
+  });
+
   it('should get references to both input and output for two-way binding', () => {
     const files = {
       'dir.ts': `
