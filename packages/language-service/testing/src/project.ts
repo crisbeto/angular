@@ -9,6 +9,7 @@
 import {
   InternalOptions,
   LegacyNgcOptions,
+  MiscOptions,
   StrictTemplateOptions,
 } from '@angular/compiler-cli/src/ngtsc/core/api';
 import {
@@ -65,6 +66,7 @@ function writeTsconfig(
 
 export type TestableOptions = StrictTemplateOptions &
   InternalOptions &
+  Pick<MiscOptions, 'typeCheckHostBindings'> &
   Pick<LegacyNgcOptions, 'fullTemplateTypeCheck'>;
 
 export class Project {
