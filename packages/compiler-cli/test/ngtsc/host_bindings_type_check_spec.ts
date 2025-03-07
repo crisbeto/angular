@@ -57,6 +57,44 @@ runInEachFileSystem(() => {
       expect(getDiagnosticSourceCode(diags[0])).toBe('doesNotExist');
     });
 
+    fit('should check the value of an attribute host binding', () => {
+      env.write(
+        'test.ts',
+        `
+          import {Component} from '@angular/core';
+
+          @Component({
+            // template: '<div [attr.id]="acceptsNumber(\\'foo\\' + 123)"></div>',
+            template: '',
+            host: {
+              // '[attr.one]': 'a1(123 + \\'foo\\' + 456 + "bar" + 789 + \\'baz\\')'
+              // '[attr.two]': 'a1(\\'foo\\' + \\'baz\\' + 123)'
+              // '[attr.three]': 'a1(\\'foo\\')'
+              // '[attr.four]': 'a2(\\'foobarbaz\\', 123, 456, \\"hello\\")'
+              // This failed
+              '[attr.five]': 'a2(\\'foobarbaz\\', 123, 456, \\'\\"hello\\"\\')'
+              // '(click)': 'a1(123 + \\'foo\\' + 456 + \\'bar\\')'
+            },
+          })
+          export class Comp {
+            a1(a: number) {
+            }
+
+            a2(a: string, b: number, c: number, d: number) {
+            }
+          }
+      `,
+      );
+
+      env.driveMain();
+      // const diags = env.driveDiagnostics();
+      // console.log(getDiagnosticSourceCode(diags[0]));
+
+      // expect(diags.length).toBe(1);
+      // expect(diags[0].messageText).toBe(`Property 'doesNotExist' does not exist on type 'Comp'.`);
+      // expect(getDiagnosticSourceCode(diags[0])).toBe('doesNotExist');
+    });
+
     it('should check the value of a style host binding', () => {
       env.write(
         'test.ts',

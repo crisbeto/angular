@@ -26,6 +26,7 @@ import {
   LiteralPrimitive,
   ImplicitReceiver,
   AST,
+  RecursiveAstVisitor,
 } from '@angular/compiler';
 import ts from 'typescript';
 import {createSourceSpan} from '../../annotations/common';
@@ -178,12 +179,19 @@ function createNodeFromHostLiteralProperty(
   if (name.text.startsWith('[') && name.text.endsWith(']')) {
     const {attrName, type} = inferBoundAttribute(name.text.slice(1, -1));
     const valueSpan = createStaticExpressionSpan(initializer);
+    const src = initializer.getText().slice(1, -1);
+    const ast = parser.parseBinding(initializer.text, true, valueSpan, valueSpan.start.offset);
+    const visitor = new FixupSpansVisitor(src);
+
+    ast.visit(visitor);
+    visitor.fix();
+
     bindings.push(
       new TmplAstBoundAttribute(
         attrName,
         type,
         0,
-        parser.parseBinding(initializer.text, true, valueSpan, valueSpan.start.offset),
+        ast,
         null,
         createSourceSpan(property),
         createStaticExpressionSpan(name),
@@ -209,6 +217,63 @@ function createNodeFromHostLiteralProperty(
     }
 
     listeners.push(TmplAstBoundEvent.fromParsedEvent(events[0]));
+  }
+}
+
+class FixupSpansVisitor extends RecursiveAstVisitor {
+  private nodes: AST[] = [];
+
+  constructor(private source: string) {
+    super();
+  }
+
+  override visit(ast: AST, context?: any) {
+    this.nodes.push(ast);
+    super.visit(ast, context);
+  }
+
+  fix() {
+    const escapedStringOffsets: number[] = [];
+    let escapedCount = 0;
+
+    this.nodes.sort((a, b) => a.span.start - b.span.start);
+
+    for (const n of this.nodes) {
+      if (n instanceof LiteralPrimitive && typeof n.value === 'string') {
+        if (this.source[n.span.start + escapedCount] === '\\') {
+          escapedCount += 2;
+          escapedStringOffsets.push(n.span.start);
+        }
+      }
+    }
+
+    if (escapedCount === 0) {
+      return;
+    }
+
+    for (const n of this.nodes) {
+      let preceding = 0;
+      let including = 0;
+
+      for (const start of escapedStringOffsets) {
+        if (start < n.span.start) {
+          preceding++;
+        } else if (start <= n.span.end) {
+          including++;
+        }
+      }
+
+      if (preceding > 0 || including > 0) {
+        const startOffset = preceding * 2;
+        const endOffset = startOffset + including * 2;
+
+        n.span = new ParseSpan(n.span.start + startOffset, n.span.end + endOffset);
+        n.sourceSpan = new AbsoluteSourceSpan(
+          n.sourceSpan.start + startOffset,
+          n.sourceSpan.end + endOffset,
+        );
+      }
+    }
   }
 }
 
