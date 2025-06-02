@@ -17,6 +17,11 @@ export enum CompilationJobKind {
   Both, // A special value used to indicate that some logic applies to both compilation types
 }
 
+export enum CompilationMode {
+  Full,
+  DomOnly,
+}
+
 /**
  * An entire ongoing compilation, which will result in one or more template functions when complete.
  * Contains one or more corresponding compilation units.
@@ -26,6 +31,7 @@ export abstract class CompilationJob {
     readonly componentName: string,
     readonly pool: ConstantPool,
     readonly compatibility: ir.CompatibilityMode,
+    readonly mode: CompilationMode,
   ) {}
 
   kind: CompilationJobKind = CompilationJobKind.Both;
@@ -69,6 +75,7 @@ export class ComponentCompilationJob extends CompilationJob {
     componentName: string,
     pool: ConstantPool,
     compatibility: ir.CompatibilityMode,
+    mode: CompilationMode,
     readonly relativeContextFilePath: string,
     readonly i18nUseExternalIds: boolean,
     readonly deferMeta: R3ComponentDeferMetadata,
@@ -76,7 +83,7 @@ export class ComponentCompilationJob extends CompilationJob {
     readonly relativeTemplatePath: string | null,
     readonly enableDebugLocations: boolean,
   ) {
-    super(componentName, pool, compatibility);
+    super(componentName, pool, compatibility, mode);
     this.root = new ViewCompilationUnit(this, this.allocateXrefId(), null);
     this.views.set(this.root.xref, this.root);
   }
@@ -237,8 +244,13 @@ export class ViewCompilationUnit extends CompilationUnit {
  * Compilation-in-progress of a host binding, which contains a single unit for that host binding.
  */
 export class HostBindingCompilationJob extends CompilationJob {
-  constructor(componentName: string, pool: ConstantPool, compatibility: ir.CompatibilityMode) {
-    super(componentName, pool, compatibility);
+  constructor(
+    componentName: string,
+    pool: ConstantPool,
+    compatibility: ir.CompatibilityMode,
+    mode: CompilationMode,
+  ) {
+    super(componentName, pool, compatibility, mode);
     this.root = new HostBindingCompilationUnit(this);
   }
 

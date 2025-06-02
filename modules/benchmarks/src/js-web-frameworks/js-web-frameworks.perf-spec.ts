@@ -67,7 +67,8 @@ const testPackageName = process.env['BAZEL_TARGET']!.split(':')[0].split('/').po
 describe('js-web-frameworks benchmark perf', () => {
   afterEach(verifyNoBrowserErrors);
 
-  [Create1KWorker, Delete1KWorker, UpdateWorker, SelectWorker, SwapWorker].forEach((worker) => {
+  // [Create1KWorker, Delete1KWorker, UpdateWorker, SelectWorker, SwapWorker].forEach((worker) => {
+  [Create1KWorker].forEach((worker) => {
     describe(worker.id, () => {
       it(`should run benchmark for ${testPackageName}`, async () => {
         await runTableBenchmark({

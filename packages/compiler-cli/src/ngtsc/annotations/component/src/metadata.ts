@@ -43,7 +43,7 @@ import {HostBindingNodes} from '../../directive';
  */
 export type ComponentMetadataResolvedFields = SubsetOfKeys<
   R3ComponentMetadata<R3TemplateDependencyMetadata>,
-  'declarations' | 'declarationListEmitMode' | 'defer'
+  'declarations' | 'declarationListEmitMode' | 'defer' | 'hasDirectiveDependencies'
 >;
 
 export interface ComponentAnalysisData {
@@ -152,6 +152,8 @@ export interface ComponentResolutionData {
    * defer resolver function in `PerComponent` mode.
    */
   deferPerComponentDependencies: R3DeferPerComponentDependency[];
+
+  hasDirectiveDependencies: boolean;
 }
 
 /**

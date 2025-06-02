@@ -180,6 +180,8 @@ export class PartialComponentLinkerVersion1<TStatement, TExpression>
       }
     }
 
+    let hasDirectiveDependencies = false;
+
     // Process the new style field:
     if (metaObj.has('dependencies')) {
       for (const dep of metaObj.getArray('dependencies')) {
@@ -189,6 +191,7 @@ export class PartialComponentLinkerVersion1<TStatement, TExpression>
         switch (depObj.getString('kind')) {
           case 'directive':
           case 'component':
+            hasDirectiveDependencies = true;
             declarations.push(makeDirectiveMetadata(depObj, typeExpr));
             break;
           case 'pipe':
@@ -203,6 +206,7 @@ export class PartialComponentLinkerVersion1<TStatement, TExpression>
             });
             break;
           case 'ngmodule':
+            hasDirectiveDependencies = true;
             declarations.push({
               kind: R3TemplateDependencyKind.NgModule,
               type: typeExpr,
@@ -239,6 +243,7 @@ export class PartialComponentLinkerVersion1<TStatement, TExpression>
       relativeTemplatePath: null,
       i18nUseExternalIds: false,
       declarations,
+      hasDirectiveDependencies,
     };
   }
 

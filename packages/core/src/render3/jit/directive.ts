@@ -149,6 +149,10 @@ export function compileComponent(type: Type<any>, metadata: Component): void {
           encapsulation,
           interpolation: metadata.interpolation,
           viewProviders: metadata.viewProviders || null,
+          // We can't inspect whether any of the dependencies are actually directives, because they
+          // get patched on after compilation. That's why in JIT mode we consider that any
+          // dependency might be a directive dependency.
+          hasDirectiveDependencies: metadata.imports != null && metadata.imports.length > 0,
         };
 
         compilationDepth++;

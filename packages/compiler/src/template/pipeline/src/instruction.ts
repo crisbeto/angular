@@ -643,6 +643,122 @@ export function classMap(
   return call(Identifiers.classMap, [value], sourceSpan);
 }
 
+export function domElement(
+  slot: number,
+  tag: string,
+  constIndex: number | null,
+  localRefIndex: number | null,
+  sourceSpan: ParseSourceSpan,
+): ir.CreateOp {
+  return elementOrContainerBase(
+    Identifiers.domElement,
+    slot,
+    tag,
+    constIndex,
+    localRefIndex,
+    sourceSpan,
+  );
+}
+
+export function domElementStart(
+  slot: number,
+  tag: string,
+  constIndex: number | null,
+  localRefIndex: number | null,
+  sourceSpan: ParseSourceSpan,
+): ir.CreateOp {
+  return elementOrContainerBase(
+    Identifiers.domElementStart,
+    slot,
+    tag,
+    constIndex,
+    localRefIndex,
+    sourceSpan,
+  );
+}
+
+export function domElementEnd(sourceSpan: ParseSourceSpan | null): ir.CreateOp {
+  return call(Identifiers.domElementEnd, [], sourceSpan);
+}
+
+export function domElementContainerStart(
+  slot: number,
+  constIndex: number | null,
+  localRefIndex: number | null,
+  sourceSpan: ParseSourceSpan,
+): ir.CreateOp {
+  return elementOrContainerBase(
+    Identifiers.domElementContainerStart,
+    slot,
+    /* tag */ null,
+    constIndex,
+    localRefIndex,
+    sourceSpan,
+  );
+}
+
+export function domElementContainer(
+  slot: number,
+  constIndex: number | null,
+  localRefIndex: number | null,
+  sourceSpan: ParseSourceSpan,
+): ir.CreateOp {
+  return elementOrContainerBase(
+    Identifiers.domElementContainer,
+    slot,
+    /* tag */ null,
+    constIndex,
+    localRefIndex,
+    sourceSpan,
+  );
+}
+
+export function domElementContainerEnd(): ir.CreateOp {
+  return call(Identifiers.domElementContainerEnd, [], null);
+}
+
+export function domListener(
+  name: string,
+  handlerFn: o.Expression,
+  eventTargetResolver: o.ExternalReference | null,
+  sourceSpan: ParseSourceSpan,
+): ir.CreateOp {
+  const args = [o.literal(name), handlerFn];
+  if (eventTargetResolver !== null) {
+    args.push(o.importExpr(eventTargetResolver));
+  }
+  return call(Identifiers.domListener, args, sourceSpan);
+}
+
+// TODO: dedupe
+export function domTemplate(
+  slot: number,
+  templateFnRef: o.Expression,
+  decls: number,
+  vars: number,
+  tag: string | null,
+  constIndex: number | null,
+  localRefs: number | null,
+  sourceSpan: ParseSourceSpan,
+): ir.CreateOp {
+  const args = [
+    o.literal(slot),
+    templateFnRef,
+    o.literal(decls),
+    o.literal(vars),
+    o.literal(tag),
+    o.literal(constIndex),
+  ];
+  if (localRefs !== null) {
+    args.push(o.literal(localRefs));
+    args.push(o.importExpr(Identifiers.templateRefExtractor));
+  }
+  while (args[args.length - 1].isEquivalent(o.NULL_EXPR)) {
+    args.pop();
+  }
+  return call(Identifiers.domTemplate, args, sourceSpan);
+}
+
 const PIPE_BINDINGS: o.ExternalReference[] = [
   Identifiers.pipeBind1,
   Identifiers.pipeBind2,

@@ -1222,6 +1222,7 @@ export class ComponentDecoratorHandler
         deferBlockDepsEmitMode: DeferBlockDepsEmitMode.PerComponent,
         deferrableDeclToImportDecl: new Map(),
         deferPerComponentDependencies: analysis.explicitlyDeferredTypes ?? [],
+        hasDirectiveDependencies: true,
       };
 
       if (this.localCompilationExtraImportsTracker === null) {
@@ -1238,6 +1239,7 @@ export class ComponentDecoratorHandler
         deferBlockDepsEmitMode: DeferBlockDepsEmitMode.PerBlock,
         deferrableDeclToImportDecl: new Map(),
         deferPerComponentDependencies: [],
+        hasDirectiveDependencies: true,
       };
     }
 
@@ -1301,6 +1303,11 @@ export class ComponentDecoratorHandler
         declarations,
         eagerlyUsed,
         symbol,
+      );
+
+      data.hasDirectiveDependencies = data.declarations.some(
+        ({kind}) =>
+          kind === R3TemplateDependencyKind.Directive || kind === R3TemplateDependencyKind.NgModule,
       );
     }
 
