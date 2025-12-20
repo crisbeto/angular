@@ -162,6 +162,10 @@ class SerializeExpressionVisitor implements expr.AstVisitor {
     return ast.tag.visit(this, context) + ast.template.visit(this, context);
   }
 
+  visitSpreadElement(ast: expr.SpreadElement, context: any) {
+    return `...${ast.expression.visit(this, context)}`;
+  }
+
   visitParenthesizedExpression(ast: expr.ParenthesizedExpression, context: any) {
     return '(' + ast.expression.visit(this, context) + ')';
   }
