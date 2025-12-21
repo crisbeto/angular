@@ -995,3 +995,54 @@ export declare class TestComp {
     static ɵcmp: i0.ɵɵComponentDeclaration<TestComp, "ng-component", never, {}, {}, never, never, true, never>;
 }
 
+/****************************************************************************************************
+ * PARTIAL FILE: call_rest.js
+ ****************************************************************************************************/
+import { Component } from '@angular/core';
+import * as i0 from "@angular/core";
+export class TestComp {
+    constructor() {
+        this.foo = [];
+        this.bar = [];
+        this.baz = [];
+    }
+    fn(..._) { }
+}
+TestComp.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: TestComp, deps: [], target: i0.ɵɵFactoryTarget.Component });
+TestComp.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: TestComp, isStandalone: true, selector: "ng-component", ngImport: i0, template: `
+    {{fn(...foo)}}
+    <hr>
+    {{fn(1, ...foo, 2)}}
+    <hr>
+    {{fn(...foo, 1, ...bar, ...baz, 2)}}
+    <hr>
+    {{fn(1, ...[2, ...[3]])}}
+  `, isInline: true });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: TestComp, decorators: [{
+            type: Component,
+            args: [{
+                    template: `
+    {{fn(...foo)}}
+    <hr>
+    {{fn(1, ...foo, 2)}}
+    <hr>
+    {{fn(...foo, 1, ...bar, ...baz, 2)}}
+    <hr>
+    {{fn(1, ...[2, ...[3]])}}
+  `,
+                }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: call_rest.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class TestComp {
+    foo: never[];
+    bar: never[];
+    baz: never[];
+    fn(..._: any[]): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<TestComp, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<TestComp, "ng-component", never, {}, {}, never, never, true, never>;
+}
+
