@@ -7,6 +7,7 @@
  */
 
 import {
+  ArrowFunction,
   AST,
   AstVisitor,
   ASTWithSource,
@@ -240,6 +241,16 @@ class Unparser implements AstVisitor {
 
   visitRegularExpressionLiteral(ast: RegularExpressionLiteral, context: any) {
     this._expression += `/${ast.body}/${ast.flags || ''}`;
+  }
+
+  visitArrowFunction(ast: ArrowFunction, context: any) {
+    if (ast.parameters.length === 1) {
+      this._expression += ast.parameters[0].name;
+    } else {
+      this._expression += `(${ast.parameters.map((e) => e.name).join(', ')})`;
+    }
+    this._expression += ' => ';
+    this._visit(ast.body);
   }
 
   private _visit(ast: AST) {
