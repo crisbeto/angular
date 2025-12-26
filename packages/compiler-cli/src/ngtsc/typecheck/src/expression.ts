@@ -7,6 +7,7 @@
  */
 
 import {
+  ArrowFunction,
   AST,
   AstVisitor,
   ASTWithSource,
@@ -42,6 +43,7 @@ import ts from 'typescript';
 import {TypeCheckingConfig} from '../api';
 import {addParseSpanInfo, wrapForDiagnostics, wrapForTypeChecker} from './diagnostics';
 import {tsCastToAny, tsNumericExpression} from './ts_util';
+import {markIgnoreDiagnostics} from './comments';
 
 /**
  * Gets an expression that is cast to any. Currently represented as `0 as any`.
@@ -479,6 +481,44 @@ class AstTranslator implements AstVisitor {
     return ts.factory.createParenthesizedExpression(this.translate(ast.expression));
   }
 
+  visitArrowFunction(ast: ArrowFunction): ts.ArrowFunction {
+    const params = ast.parameters.map((param) => {
+      const paramNode = ts.factory.createParameterDeclaration(undefined, undefined, param.name);
+      // Ignore diagnostics on the node to skip diagnostics from `noImplicitAny` since
+      // users aren't able to set types on the parameters. Note that this is preferrable
+      // to setting their types to `any`, because it allows us to infer the types when
+      // the arrow function is passed as a callback.
+      markIgnoreDiagnostics(paramNode);
+      return paramNode;
+    });
+
+    const body = astToTypescript(
+      ast.body,
+      (innerAst) => {
+        if (
+          !(innerAst instanceof PropertyRead) ||
+          innerAst.receiver instanceof ThisReceiver ||
+          !(innerAst.receiver instanceof ImplicitReceiver)
+        ) {
+          return this.maybeResolve(innerAst);
+        }
+
+        const correspondingParam = ast.parameters.find((arg) => arg.name === innerAst.name);
+
+        if (correspondingParam) {
+          const node = ts.factory.createIdentifier(innerAst.name);
+          addParseSpanInfo(node, innerAst.sourceSpan);
+          return node;
+        }
+
+        return this.maybeResolve(innerAst);
+      },
+      this.config,
+    );
+
+    return ts.factory.createArrowFunction(undefined, undefined, params, undefined, undefined, body);
+  }
+
   private convertToSafeCall(
     ast: Call | SafeCall,
     expr: ts.Expression,
@@ -611,6 +651,9 @@ class VeSafeLhsInferenceBugDetector implements AstVisitor {
     return ast.expression.visit(this);
   }
   visitRegularExpressionLiteral(ast: RegularExpressionLiteral, context: any) {
+    return false;
+  }
+  visitArrowFunction(ast: ArrowFunction, context: any) {
     return false;
   }
 }
