@@ -152,11 +152,11 @@ export function ingestDomProperty(
   if (ast instanceof e.Interpolation) {
     expression = new ir.Interpolation(
       ast.strings,
-      ast.expressions.map((expr) => convertAst(expr, job, property.sourceSpan)),
+      ast.expressions.map((expr) => convertAst(expr, job, property.sourceSpan, null)),
       [],
     );
   } else {
-    expression = convertAst(ast, job, property.sourceSpan);
+    expression = convertAst(ast, job, property.sourceSpan, null);
   }
   job.root.update.push(
     ir.createBindingOp(
@@ -505,7 +505,7 @@ function ingestBoundText(
       textXref,
       new ir.Interpolation(
         value.strings,
-        value.expressions.map((expr) => convertAst(expr, unit.job, baseSourceSpan)),
+        value.expressions.map((expr) => convertAst(expr, unit.job, baseSourceSpan, null)),
         i18nPlaceholders,
       ),
       text.sourceSpan,
@@ -554,7 +554,7 @@ function ingestIfBlock(unit: ViewCompilationUnit, ifBlock: t.IfBlock): void {
       firstXref = cView.xref;
     }
 
-    const caseExpr = ifCase.expression ? convertAst(ifCase.expression, unit.job, null) : null;
+    const caseExpr = ifCase.expression ? convertAst(ifCase.expression, unit.job, null, null) : null;
     const conditionalCaseExpr = new ir.ConditionalCaseExpr(
       caseExpr,
       conditionalCreateOp.xref,
@@ -610,7 +610,7 @@ function ingestSwitchBlock(unit: ViewCompilationUnit, switchBlock: t.SwitchBlock
       firstXref = cView.xref;
     }
     const caseExpr = switchCase.expression
-      ? convertAst(switchCase.expression, unit.job, switchBlock.startSourceSpan)
+      ? convertAst(switchCase.expression, unit.job, switchBlock.startSourceSpan, null)
       : null;
     const conditionalCaseExpr = new ir.ConditionalCaseExpr(
       caseExpr,
@@ -623,7 +623,7 @@ function ingestSwitchBlock(unit: ViewCompilationUnit, switchBlock: t.SwitchBlock
   unit.update.push(
     ir.createConditionalOp(
       firstXref!,
-      convertAst(switchBlock.expression, unit.job, null),
+      convertAst(switchBlock.expression, unit.job, null, null),
       conditions,
       switchBlock.sourceSpan,
     ),
@@ -860,7 +860,7 @@ function ingestDeferTriggers(
         targetView: null,
         targetSlotViewSteps: null,
         options: triggers.viewport.options
-          ? convertAst(triggers.viewport.options, unit.job, triggers.viewport.sourceSpan)
+          ? convertAst(triggers.viewport.options, unit.job, triggers.viewport.sourceSpan, null)
           : null,
       },
       modifier,
@@ -885,7 +885,7 @@ function ingestDeferTriggers(
     }
     const deferOnOp = ir.createDeferWhenOp(
       deferXref,
-      convertAst(triggers.when.value, unit.job, triggers.when.sourceSpan),
+      convertAst(triggers.when.value, unit.job, triggers.when.sourceSpan, null),
       modifier,
       triggers.when.sourceSpan,
     );
@@ -947,7 +947,7 @@ function ingestForBlock(unit: ViewCompilationUnit, forBlock: t.ForLoopBlock): vo
   }
 
   const sourceSpan = convertSourceSpan(forBlock.trackBy.span, forBlock.sourceSpan);
-  const track = convertAst(forBlock.trackBy, unit.job, sourceSpan);
+  const track = convertAst(forBlock.trackBy, unit.job, sourceSpan, null);
 
   ingestNodes(repeaterView, forBlock.children);
 
@@ -995,6 +995,7 @@ function ingestForBlock(unit: ViewCompilationUnit, forBlock: t.ForLoopBlock): vo
     forBlock.expression,
     unit.job,
     convertSourceSpan(forBlock.expression.span, forBlock.sourceSpan),
+    null,
   );
   const repeater = ir.createRepeaterOp(
     repeaterCreate.xref,
@@ -1050,7 +1051,7 @@ function ingestLetDeclaration(unit: ViewCompilationUnit, node: t.LetDeclaration)
     ir.createStoreLetOp(
       target,
       node.name,
-      convertAst(node.value, unit.job, node.valueSpan),
+      convertAst(node.value, unit.job, node.valueSpan, null),
       node.sourceSpan,
     ),
   );
@@ -1063,15 +1064,18 @@ function convertAst(
   ast: e.AST,
   job: CompilationJob,
   baseSourceSpan: ParseSourceSpan | null,
+  localSymbols: Set<string> | null,
 ): o.Expression {
   if (ast instanceof e.ASTWithSource) {
-    return convertAst(ast.ast, job, baseSourceSpan);
+    return convertAst(ast.ast, job, baseSourceSpan, localSymbols);
   } else if (ast instanceof e.PropertyRead) {
     if (ast.receiver instanceof e.ImplicitReceiver) {
-      return new ir.LexicalReadExpr(ast.name);
+      return localSymbols !== null && localSymbols.has(ast.name)
+        ? o.variable(ast.name)
+        : new ir.LexicalReadExpr(ast.name);
     } else {
       return new o.ReadPropExpr(
-        convertAst(ast.receiver, job, baseSourceSpan),
+        convertAst(ast.receiver, job, baseSourceSpan, localSymbols),
         ast.name,
         null,
         convertSourceSpan(ast.span, baseSourceSpan),
@@ -1082,8 +1086,8 @@ function convertAst(
       throw new Error(`Unexpected ImplicitReceiver`);
     } else {
       return new o.InvokeFunctionExpr(
-        convertAst(ast.receiver, job, baseSourceSpan),
-        ast.args.map((arg) => convertAst(arg, job, baseSourceSpan)),
+        convertAst(ast.receiver, job, baseSourceSpan, localSymbols),
+        ast.args.map((arg) => convertAst(arg, job, baseSourceSpan, localSymbols)),
         undefined,
         convertSourceSpan(ast.span, baseSourceSpan),
       );
@@ -1095,14 +1099,14 @@ function convertAst(
       case '+':
         return new o.UnaryOperatorExpr(
           o.UnaryOperator.Plus,
-          convertAst(ast.expr, job, baseSourceSpan),
+          convertAst(ast.expr, job, baseSourceSpan, localSymbols),
           undefined,
           convertSourceSpan(ast.span, baseSourceSpan),
         );
       case '-':
         return new o.UnaryOperatorExpr(
           o.UnaryOperator.Minus,
-          convertAst(ast.expr, job, baseSourceSpan),
+          convertAst(ast.expr, job, baseSourceSpan, localSymbols),
           undefined,
           convertSourceSpan(ast.span, baseSourceSpan),
         );
@@ -1116,8 +1120,8 @@ function convertAst(
     }
     return new o.BinaryOperatorExpr(
       operator,
-      convertAst(ast.left, job, baseSourceSpan),
-      convertAst(ast.right, job, baseSourceSpan),
+      convertAst(ast.left, job, baseSourceSpan, localSymbols),
+      convertAst(ast.right, job, baseSourceSpan, localSymbols),
       undefined,
       convertSourceSpan(ast.span, baseSourceSpan),
     );
@@ -1126,8 +1130,8 @@ function convertAst(
     return new ir.ContextExpr(job.root.xref);
   } else if (ast instanceof e.KeyedRead) {
     return new o.ReadKeyExpr(
-      convertAst(ast.receiver, job, baseSourceSpan),
-      convertAst(ast.key, job, baseSourceSpan),
+      convertAst(ast.receiver, job, baseSourceSpan, localSymbols),
+      convertAst(ast.key, job, baseSourceSpan, localSymbols),
       undefined,
       convertSourceSpan(ast.span, baseSourceSpan),
     );
@@ -1138,78 +1142,92 @@ function convertAst(
       const value = ast.values[idx];
       // TODO: should literals have source maps, or do we just map the whole surrounding
       // expression?
-      return new o.LiteralMapEntry(key.key, convertAst(value, job, baseSourceSpan), key.quoted);
+      return new o.LiteralMapEntry(
+        key.key,
+        convertAst(value, job, baseSourceSpan, localSymbols),
+        key.quoted,
+      );
     });
     return new o.LiteralMapExpr(entries, undefined, convertSourceSpan(ast.span, baseSourceSpan));
   } else if (ast instanceof e.LiteralArray) {
     // TODO: should literals have source maps, or do we just map the whole surrounding expression?
     return new o.LiteralArrayExpr(
-      ast.expressions.map((expr) => convertAst(expr, job, baseSourceSpan)),
+      ast.expressions.map((expr) => convertAst(expr, job, baseSourceSpan, localSymbols)),
     );
   } else if (ast instanceof e.Conditional) {
     return new o.ConditionalExpr(
-      convertAst(ast.condition, job, baseSourceSpan),
-      convertAst(ast.trueExp, job, baseSourceSpan),
-      convertAst(ast.falseExp, job, baseSourceSpan),
+      convertAst(ast.condition, job, baseSourceSpan, localSymbols),
+      convertAst(ast.trueExp, job, baseSourceSpan, localSymbols),
+      convertAst(ast.falseExp, job, baseSourceSpan, localSymbols),
       undefined,
       convertSourceSpan(ast.span, baseSourceSpan),
     );
   } else if (ast instanceof e.NonNullAssert) {
     // A non-null assertion shouldn't impact generated instructions, so we can just drop it.
-    return convertAst(ast.expression, job, baseSourceSpan);
+    return convertAst(ast.expression, job, baseSourceSpan, localSymbols);
   } else if (ast instanceof e.BindingPipe) {
     // TODO: pipes should probably have source maps; figure out details.
     return new ir.PipeBindingExpr(job.allocateXrefId(), new ir.SlotHandle(), ast.name, [
-      convertAst(ast.exp, job, baseSourceSpan),
-      ...ast.args.map((arg) => convertAst(arg, job, baseSourceSpan)),
+      convertAst(ast.exp, job, baseSourceSpan, localSymbols),
+      ...ast.args.map((arg) => convertAst(arg, job, baseSourceSpan, localSymbols)),
     ]);
   } else if (ast instanceof e.SafeKeyedRead) {
     return new ir.SafeKeyedReadExpr(
-      convertAst(ast.receiver, job, baseSourceSpan),
-      convertAst(ast.key, job, baseSourceSpan),
+      convertAst(ast.receiver, job, baseSourceSpan, localSymbols),
+      convertAst(ast.key, job, baseSourceSpan, localSymbols),
       convertSourceSpan(ast.span, baseSourceSpan),
     );
   } else if (ast instanceof e.SafePropertyRead) {
     // TODO: source span
-    return new ir.SafePropertyReadExpr(convertAst(ast.receiver, job, baseSourceSpan), ast.name);
+    return new ir.SafePropertyReadExpr(
+      convertAst(ast.receiver, job, baseSourceSpan, localSymbols),
+      ast.name,
+    );
   } else if (ast instanceof e.SafeCall) {
     // TODO: source span
     return new ir.SafeInvokeFunctionExpr(
-      convertAst(ast.receiver, job, baseSourceSpan),
-      ast.args.map((a) => convertAst(a, job, baseSourceSpan)),
+      convertAst(ast.receiver, job, baseSourceSpan, localSymbols),
+      ast.args.map((a) => convertAst(a, job, baseSourceSpan, localSymbols)),
     );
   } else if (ast instanceof e.EmptyExpr) {
     return new ir.EmptyExpr(convertSourceSpan(ast.span, baseSourceSpan));
   } else if (ast instanceof e.PrefixNot) {
     return o.not(
-      convertAst(ast.expression, job, baseSourceSpan),
+      convertAst(ast.expression, job, baseSourceSpan, localSymbols),
       convertSourceSpan(ast.span, baseSourceSpan),
     );
   } else if (ast instanceof e.TypeofExpression) {
-    return o.typeofExpr(convertAst(ast.expression, job, baseSourceSpan));
+    return o.typeofExpr(convertAst(ast.expression, job, baseSourceSpan, localSymbols));
   } else if (ast instanceof e.VoidExpression) {
     return new o.VoidExpr(
-      convertAst(ast.expression, job, baseSourceSpan),
+      convertAst(ast.expression, job, baseSourceSpan, localSymbols),
       undefined,
       convertSourceSpan(ast.span, baseSourceSpan),
     );
   } else if (ast instanceof e.TemplateLiteral) {
-    return convertTemplateLiteral(ast, job, baseSourceSpan);
+    return convertTemplateLiteral(ast, job, baseSourceSpan, localSymbols);
   } else if (ast instanceof e.TaggedTemplateLiteral) {
     return new o.TaggedTemplateLiteralExpr(
-      convertAst(ast.tag, job, baseSourceSpan),
-      convertTemplateLiteral(ast.template, job, baseSourceSpan),
+      convertAst(ast.tag, job, baseSourceSpan, localSymbols),
+      convertTemplateLiteral(ast.template, job, baseSourceSpan, localSymbols),
       undefined,
       convertSourceSpan(ast.span, baseSourceSpan),
     );
   } else if (ast instanceof e.ParenthesizedExpression) {
     return new o.ParenthesizedExpr(
-      convertAst(ast.expression, job, baseSourceSpan),
+      convertAst(ast.expression, job, baseSourceSpan, localSymbols),
       undefined,
       convertSourceSpan(ast.span, baseSourceSpan),
     );
   } else if (ast instanceof e.RegularExpressionLiteral) {
     return new o.RegularExpressionLiteralExpr(ast.body, ast.flags, baseSourceSpan);
+  } else if (ast instanceof e.ArrowFunction) {
+    localSymbols ??= new Set();
+    ast.parameters.forEach((arg) => localSymbols!.add(arg.name));
+    return o.arrowFn(
+      ast.parameters.map((arg) => new o.FnParam(arg.name)),
+      convertAst(ast.body, job, baseSourceSpan, localSymbols),
+    );
   } else {
     throw new Error(
       `Unhandled expression type "${ast.constructor.name}" in file "${baseSourceSpan?.start.file.url}"`,
@@ -1221,12 +1239,13 @@ function convertTemplateLiteral(
   ast: e.TemplateLiteral,
   job: CompilationJob,
   baseSourceSpan: ParseSourceSpan | null,
+  localSymbols: Set<string> | null,
 ) {
   return new o.TemplateLiteralExpr(
     ast.elements.map((el) => {
       return new o.TemplateLiteralElementExpr(el.text, convertSourceSpan(el.span, baseSourceSpan));
     }),
-    ast.expressions.map((expr) => convertAst(expr, job, baseSourceSpan)),
+    ast.expressions.map((expr) => convertAst(expr, job, baseSourceSpan, localSymbols)),
     convertSourceSpan(ast.span, baseSourceSpan),
   );
 }
@@ -1241,11 +1260,11 @@ function convertAstWithInterpolation(
   if (value instanceof e.Interpolation) {
     expression = new ir.Interpolation(
       value.strings,
-      value.expressions.map((e) => convertAst(e, job, sourceSpan ?? null)),
+      value.expressions.map((e) => convertAst(e, job, sourceSpan ?? null, null)),
       Object.keys(asMessage(i18nMeta)?.placeholders ?? {}),
     );
   } else if (value instanceof e.AST) {
-    expression = convertAst(value, job, sourceSpan ?? null);
+    expression = convertAst(value, job, sourceSpan ?? null, null);
   } else {
     expression = o.literal(value);
   }
@@ -1717,7 +1736,7 @@ function makeListenerHandlerOps(
   if (handlerExprs.length === 0) {
     throw new Error('Expected listener to have non-empty expression list.');
   }
-  const expressions = handlerExprs.map((expr) => convertAst(expr, unit.job, handlerSpan));
+  const expressions = handlerExprs.map((expr) => convertAst(expr, unit.job, handlerSpan, null));
   const returnExpr = expressions.pop()!;
   handlerOps.push(
     ...expressions.map((e) =>
@@ -1745,7 +1764,7 @@ function makeTwoWayListenerHandlerOps(
     }
   }
 
-  const handlerExpr = convertAst(handler, unit.job, handlerSpan);
+  const handlerExpr = convertAst(handler, unit.job, handlerSpan, null);
   const eventReference = new ir.LexicalReadExpr('$event');
   const twoWaySetExpr = new ir.TwoWayBindingSetExpr(handlerExpr, eventReference);
 
