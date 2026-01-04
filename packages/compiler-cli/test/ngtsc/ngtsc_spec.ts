@@ -313,6 +313,54 @@ runInEachFileSystem((os: string) => {
         expect(updateInstances?.length).toBe(1);
       });
 
+      fit('', () => {
+        // <button (click)="value.update(prev => prev + $event)">
+        //   Assign
+        // </button>
+        // @for (thing of things; track $index) {
+        //   <button (click)="value.update(prev => prev + $even)">
+        //     Assign
+        //   </button>
+        // }
+        // <button (click)="value.update(prev => prev + $event.type + componentProp?.a?.b?.c?.()?.()?.()?.())">
+        //   Assign
+        // </button>
+        env.tsconfig({'target': ts.ScriptTarget.Latest});
+        env.write(
+          'test.ts',
+          `
+          import {Component, signal, Directive} from '@angular/core';
+
+          @Component({
+            template: \`
+              @if (true) {
+                @let inner = 1;
+
+                @if (true) {
+                  <button (click)="value.update(prev => $event + inner + prev + 1 + foo)"></button>
+
+                  <!-- {{value.update(prev => prev + 1 + foo)}} -->
+
+                  <!-- <button (click)="value() + 1 + foo"></button> -->
+                }
+              }
+            \`
+          })
+          export class TestComp {
+            value = signal('initial');
+            things = [1, 2, 3];
+            foo = 1;
+            componentProp: {a?: {b?: {c?: () => () => () => () => string}}} = {};
+          }
+        `,
+        );
+
+        env.driveMain();
+
+        const jsContents = env.getContents('test.js');
+        console.log(jsContents);
+      });
+
       it('should throw an error when legacy animations are used with animate.enter', () => {
         env.write(
           'test.ts',

@@ -19,8 +19,29 @@ import {CompilationJob, CompilationUnit} from '../compilation';
  */
 export function resolveNames(job: CompilationJob): void {
   for (const unit of job.units) {
-    processLexicalScope(unit, unit.create, null);
-    processLexicalScope(unit, unit.update, null);
+    let savedView: SavedView | null = null;
+
+    for (const op of unit.ops()) {
+      if (
+        op.kind === ir.OpKind.Variable &&
+        op.variable.kind === ir.SemanticVariableKind.SavedView
+      ) {
+        // This variable represents a snapshot of the current view context, and can be used to
+        // restore that context within listener functions.
+        savedView = {
+          view: op.variable.view,
+          variable: op.xref,
+        };
+        break;
+      }
+    }
+
+    processLexicalScope(unit, unit.create, savedView);
+    processLexicalScope(unit, unit.update, savedView);
+
+    for (const expr of unit.expressionsWithOps) {
+      processLexicalScope(unit, expr.ops, savedView);
+    }
   }
 }
 
@@ -64,14 +85,6 @@ function processLexicalScope(
             }
             scope.set(op.variable.identifier, op.xref);
             break;
-          case ir.SemanticVariableKind.SavedView:
-            // This variable represents a snapshot of the current view context, and can be used to
-            // restore that context within listener functions.
-            savedView = {
-              view: op.variable.view,
-              variable: op.xref,
-            };
-            break;
         }
         break;
       case ir.OpKind.Animation:
@@ -98,11 +111,10 @@ function processLexicalScope(
   // variable.
   for (const op of ops) {
     if (
-      op.kind == ir.OpKind.Listener ||
+      op.kind === ir.OpKind.Listener ||
       op.kind === ir.OpKind.TwoWayListener ||
       op.kind === ir.OpKind.Animation ||
-      op.kind === ir.OpKind.AnimationListener ||
-      op.kind === ir.OpKind.StoreCallback
+      op.kind === ir.OpKind.AnimationListener
     ) {
       // Listeners were already processed above with their own scopes.
       continue;

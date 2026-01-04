@@ -19,6 +19,10 @@ export function resolveContexts(job: CompilationJob): void {
   for (const unit of job.units) {
     processLexicalScope(unit, unit.create);
     processLexicalScope(unit, unit.update);
+
+    for (const expr of unit.expressionsWithOps) {
+      processLexicalScope(unit, expr.ops);
+    }
   }
 }
 

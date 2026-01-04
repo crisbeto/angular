@@ -12,7 +12,7 @@ import type {ParseSourceSpan} from '../../../../parse_util';
 import * as t from '../../../../render3/r3_ast';
 import {ExpressionKind, OpKind} from './enums';
 import {SlotHandle} from './handle';
-import type {XrefId} from './operations';
+import type {OpList, XrefId} from './operations';
 import type {CreateOp} from './ops/create';
 import {Interpolation, type UpdateOp} from './ops/update';
 import {
@@ -52,7 +52,8 @@ export type Expression =
   | ContextLetReferenceExpr
   | StoreLetExpr
   | TrackContextExpr
-  | CallbackReferenceExpr;
+  | CallbackReferenceExpr
+  | CallbackDefinitionExpr;
 
 /**
  * Transformer type which converts expressions into general `o.Expression`s (which may be an
@@ -1067,6 +1068,47 @@ export class CallbackReferenceExpr extends ExpressionBase {
   }
 }
 
+export class CallbackDefinitionExpr extends ExpressionBase {
+  override readonly kind = ExpressionKind.CallbackDefinition;
+
+  constructor(
+    readonly expression: o.ArrowFunctionExpr,
+    readonly ops: OpList<UpdateOp>,
+    readonly analysis: {usesDollarEvent: boolean; hasContextReferences: boolean},
+  ) {
+    super();
+  }
+
+  override visitExpression(visitor: o.ExpressionVisitor, context: any): void {
+    for (const op of this.ops) {
+      visitExpressionsInOp(op, (expr) => {
+        expr.visitExpression(visitor, context);
+      });
+    }
+  }
+
+  override isEquivalent(e: o.Expression): boolean {
+    return e instanceof CallbackDefinitionExpr && e.expression.isEquivalent(this.expression);
+  }
+
+  override isConstant(): boolean {
+    return false;
+  }
+
+  override transformInternalExpressions(
+    transform: ExpressionTransform,
+    flags: VisitorContextFlag,
+  ): void {
+    for (const op of this.ops) {
+      transformExpressionsInOp(op, transform, flags);
+    }
+  }
+
+  override clone(): CallbackDefinitionExpr {
+    return new CallbackDefinitionExpr(this.expression.clone(), this.ops, {...this.analysis});
+  }
+}
+
 /**
  * Visits all `Expression`s in the AST of `op` with the `visitor` function.
  */
@@ -1234,7 +1276,6 @@ export function transformExpressionsInOp(
       op.value = transformExpressionsInExpression(op.value, transform, flags);
       break;
     case OpKind.StoreCallback:
-    case OpKind.ExtractCallback:
       for (const innerOp of op.callbackOps) {
         transformExpressionsInOp(innerOp, transform, flags | VisitorContextFlag.InChildOperation);
       }

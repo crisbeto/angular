@@ -43,17 +43,12 @@ export function saveAndRestoreView(job: ComponentCompilationJob): void {
 
       // Embedded views always need the save/restore view operation.
       let needsRestoreView = unit !== job.root;
-      const innerOps = op.kind === ir.OpKind.StoreCallback ? op.callbackOps : op.handlerOps;
+      const ops = op.kind === ir.OpKind.StoreCallback ? op.callbackOps : op.handlerOps;
 
       if (!needsRestoreView) {
-        for (const innerOp of innerOps) {
+        for (const innerOp of ops) {
           ir.visitExpressionsInOp(innerOp, (expr) => {
-            if (
-              expr instanceof ir.ReferenceExpr ||
-              expr instanceof ir.ContextLetReferenceExpr ||
-              // TODO(crisbeto): workaround for #66286, only covers basic cases.
-              (expr instanceof ir.CallbackReferenceExpr && op.kind !== ir.OpKind.StoreCallback)
-            ) {
+            if (expr instanceof ir.ReferenceExpr || expr instanceof ir.ContextLetReferenceExpr) {
               // Listeners that reference() a local ref need the save/restore view operation.
               needsRestoreView = true;
             }
@@ -62,7 +57,13 @@ export function saveAndRestoreView(job: ComponentCompilationJob): void {
       }
 
       if (needsRestoreView) {
-        addSaveRestoreViewOperationToListener(unit, innerOps);
+        addSaveRestoreViewOperationToListener(unit, ops);
+      }
+    }
+
+    for (const expr of unit.expressionsWithOps) {
+      if (expr.analysis.hasContextReferences) {
+        addSaveRestoreViewOperationToListener(unit, expr.ops);
       }
     }
   }

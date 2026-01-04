@@ -38,6 +38,10 @@ export function mergeNextContextExpressions(job: CompilationJob): void {
       }
     }
     mergeNextContextsInOps(unit.update);
+
+    for (const expr of unit.expressionsWithOps) {
+      mergeNextContextsInOps(expr.ops);
+    }
   }
 }
 

@@ -79,8 +79,7 @@ export type CreateOp =
   | AnimationOp
   | SourceLocationOp
   | ControlCreateOp
-  | StoreCallbackOp
-  | ExtractCallbackOp;
+  | StoreCallbackOp;
 
 /**
  * An operation representing the creation of an element or container.
@@ -1495,13 +1494,10 @@ export interface StoreCallbackOp extends Op<CreateOp>, ConsumesSlotOpTrait {
   kind: OpKind.StoreCallback;
 
   /** Name of the function's parameters. */
-  parameters: string[];
+  parameters: o.FnParam[];
 
   /** A list of `UpdateOp`s representing the body of the callback function. */
   callbackOps: OpList<UpdateOp>;
-
-  /** Name to use when referring to the callback within the view. */
-  localName: string;
 }
 
 /**
@@ -1509,60 +1505,16 @@ export interface StoreCallbackOp extends Op<CreateOp>, ConsumesSlotOpTrait {
  */
 export function createStoreCallbackOp(
   xref: XrefId,
-  parameters: string[],
-  callbackOps: UpdateOp[],
-  localName: string,
+  parameters: o.FnParam[],
+  callbackOps: OpList<UpdateOp>,
 ): StoreCallbackOp {
-  const opList = new OpList<UpdateOp>();
-  opList.push(callbackOps);
   return {
     kind: OpKind.StoreCallback,
     xref,
     parameters,
-    callbackOps: opList,
-    localName,
+    callbackOps,
     handle: new SlotHandle(),
     ...TRAIT_CONSUMES_SLOT,
-    ...NEW_OP,
-  };
-}
-
-/**
- * Op used to collect additional ops for callbacks that will eventually be extracted into the
- * constant pool. This op is necessary, because some expressions inside the callback (e.g. optional
- * access) produce new statements that need to be reified. We can't reify them until the
- * actual reify phase and we can't move the callback into the constant pool until these additional
- * statements are processed. This op doesn't correspond to generated code, but rather it is deleted
- * when the callback is reified and moved into the constant pool.
- */
-export interface ExtractCallbackOp extends Op<CreateOp> {
-  kind: OpKind.ExtractCallback;
-
-  /** Name of the function's parameters. */
-  parameters: string[];
-
-  /** A list of `UpdateOp`s representing the body of the callback function. */
-  callbackOps: OpList<UpdateOp>;
-
-  /** Unique name of the extracted callback. */
-  callbackName: string;
-}
-
-/**
- * Creates an `ExtractCallbackOp`.
- */
-export function createExtractCallbackOp(
-  parameters: string[],
-  callbackOps: UpdateOp[],
-  callbackName: string,
-): ExtractCallbackOp {
-  const opList = new OpList<UpdateOp>();
-  opList.push(callbackOps);
-  return {
-    kind: OpKind.ExtractCallback,
-    parameters,
-    callbackOps: opList,
-    callbackName,
     ...NEW_OP,
   };
 }

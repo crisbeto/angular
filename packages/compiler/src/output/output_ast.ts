@@ -1082,7 +1082,7 @@ export class ArrowFunctionExpr extends Expression {
     return visitor.visitArrowFunctionExpr(this, context);
   }
 
-  override clone(): Expression {
+  override clone(): ArrowFunctionExpr {
     // TODO: Should we deep clone statements?
     return new ArrowFunctionExpr(
       this.params.map((p) => p.clone()),

@@ -33,6 +33,10 @@ export function optimizeVariables(job: CompilationJob): void {
     inlineAlwaysInlineVariables(unit.create);
     inlineAlwaysInlineVariables(unit.update);
 
+    for (const expr of unit.expressionsWithOps) {
+      inlineAlwaysInlineVariables(expr.ops);
+    }
+
     for (const op of unit.create) {
       if (
         op.kind === ir.OpKind.Listener ||
@@ -41,7 +45,7 @@ export function optimizeVariables(job: CompilationJob): void {
         op.kind === ir.OpKind.TwoWayListener
       ) {
         inlineAlwaysInlineVariables(op.handlerOps);
-      } else if (op.kind === ir.OpKind.StoreCallback || op.kind === ir.OpKind.ExtractCallback) {
+      } else if (op.kind === ir.OpKind.StoreCallback) {
         inlineAlwaysInlineVariables(op.callbackOps);
       } else if (op.kind === ir.OpKind.RepeaterCreate && op.trackByOps !== null) {
         inlineAlwaysInlineVariables(op.trackByOps);
@@ -51,6 +55,10 @@ export function optimizeVariables(job: CompilationJob): void {
     optimizeVariablesInOpList(unit.create, job.compatibility);
     optimizeVariablesInOpList(unit.update, job.compatibility);
 
+    for (const expr of unit.expressionsWithOps) {
+      optimizeVariablesInOpList(expr.ops, job.compatibility);
+    }
+
     for (const op of unit.create) {
       if (
         op.kind === ir.OpKind.Listener ||
@@ -59,7 +67,7 @@ export function optimizeVariables(job: CompilationJob): void {
         op.kind === ir.OpKind.TwoWayListener
       ) {
         optimizeVariablesInOpList(op.handlerOps, job.compatibility);
-      } else if (op.kind === ir.OpKind.StoreCallback || op.kind === ir.OpKind.ExtractCallback) {
+      } else if (op.kind === ir.OpKind.StoreCallback) {
         optimizeVariablesInOpList(op.callbackOps, job.compatibility);
       } else if (op.kind === ir.OpKind.RepeaterCreate && op.trackByOps !== null) {
         optimizeVariablesInOpList(op.trackByOps, job.compatibility);

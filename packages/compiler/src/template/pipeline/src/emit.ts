@@ -85,7 +85,8 @@ import {transformTwoWayBindingSet} from './phases/transform_two_way_binding_set'
 import {countVariables} from './phases/var_counting';
 import {optimizeVariables} from './phases/variable_optimization';
 import {wrapI18nIcus} from './phases/wrap_icus';
-import {storeHostBindingCallbacks, storeTemplateCallbacks} from './phases/callback_storage';
+import {identifyCallbacks} from './phases/callback_identification';
+import {optimizeCallbacks} from './phases/callback_optimization';
 
 type Phase =
   | {
@@ -103,12 +104,11 @@ type Phase =
 
 const phases: Phase[] = [
   {kind: Kind.Tmpl, fn: removeContentSelectors},
+  {kind: Kind.Both, fn: identifyCallbacks},
   {kind: Kind.Both, fn: optimizeRegularExpressions},
   {kind: Kind.Host, fn: parseHostStyleProperties},
   {kind: Kind.Tmpl, fn: emitNamespaceChanges},
   {kind: Kind.Tmpl, fn: propagateI18nBlocks},
-  {kind: Kind.Tmpl, fn: storeTemplateCallbacks},
-  {kind: Kind.Host, fn: storeHostBindingCallbacks},
   {kind: Kind.Tmpl, fn: wrapI18nIcus},
   {kind: Kind.Both, fn: deduplicateTextBindings},
   {kind: Kind.Both, fn: specializeStyleBindings},
@@ -143,6 +143,7 @@ const phases: Phase[] = [
   {kind: Kind.Both, fn: expandSafeReads},
   {kind: Kind.Both, fn: stripNonrequiredParentheses},
   {kind: Kind.Both, fn: generateTemporaryVariables},
+  {kind: Kind.Both, fn: optimizeCallbacks},
   {kind: Kind.Both, fn: optimizeVariables},
   {kind: Kind.Both, fn: optimizeStoreLet},
   {kind: Kind.Tmpl, fn: convertI18nText},

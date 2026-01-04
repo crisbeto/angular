@@ -171,6 +171,8 @@ export abstract class CompilationUnit {
    */
   readonly update = new ir.OpList<ir.UpdateOp>();
 
+  readonly expressionsWithOps = new Set<ir.CallbackDefinitionExpr>();
+
   /**
    * The enclosing job, which might contain several individual compilation units.
    */
@@ -210,7 +212,7 @@ export abstract class CompilationUnit {
         for (const trackOp of op.trackByOps) {
           yield trackOp;
         }
-      } else if (op.kind === ir.OpKind.StoreCallback || op.kind === ir.OpKind.ExtractCallback) {
+      } else if (op.kind === ir.OpKind.StoreCallback) {
         for (const callbackOp of op.callbackOps) {
           yield callbackOp;
         }

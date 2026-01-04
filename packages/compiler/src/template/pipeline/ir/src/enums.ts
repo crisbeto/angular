@@ -314,11 +314,6 @@ export enum OpKind {
   ControlCreate,
 
   /**
-   * An operation that will extract a callback into the constant pool once it is reified.
-   */
-  ExtractCallback,
-
-  /**
    * An operation that stores a callback on the current view for later usage.
    */
   StoreCallback,
@@ -462,6 +457,8 @@ export enum ExpressionKind {
    * A reference to a stored callback function declaration.
    */
   CallbackReference,
+
+  CallbackDefinition,
 }
 
 export enum VariableFlags {

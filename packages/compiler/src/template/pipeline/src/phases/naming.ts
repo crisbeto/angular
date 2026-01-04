@@ -8,6 +8,7 @@
 
 import {sanitizeIdentifier} from '../../../../parse_util';
 import * as ir from '../../ir';
+import * as o from '../../../../output/output_ast';
 
 import {hyphenate} from './parse_extracted_styles';
 
@@ -47,6 +48,14 @@ function addNamesToView(
   // Keep track of the names we assign to variables in the view. We'll need to propagate these
   // into reads of those variables afterwards.
   const varNames = new Map<ir.XrefId, string>();
+
+  for (const expr of unit.expressionsWithOps) {
+    for (const op of expr.ops) {
+      if (op.kind === ir.OpKind.Variable) {
+        varNames.set(op.xref, getVariableName(unit, op.variable, state));
+      }
+    }
+  }
 
   for (const op of unit.ops()) {
     switch (op.kind) {
@@ -187,16 +196,24 @@ function addNamesToView(
   // Having named all variables declared in the view, now we can push those names into the
   // `ir.ReadVariableExpr` expressions which represent reads of those variables.
   for (const op of unit.ops()) {
-    ir.visitExpressionsInOp(op, (expr) => {
-      if (!(expr instanceof ir.ReadVariableExpr) || expr.name !== null) {
-        return;
-      }
-      if (!varNames.has(expr.xref)) {
-        throw new Error(`Variable ${expr.xref} not yet named`);
-      }
-      expr.name = varNames.get(expr.xref)!;
-    });
+    ir.visitExpressionsInOp(op, (expr) => addVarNames(expr, varNames));
   }
+
+  for (const outerExpr of unit.expressionsWithOps) {
+    for (const op of outerExpr.ops) {
+      ir.visitExpressionsInOp(op, (expr) => addVarNames(expr, varNames));
+    }
+  }
+}
+
+function addVarNames(expr: o.Expression, varNames: Map<ir.XrefId, string>) {
+  if (!(expr instanceof ir.ReadVariableExpr) || expr.name !== null) {
+    return;
+  }
+  if (!varNames.has(expr.xref)) {
+    throw new Error(`Variable ${expr.xref} not yet named`);
+  }
+  expr.name = varNames.get(expr.xref)!;
 }
 
 function getVariableName(
