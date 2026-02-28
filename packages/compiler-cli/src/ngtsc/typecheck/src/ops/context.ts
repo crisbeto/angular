@@ -52,6 +52,9 @@ export enum TcbGenericContextBehavior {
 export class Context {
   private nextId = 1;
 
+  /** @deprecated Temporary printer while moving away from TS. */
+  readonly tempPrinter = ts.createPrinter();
+
   constructor(
     readonly env: Environment,
     readonly domSchemaChecker: DomSchemaChecker,
@@ -70,8 +73,8 @@ export class Context {
    * Currently this uses a monotonically increasing counter, but in the future the variable name
    * might change depending on the type of data being stored.
    */
-  allocateId(): ts.Identifier {
-    return ts.factory.createIdentifier(`_t${this.nextId++}`);
+  allocateId(): string {
+    return `_t${this.nextId++}`;
   }
 
   getPipeByName(name: string): PipeMeta | null {

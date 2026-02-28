@@ -7,10 +7,7 @@
  */
 
 import {TmplAstComponent} from '@angular/compiler';
-import ts from 'typescript';
-import {addParseSpanInfo} from '../diagnostics';
-import {tsCreateElement, tsCreateVariable} from '../ts_util';
-import {TcbOp} from './base';
+import {TcbNode, TcbOp} from './base';
 import {Context} from './context';
 import type {Scope} from './scope';
 
@@ -37,11 +34,13 @@ export class TcbComponentNodeOp extends TcbOp {
     super();
   }
 
-  override execute(): ts.Identifier {
+  override execute(): TcbNode {
     const id = this.tcb.allocateId();
-    const initializer = tsCreateElement(getComponentTagName(this.component));
-    addParseSpanInfo(initializer, this.component.startSourceSpan || this.component.sourceSpan);
-    this.scope.addStatement(tsCreateVariable(id, initializer));
-    return id;
+    const initializer = new TcbNode(
+      `document.createElement("${getComponentTagName(this.component)}")`,
+    );
+    initializer.addParseSpanInfo(this.component.startSourceSpan || this.component.sourceSpan);
+    this.scope.addStatement(new TcbNode(`var ${id} = ${initializer.print()}`));
+    return new TcbNode(id);
   }
 }

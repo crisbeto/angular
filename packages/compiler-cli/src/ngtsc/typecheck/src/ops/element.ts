@@ -7,12 +7,9 @@
  */
 
 import {TmplAstElement} from '@angular/compiler';
-import ts from 'typescript';
-import {TcbOp} from './base';
+import {TcbNode, TcbOp} from './base';
 import type {Context} from './context';
 import type {Scope} from './scope';
-import {tsCreateElement, tsCreateVariable} from '../ts_util';
-import {addParseSpanInfo} from '../diagnostics';
 
 /**
  * A `TcbOp` which creates an expression for a native DOM element (or web component) from a
@@ -36,12 +33,18 @@ export class TcbElementOp extends TcbOp {
     return true;
   }
 
-  override execute(): ts.Identifier {
+  override execute(): TcbNode {
     const id = this.tcb.allocateId();
+    const idNode = new TcbNode(id);
+    // Element doesn't have nameSpan? startSourceSpan covers the tag name `<div`.
+    idNode.addParseSpanInfo(this.element.startSourceSpan || this.element.sourceSpan);
+
     // Add the declaration of the element using document.createElement.
-    const initializer = tsCreateElement(this.element.name);
-    addParseSpanInfo(initializer, this.element.startSourceSpan || this.element.sourceSpan);
-    this.scope.addStatement(tsCreateVariable(id, initializer));
-    return id;
+    const initializer = new TcbNode(`document.createElement("${this.element.name}")`);
+    initializer.addParseSpanInfo(this.element.startSourceSpan || this.element.sourceSpan);
+    const stmt = new TcbNode(`var ${idNode.print()} = ${initializer.print()}`);
+    stmt.addParseSpanInfo(this.element.startSourceSpan || this.element.sourceSpan);
+    this.scope.addStatement(stmt);
+    return idNode;
   }
 }

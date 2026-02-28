@@ -9,6 +9,8 @@
 import {
   AST,
   BindingType,
+  LiteralArray,
+  LiteralMap,
   ParseSourceSpan,
   TmplAstBoundAttribute,
   TmplAstBoundEvent,
@@ -23,7 +25,7 @@ import {TypeCheckableDirectiveMeta} from '../../api';
 import {ClassPropertyName} from '../../../metadata';
 import {Reference} from '../../../imports';
 import {Context} from './context';
-import {tsCastToAny} from '../ts_util';
+import {TcbNode} from './base';
 
 export interface TcbBoundAttribute {
   value: AST | string;
@@ -52,7 +54,9 @@ export interface TcbDirectiveBoundInput {
   /**
    * The `ts.Expression` corresponding with the input binding expression.
    */
-  expression: ts.Expression;
+  expression: TcbNode;
+
+  originalExpression: AST | string;
 
   /**
    * The source span of the full attribute binding.
@@ -177,13 +181,13 @@ export function checkSplitTwoWayBinding(
 /**
  * Potentially widens the type of `expr` according to the type-checking configuration.
  */
-export function widenBinding(expr: ts.Expression, tcb: Context): ts.Expression {
+export function widenBinding(expr: TcbNode, tcb: Context, originalValue: string | AST): TcbNode {
   if (!tcb.env.config.checkTypeOfInputBindings) {
     // If checking the type of bindings is disabled, cast the resulting expression to 'any'
     // before the assignment.
-    return tsCastToAny(expr);
+    return new TcbNode(`(${expr.print()} as any)`);
   } else if (!tcb.env.config.strictNullInputBindings) {
-    if (ts.isObjectLiteralExpression(expr) || ts.isArrayLiteralExpression(expr)) {
+    if (originalValue instanceof LiteralMap || originalValue instanceof LiteralArray) {
       // Object literals and array literals should not be wrapped in non-null assertions as that
       // would cause literals to be prematurely widened, resulting in type errors when assigning
       // into a literal type.
@@ -191,7 +195,7 @@ export function widenBinding(expr: ts.Expression, tcb: Context): ts.Expression {
     } else {
       // If strict null checks are disabled, erase `null` and `undefined` from the type by
       // wrapping the expression in a non-null assertion.
-      return ts.factory.createNonNullExpression(expr);
+      return new TcbNode(`${expr.print()}!`);
     }
   } else {
     // No widening is requested, use the expression as is.

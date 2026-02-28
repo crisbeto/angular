@@ -525,7 +525,7 @@ export class TypeCheckContextImpl implements TypeCheckContext {
           path: pendingShimData.file.fileName,
           data: pendingShimData.data,
         });
-        const sfText = pendingShimData.file.render(false /* removeComments */);
+        const sfText = pendingShimData.file.render();
         updates.set(pendingShimData.file.fileName, {
           newText: sfText,
 
@@ -670,12 +670,7 @@ class InlineTcbOp implements Op {
     return this.ref.node.end + 1;
   }
 
-  execute(
-    im: ImportManager,
-    sf: ts.SourceFile,
-    refEmitter: ReferenceEmitter,
-    printer: ts.Printer,
-  ): string {
+  execute(im: ImportManager, sf: ts.SourceFile, refEmitter: ReferenceEmitter): string {
     const env = new Environment(this.config, im, refEmitter, this.reflector, sf);
     const fnName = ts.factory.createIdentifier(`_tcb_${this.ref.node.pos}`);
 
@@ -691,7 +686,7 @@ class InlineTcbOp implements Op {
       TcbGenericContextBehavior.CopyClassNodes,
     );
 
-    return printer.printNode(ts.EmitHint.Unspecified, fn, sf);
+    return fn;
   }
 }
 
@@ -712,15 +707,9 @@ class TypeCtorOp implements Op {
     return this.ref.node.end - 1;
   }
 
-  execute(
-    im: ImportManager,
-    sf: ts.SourceFile,
-    refEmitter: ReferenceEmitter,
-    printer: ts.Printer,
-  ): string {
+  execute(im: ImportManager, sf: ts.SourceFile, refEmitter: ReferenceEmitter): string {
     const emitEnv = new ReferenceEmitEnvironment(im, refEmitter, this.reflector, sf);
-    const tcb = generateInlineTypeCtor(emitEnv, this.ref.node, this.meta);
-    return printer.printNode(ts.EmitHint.Unspecified, tcb, sf);
+    return generateInlineTypeCtor(emitEnv, this.ref.node, this.meta);
   }
 }
 

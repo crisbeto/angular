@@ -7,12 +7,9 @@
  */
 
 import {TmplAstTemplate, TmplAstVariable} from '@angular/compiler';
-import ts from 'typescript';
-import {TcbOp} from './base';
+import {TcbNode, TcbOp} from './base';
 import type {Context} from './context';
 import type {Scope} from './scope';
-import {addParseSpanInfo, wrapForTypeChecker} from '../diagnostics';
-import {tsCreateVariable, tsDeclareVariable} from '../ts_util';
 
 /**
  * A `TcbOp` which renders a variable that is implicitly available within a block (e.g. `$count`
@@ -24,7 +21,7 @@ export class TcbBlockImplicitVariableOp extends TcbOp {
   constructor(
     private tcb: Context,
     private scope: Scope,
-    private type: ts.TypeNode,
+    private type: TcbNode,
     private variable: TmplAstVariable,
   ) {
     super();
@@ -32,11 +29,13 @@ export class TcbBlockImplicitVariableOp extends TcbOp {
 
   override readonly optional = true;
 
-  override execute(): ts.Identifier {
-    const id = this.tcb.allocateId();
-    addParseSpanInfo(id, this.variable.keySpan);
-    const variable = tsDeclareVariable(id, this.type);
-    addParseSpanInfo(variable.declarationList.declarations[0], this.variable.sourceSpan);
+  override execute(): TcbNode {
+    const id = new TcbNode(this.tcb.allocateId()).addParseSpanInfo(this.variable.keySpan);
+    // TODO: this might not be right. Previously it was being added as:
+    // `addParseSpanInfo(variable.declarationList.declarations[0], this.variable.sourceSpan);`
+    const variable = TcbNode.declareVariable(id, this.type).addParseSpanInfo(
+      this.variable.sourceSpan,
+    );
     this.scope.addStatement(variable);
     return id;
   }
@@ -62,30 +61,34 @@ export class TcbTemplateVariableOp extends TcbOp {
     return false;
   }
 
-  override execute(): ts.Identifier {
+  override execute(): TcbNode {
     // Look for a context variable for the template.
     const ctx = this.scope.resolve(this.template);
 
     // Allocate an identifier for the TmplAstVariable, and initialize it to a read of the variable
     // on the template context.
     const id = this.tcb.allocateId();
-    const initializer = ts.factory.createPropertyAccessExpression(
-      /* expression */ ctx,
-      /* name */ this.variable.value || '$implicit',
-    );
-    addParseSpanInfo(id, this.variable.keySpan);
+    const initializer = new TcbNode(`${ctx.print()}.${this.variable.value || '$implicit'}`);
+    const idNode = new TcbNode(id);
+    idNode.addParseSpanInfo(this.variable.keySpan);
 
     // Declare the variable, and return its identifier.
-    let variable: ts.VariableStatement;
+    let variable: TcbNode;
+    // We already have idNode with keySpan.
+    // We should use idNode in the statement.
     if (this.variable.valueSpan !== undefined) {
-      addParseSpanInfo(initializer, this.variable.valueSpan);
-      variable = tsCreateVariable(id, wrapForTypeChecker(initializer));
+      initializer.addParseSpanInfo(this.variable.valueSpan);
+      initializer.wrapForTypeChecker(); // TcbNode has this method
+      // Attach sourceSpan to the wrapper (parenthesized expression)
+      initializer.addParseSpanInfo(this.variable.sourceSpan);
+      variable = new TcbNode(`var ${idNode.print()} = ${initializer.print()}`);
     } else {
-      variable = tsCreateVariable(id, initializer);
+      initializer.addParseSpanInfo(this.variable.sourceSpan);
+      variable = new TcbNode(`var ${idNode.print()} = ${initializer.print()}`);
     }
-    addParseSpanInfo(variable.declarationList.declarations[0], this.variable.sourceSpan);
+    // variable.addParseSpanInfo(this.variable.sourceSpan);
     this.scope.addStatement(variable);
-    return id;
+    return idNode;
   }
 }
 
@@ -98,7 +101,7 @@ export class TcbBlockVariableOp extends TcbOp {
   constructor(
     private tcb: Context,
     private scope: Scope,
-    private initializer: ts.Expression,
+    private initializer: TcbNode,
     private variable: TmplAstVariable,
   ) {
     super();
@@ -108,12 +111,18 @@ export class TcbBlockVariableOp extends TcbOp {
     return false;
   }
 
-  override execute(): ts.Identifier {
+  override execute(): TcbNode {
     const id = this.tcb.allocateId();
-    addParseSpanInfo(id, this.variable.keySpan);
-    const variable = tsCreateVariable(id, wrapForTypeChecker(this.initializer));
-    addParseSpanInfo(variable.declarationList.declarations[0], this.variable.sourceSpan);
+    const idNode = new TcbNode(id);
+    idNode.addParseSpanInfo(this.variable.keySpan);
+
+    this.initializer.wrapForTypeChecker();
+    // Attach span to initializer (which is already wrapped)
+    // We assume initializer expects sourceSpan.
+    this.initializer.addParseSpanInfo(this.variable.sourceSpan);
+    const variable = new TcbNode(`var ${idNode.print()} = ${this.initializer.print()}`);
+    // variable.addParseSpanInfo(this.variable.sourceSpan);
     this.scope.addStatement(variable);
-    return id;
+    return idNode;
   }
 }

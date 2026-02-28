@@ -21,13 +21,10 @@ import ts from 'typescript';
 import type {Context} from './context';
 import type {Scope} from './scope';
 import {TypeCheckableDirectiveMeta} from '../../api';
-import {TcbOp} from './base';
+import {TcbNode, TcbOp} from './base';
 import {BindingPropertyName, ClassPropertyName} from '../../../metadata';
-import {addParseSpanInfo, wrapForDiagnostics} from '../diagnostics';
-import {markIgnoreDiagnostics} from '../comments';
 import {REGISTRY} from '../dom';
 import {tcbExpression, unwrapWritableSignal} from './expression';
-import {tsCreateTypeQueryForCoercedInput, tsDeclareVariable} from '../ts_util';
 import {
   checkUnsupportedFieldBindings,
   CustomFormControlType,
@@ -40,10 +37,10 @@ import {LocalSymbol} from './references';
 /**
  * Translates the given attribute binding to a `ts.Expression`.
  */
-export function translateInput(value: AST | string, tcb: Context, scope: Scope): ts.Expression {
+export function translateInput(value: AST | string, tcb: Context, scope: Scope): TcbNode {
   if (typeof value === 'string') {
     // For regular attributes with a static string value, use the represented string literal.
-    return ts.factory.createStringLiteral(value);
+    return new TcbNode(`"${value}"`);
   } else {
     // Produce an expression representing the value of the binding.
     return tcbExpression(value, tcb, scope);
@@ -73,7 +70,7 @@ export class TcbDirectiveInputsOp extends TcbOp {
   }
 
   override execute(): null {
-    let dirId: ts.Expression | null = null;
+    let dirId: TcbNode | null = null;
 
     // TODO(joost): report duplicate properties
     const seenRequiredInputs = new Set<ClassPropertyName>();
@@ -97,12 +94,14 @@ export class TcbDirectiveInputsOp extends TcbOp {
 
     for (const attr of boundAttrs) {
       // For bound inputs, the property is assigned the binding expression.
-      const expr = widenBinding(translateInput(attr.value, this.tcb, this.scope), this.tcb);
-
-      let assignment: ts.Expression = wrapForDiagnostics(expr);
+      let assignment = widenBinding(
+        translateInput(attr.value, this.tcb, this.scope),
+        this.tcb,
+        attr.value,
+      ).wrapForDiagnostics();
 
       for (const {fieldName, required, transformType, isSignal, isTwoWayBinding} of attr.inputs) {
-        let target: ts.LeftHandSideExpression;
+        let target: TcbNode;
 
         if (required) {
           seenRequiredInputs.add(fieldName);
@@ -115,10 +114,13 @@ export class TcbDirectiveInputsOp extends TcbOp {
         // setting the `WriteT` of such `InputSignalWithTransform<_, WriteT>`.
 
         if (this.dir.coercedInputFields.has(fieldName)) {
-          let type: ts.TypeNode;
+          let type: TcbNode;
 
           if (transformType !== null) {
-            type = this.tcb.env.referenceTransplantedType(new TransplantedType(transformType));
+            const tsType = this.tcb.env.referenceTransplantedType(
+              new TransplantedType(transformType),
+            );
+            type = new TcbNode(TcbNode.tempPrint(tsType, transformType.node.getSourceFile()));
           } else {
             // The input has a coercion declaration which should be used instead of assigning the
             // expression into the input field directly. To achieve this, a variable is declared
@@ -132,11 +134,15 @@ export class TcbDirectiveInputsOp extends TcbOp {
               );
             }
 
-            type = tsCreateTypeQueryForCoercedInput(dirTypeRef.typeName, fieldName);
+            const typeName = ts.isIdentifier(dirTypeRef.typeName)
+              ? dirTypeRef.typeName.text
+              : TcbNode.tempPrint(dirTypeRef.typeName, dirTypeRef.typeName.getSourceFile());
+
+            type = new TcbNode(`typeof ${typeName}.ngAcceptInputType_${fieldName}`);
           }
 
-          const id = this.tcb.allocateId();
-          this.scope.addStatement(tsDeclareVariable(id, type));
+          const id = new TcbNode(this.tcb.allocateId());
+          this.scope.addStatement(TcbNode.declareVariable(id, type));
 
           target = id;
         } else if (this.dir.undeclaredInputFields.has(fieldName)) {
@@ -156,18 +162,15 @@ export class TcbDirectiveInputsOp extends TcbOp {
             dirId = this.scope.resolve(this.node, this.dir);
           }
 
-          const id = this.tcb.allocateId();
+          const id = new TcbNode(this.tcb.allocateId());
           const dirTypeRef = this.tcb.env.referenceType(this.dir.ref);
           if (!ts.isTypeReferenceNode(dirTypeRef)) {
             throw new Error(
               `Expected TypeReferenceNode from reference to ${this.dir.ref.debugName}`,
             );
           }
-          const type = ts.factory.createIndexedAccessTypeNode(
-            ts.factory.createTypeQueryNode(dirId as ts.Identifier),
-            ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(fieldName)),
-          );
-          const temp = tsDeclareVariable(id, type);
+          const type = new TcbNode(`(typeof ${dirId.print()})["${fieldName}"]`);
+          const temp = TcbNode.declareVariable(id, type);
           this.scope.addStatement(temp);
           target = id;
         } else {
@@ -179,14 +182,8 @@ export class TcbDirectiveInputsOp extends TcbOp {
           // when possible. String literal fields may not be valid JS identifiers so we use
           // literal element access instead for those cases.
           target = this.dir.stringLiteralInputFields.has(fieldName)
-            ? ts.factory.createElementAccessExpression(
-                dirId,
-                ts.factory.createStringLiteral(fieldName),
-              )
-            : ts.factory.createPropertyAccessExpression(
-                dirId,
-                ts.factory.createIdentifier(fieldName),
-              );
+            ? new TcbNode(`${dirId.print()}["${fieldName}"]`)
+            : new TcbNode(`${dirId.print()}.${fieldName}`);
         }
 
         // For signal inputs, we unwrap the target `InputSignal`. Note that
@@ -195,24 +192,16 @@ export class TcbDirectiveInputsOp extends TcbOp {
         //   2. follow the existing pattern where multiple targets assign a single expression.
         //      This is a significant requirement for language service auto-completion.
         if (isSignal) {
-          const inputSignalBrandWriteSymbol = this.tcb.env.referenceExternalSymbol(
+          const inputSignalBrandWriteSymbol = this.tcb.env.tcbReferenceExternalSymbol(
             R3Identifiers.InputSignalBrandWriteType.moduleName,
             R3Identifiers.InputSignalBrandWriteType.name,
           );
-          if (
-            !ts.isIdentifier(inputSignalBrandWriteSymbol) &&
-            !ts.isPropertyAccessExpression(inputSignalBrandWriteSymbol)
-          ) {
-            throw new Error(
-              `Expected identifier or property access for reference to ${R3Identifiers.InputSignalBrandWriteType.name}`,
-            );
-          }
 
-          target = ts.factory.createElementAccessExpression(target, inputSignalBrandWriteSymbol);
+          target = new TcbNode(`${target.print()}[${inputSignalBrandWriteSymbol.print()}]`);
         }
 
         if (attr.keySpan !== null) {
-          addParseSpanInfo(target, attr.keySpan);
+          target.addParseSpanInfo(attr.keySpan);
         }
 
         // Two-way bindings accept `T | WritableSignal<T>` so we have to unwrap the value.
@@ -221,20 +210,17 @@ export class TcbDirectiveInputsOp extends TcbOp {
         }
 
         // Finally the assignment is extended by assigning it into the target expression.
-        assignment = ts.factory.createBinaryExpression(
-          target,
-          ts.SyntaxKind.EqualsToken,
-          assignment,
-        );
+        assignment = new TcbNode(`${target.print()} = ${assignment.print()}`);
       }
 
-      addParseSpanInfo(assignment, attr.sourceSpan);
+      assignment.addParseSpanInfo(attr.sourceSpan);
+
       // Ignore diagnostics for text attributes if configured to do so.
       if (!this.tcb.env.config.checkTypeOfAttributes && typeof attr.value === 'string') {
-        markIgnoreDiagnostics(assignment);
+        assignment.markIgnoreDiagnostics();
       }
 
-      this.scope.addStatement(ts.factory.createExpressionStatement(assignment));
+      this.scope.addStatement(assignment);
     }
 
     this.checkRequiredInputs(seenRequiredInputs);
@@ -291,7 +277,7 @@ export class TcbUnclaimedInputsOp extends TcbOp {
   override execute(): null {
     // `this.inputs` contains only those bindings not matched by any directive. These bindings go to
     // the element itself.
-    let elId: ts.Expression | null = null;
+    let elId: TcbNode | null = null;
 
     // TODO(alxhub): this could be more efficient.
     for (const binding of this.inputs) {
@@ -303,7 +289,11 @@ export class TcbUnclaimedInputsOp extends TcbOp {
         continue;
       }
 
-      const expr = widenBinding(tcbExpression(binding.value, this.tcb, this.scope), this.tcb);
+      const expr = widenBinding(
+        tcbExpression(binding.value, this.tcb, this.scope),
+        this.tcb,
+        binding.value,
+      );
 
       if (this.tcb.env.config.checkTypeOfDomBindings && isPropertyBinding) {
         if (binding.name !== 'style' && binding.name !== 'class') {
@@ -312,25 +302,18 @@ export class TcbUnclaimedInputsOp extends TcbOp {
           }
           // A direct binding to a property.
           const propertyName = REGISTRY.getMappedPropName(binding.name);
-          const prop = ts.factory.createElementAccessExpression(
-            elId,
-            ts.factory.createStringLiteral(propertyName),
-          );
-          const stmt = ts.factory.createBinaryExpression(
-            prop,
-            ts.SyntaxKind.EqualsToken,
-            wrapForDiagnostics(expr),
-          );
-          addParseSpanInfo(stmt, binding.sourceSpan);
-          this.scope.addStatement(ts.factory.createExpressionStatement(stmt));
+          const stmt = new TcbNode(
+            `${elId.print()}["${propertyName}"] = ${expr.wrapForDiagnostics().print()}`,
+          ).addParseSpanInfo(binding.sourceSpan);
+          this.scope.addStatement(stmt);
         } else {
-          this.scope.addStatement(ts.factory.createExpressionStatement(expr));
+          this.scope.addStatement(expr);
         }
       } else {
         // A binding to an animation, attribute, class or style. For now, only validate the right-
         // hand side of the expression.
         // TODO: properly check class and style bindings.
-        this.scope.addStatement(ts.factory.createExpressionStatement(expr));
+        this.scope.addStatement(expr);
       }
     }
 

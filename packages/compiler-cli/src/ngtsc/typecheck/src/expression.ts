@@ -40,94 +40,29 @@ import {
   Unary,
   VoidExpression,
 } from '@angular/compiler';
-import ts from 'typescript';
+import {TcbNode} from './ops/base';
 import {TypeCheckingConfig} from '../api';
-import {addParseSpanInfo, wrapForDiagnostics, wrapForTypeChecker} from './diagnostics';
-import {tsCastToAny, tsNumericExpression} from './ts_util';
-import {markIgnoreDiagnostics} from './comments';
 
 /**
- * Gets an expression that is cast to any. Currently represented as `0 as any`.
- *
- * Historically this expression was using `null as any`, but a newly-added check in TypeScript 5.6
- * (https://devblogs.microsoft.com/typescript/announcing-typescript-5-6-beta/#disallowed-nullish-and-truthy-checks)
- * started flagging it as always being nullish. Other options that were considered:
- * - `NaN as any` or `Infinity as any` - not used, because they don't work if the `noLib` compiler
- *   option is enabled. Also they require more characters.
- * - Some flavor of function call, like `isNan(0) as any` - requires even more characters than the
- *   NaN option and has the same issue with `noLib`.
- */
-export function getAnyExpression(): ts.AsExpression {
-  return ts.factory.createAsExpression(
-    ts.factory.createNumericLiteral('0'),
-    ts.factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword),
-  );
-}
-
-/**
- * Convert an `AST` to TypeScript code directly, without going through an intermediate `Expression`
+ * Convert an `AST` to a `TcbNode` directly, without going through an intermediate `Expression`
  * AST.
  */
-export function astToTypescript(
+export function astToTcbNode(
   ast: AST,
-  maybeResolve: (ast: AST) => ts.Expression | null,
+  maybeResolve: (ast: AST) => TcbNode | null,
   config: TypeCheckingConfig,
-): ts.Expression {
-  const translator = new AstTranslator(maybeResolve, config);
+): TcbNode {
+  const translator = new TcbNodeTranslator(maybeResolve, config);
   return translator.translate(ast);
 }
 
-class AstTranslator implements AstVisitor {
-  private readonly UNDEFINED = ts.factory.createIdentifier('undefined');
-
-  private readonly UNARY_OPS = new Map<string, ts.PrefixUnaryOperator>([
-    ['+', ts.SyntaxKind.PlusToken],
-    ['-', ts.SyntaxKind.MinusToken],
-  ]);
-
-  private readonly BINARY_OPS = new Map<string, ts.BinaryOperator>([
-    ['+', ts.SyntaxKind.PlusToken],
-    ['-', ts.SyntaxKind.MinusToken],
-    ['<', ts.SyntaxKind.LessThanToken],
-    ['>', ts.SyntaxKind.GreaterThanToken],
-    ['<=', ts.SyntaxKind.LessThanEqualsToken],
-    ['>=', ts.SyntaxKind.GreaterThanEqualsToken],
-    ['=', ts.SyntaxKind.EqualsToken],
-    ['==', ts.SyntaxKind.EqualsEqualsToken],
-    ['===', ts.SyntaxKind.EqualsEqualsEqualsToken],
-    ['*', ts.SyntaxKind.AsteriskToken],
-    ['**', ts.SyntaxKind.AsteriskAsteriskToken],
-    ['/', ts.SyntaxKind.SlashToken],
-    ['%', ts.SyntaxKind.PercentToken],
-    ['!=', ts.SyntaxKind.ExclamationEqualsToken],
-    ['!==', ts.SyntaxKind.ExclamationEqualsEqualsToken],
-    ['||', ts.SyntaxKind.BarBarToken],
-    ['&&', ts.SyntaxKind.AmpersandAmpersandToken],
-    ['&', ts.SyntaxKind.AmpersandToken],
-    ['|', ts.SyntaxKind.BarToken],
-    ['??', ts.SyntaxKind.QuestionQuestionToken],
-    ['=', ts.SyntaxKind.EqualsToken],
-    ['+=', ts.SyntaxKind.PlusEqualsToken],
-    ['-=', ts.SyntaxKind.MinusEqualsToken],
-    ['*=', ts.SyntaxKind.AsteriskEqualsToken],
-    ['/=', ts.SyntaxKind.SlashEqualsToken],
-    ['%=', ts.SyntaxKind.PercentEqualsToken],
-    ['**=', ts.SyntaxKind.AsteriskAsteriskEqualsToken],
-    ['&&=', ts.SyntaxKind.AmpersandAmpersandEqualsToken],
-    ['||=', ts.SyntaxKind.BarBarEqualsToken],
-    ['??=', ts.SyntaxKind.QuestionQuestionEqualsToken],
-    ['in', ts.SyntaxKind.InKeyword],
-    ['instanceof', ts.SyntaxKind.InstanceOfKeyword],
-  ]);
-
+class TcbNodeTranslator implements AstVisitor {
   constructor(
-    private maybeResolve: (ast: AST) => ts.Expression | null,
+    private maybeResolve: (ast: AST) => TcbNode | null,
     private config: TypeCheckingConfig,
   ) {}
 
-  translate(ast: AST): ts.Expression {
-    // Skip over an `ASTWithSource` as its `visit` method calls directly into its ast's `visit`,
-    // which would prevent any custom resolution through `maybeResolve` for that node.
+  translate(ast: AST): TcbNode {
     if (ast instanceof ASTWithSource) {
       ast = ast.ast;
     }
@@ -141,37 +76,31 @@ class AstTranslator implements AstVisitor {
     return ast.visit(this);
   }
 
-  visitUnary(ast: Unary): ts.Expression {
+  visitUnary(ast: Unary): TcbNode {
     const expr = this.translate(ast.expr);
-    const op = this.UNARY_OPS.get(ast.operator);
-    if (op === undefined) {
-      throw new Error(`Unsupported Unary.operator: ${ast.operator}`);
-    }
-    const node = wrapForDiagnostics(ts.factory.createPrefixUnaryExpression(op, expr));
-    addParseSpanInfo(node, ast.sourceSpan);
+    const node = new TcbNode(`${ast.operator}${expr.print()}`);
+    return node.wrapForDiagnostics().addParseSpanInfo(ast.sourceSpan);
+  }
+
+  visitBinary(ast: Binary): TcbNode {
+    const lhs = this.translate(ast.left);
+    const rhs = this.translate(ast.right);
+    lhs.wrapForDiagnostics();
+    rhs.wrapForDiagnostics();
+    const node = new TcbNode(`${lhs.print()} ${ast.operation} ${rhs.print()}`);
+    node.addParseSpanInfo(ast.sourceSpan);
     return node;
   }
 
-  visitBinary(ast: Binary): ts.Expression {
-    const lhs = wrapForDiagnostics(this.translate(ast.left));
-    const rhs = wrapForDiagnostics(this.translate(ast.right));
-    const op = this.BINARY_OPS.get(ast.operation);
-    if (op === undefined) {
-      throw new Error(`Unsupported Binary.operation: ${ast.operation}`);
-    }
-    const node = ts.factory.createBinaryExpression(lhs, op, rhs);
-    addParseSpanInfo(node, ast.sourceSpan);
+  visitChain(ast: Chain): TcbNode {
+    const elements = ast.expressions.map((expr) => this.translate(expr).print());
+    const node = new TcbNode(elements.join(', '));
+    node.wrapForDiagnostics();
+    node.addParseSpanInfo(ast.sourceSpan);
     return node;
   }
 
-  visitChain(ast: Chain): ts.Expression {
-    const elements = ast.expressions.map((expr) => this.translate(expr));
-    const node = wrapForDiagnostics(ts.factory.createCommaListExpression(elements));
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
-  }
-
-  visitConditional(ast: Conditional): ts.Expression {
+  visitConditional(ast: Conditional): TcbNode {
     const condExpr = this.translate(ast.condition);
     const trueExpr = this.translate(ast.trueExp);
     // Wrap `falseExpr` in parens so that the trailing parse span info is not attributed to the
@@ -181,11 +110,10 @@ class AstTranslator implements AstVisitor {
     // is immediately before it:
     // `conditional /*1,2*/ ? trueExpr /*3,4*/ : falseExpr /*5,6*/`
     // This should be instead be `conditional /*1,2*/ ? trueExpr /*3,4*/ : (falseExpr /*5,6*/)`
-    const falseExpr = wrapForTypeChecker(this.translate(ast.falseExp));
-    const node = ts.factory.createParenthesizedExpression(
-      ts.factory.createConditionalExpression(condExpr, undefined, trueExpr, undefined, falseExpr),
-    );
-    addParseSpanInfo(node, ast.sourceSpan);
+    const falseExpr = this.translate(ast.falseExp).wrapForTypeChecker();
+    const node = new TcbNode(
+      `(${condExpr.print()} ? ${trueExpr.print()} : ${falseExpr.print()})`,
+    ).addParseSpanInfo(ast.sourceSpan);
     return node;
   }
 
@@ -197,213 +125,176 @@ class AstTranslator implements AstVisitor {
     throw new Error('Method not implemented.');
   }
 
-  visitRegularExpressionLiteral(ast: RegularExpressionLiteral, context: any) {
-    return wrapForTypeChecker(
-      ts.factory.createRegularExpressionLiteral(`/${ast.body}/${ast.flags ?? ''}`),
-    );
+  visitRegularExpressionLiteral(ast: RegularExpressionLiteral, context: any): TcbNode {
+    const node = new TcbNode(`/${ast.body}/${ast.flags ?? ''}`);
+    node.wrapForTypeChecker();
+    return node;
   }
 
-  visitInterpolation(ast: Interpolation): ts.Expression {
+  visitInterpolation(ast: Interpolation): TcbNode {
     // Build up a chain of binary + operations to simulate the string concatenation of the
     // interpolation's expressions. The chain is started using an actual string literal to ensure
     // the type is inferred as 'string'.
-    return ast.expressions.reduce(
-      (lhs: ts.Expression, ast: AST) =>
-        ts.factory.createBinaryExpression(
-          lhs,
-          ts.SyntaxKind.PlusToken,
-          wrapForTypeChecker(this.translate(ast)),
-        ),
-      ts.factory.createStringLiteral(''),
-    );
+    const exprs = ast.expressions.map((e) => {
+      const node = this.translate(e);
+      node.wrapForTypeChecker();
+      return node.print();
+    });
+    return new TcbNode(`"" + ${exprs.join(' + ')}`);
   }
 
-  visitKeyedRead(ast: KeyedRead): ts.Expression {
-    const receiver = wrapForDiagnostics(this.translate(ast.receiver));
+  visitKeyedRead(ast: KeyedRead): TcbNode {
+    const receiver = this.translate(ast.receiver).wrapForDiagnostics();
     const key = this.translate(ast.key);
-    const node = ts.factory.createElementAccessExpression(receiver, key);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+    return new TcbNode(`${receiver.print()}[${key.print()}]`).addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitLiteralArray(ast: LiteralArray): ts.Expression {
+  visitLiteralArray(ast: LiteralArray): TcbNode {
     const elements = ast.expressions.map((expr) => this.translate(expr));
-    const literal = ts.factory.createArrayLiteralExpression(elements);
+    let content = `[${elements.map((el) => el.print()).join(', ')}]`;
+
     // If strictLiteralTypes is disabled, array literals are cast to `any`.
-    const node = this.config.strictLiteralTypes ? literal : tsCastToAny(literal);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+    if (!this.config.strictLiteralTypes) {
+      content += ' as any';
+    }
+
+    return new TcbNode(content).addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitLiteralMap(ast: LiteralMap): ts.Expression {
+  visitLiteralMap(ast: LiteralMap): TcbNode {
     const properties = ast.keys.map((key, idx) => {
       const value = this.translate(ast.values[idx]);
 
       if (key.kind === 'property') {
-        const keyNode = ts.factory.createStringLiteral(key.key);
-        addParseSpanInfo(keyNode, key.sourceSpan);
-        return ts.factory.createPropertyAssignment(keyNode, value);
+        const keyNode = new TcbNode(`"${key.key}"`).addParseSpanInfo(key.sourceSpan);
+        return `${keyNode.print()}: ${value.print()}`;
       } else {
-        return ts.factory.createSpreadAssignment(value);
+        return `...${value.print()}`;
       }
     });
-    const literal = ts.factory.createObjectLiteralExpression(properties, true);
+
     // If strictLiteralTypes is disabled, object literals are cast to `any`.
-    const node = this.config.strictLiteralTypes ? literal : tsCastToAny(literal);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+    return new TcbNode(
+      `{ ${properties.join(', ')} }${this.config.strictLiteralTypes ? '' : ' as any'}`,
+    ).addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitLiteralPrimitive(ast: LiteralPrimitive): ts.Expression {
-    let node: ts.Expression;
+  visitLiteralPrimitive(ast: LiteralPrimitive): TcbNode {
+    let node: TcbNode;
     if (ast.value === undefined) {
-      node = ts.factory.createIdentifier('undefined');
+      node = new TcbNode('undefined');
     } else if (ast.value === null) {
-      node = ts.factory.createNull();
+      node = new TcbNode('null');
     } else if (typeof ast.value === 'string') {
-      node = ts.factory.createStringLiteral(ast.value);
+      node = new TcbNode(JSON.stringify(ast.value));
     } else if (typeof ast.value === 'number') {
-      node = tsNumericExpression(ast.value);
+      if (Number.isNaN(ast.value)) {
+        node = new TcbNode('NaN');
+      } else if (!Number.isFinite(ast.value)) {
+        node = new TcbNode(ast.value > 0 ? 'Infinity' : '-Infinity');
+      } else {
+        node = new TcbNode(ast.value.toString());
+      }
     } else if (typeof ast.value === 'boolean') {
-      node = ast.value ? ts.factory.createTrue() : ts.factory.createFalse();
+      node = new TcbNode(ast.value + '');
     } else {
       throw Error(`Unsupported AST value of type ${typeof ast.value}`);
     }
-    addParseSpanInfo(node, ast.sourceSpan);
+    node.addParseSpanInfo(ast.sourceSpan);
     return node;
   }
 
-  visitNonNullAssert(ast: NonNullAssert): ts.Expression {
-    const expr = wrapForDiagnostics(this.translate(ast.expression));
-    const node = ts.factory.createNonNullExpression(expr);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+  visitNonNullAssert(ast: NonNullAssert): TcbNode {
+    const expr = this.translate(ast.expression).wrapForDiagnostics();
+    return new TcbNode(`${expr.print()}!`).addParseSpanInfo(ast.sourceSpan);
   }
 
   visitPipe(ast: BindingPipe): never {
     throw new Error('Method not implemented.');
   }
 
-  visitPrefixNot(ast: PrefixNot): ts.Expression {
-    const expression = wrapForDiagnostics(this.translate(ast.expression));
-    const node = ts.factory.createLogicalNot(expression);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+  visitPrefixNot(ast: PrefixNot): TcbNode {
+    const expression = this.translate(ast.expression).wrapForDiagnostics();
+    return new TcbNode(`!${expression.print()}`).addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitTypeofExpression(ast: TypeofExpression): ts.Expression {
-    const expression = wrapForDiagnostics(this.translate(ast.expression));
-    const node = ts.factory.createTypeOfExpression(expression);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+  visitTypeofExpression(ast: TypeofExpression): TcbNode {
+    const expression = this.translate(ast.expression).wrapForDiagnostics();
+    return new TcbNode(`typeof ${expression.print()}`).addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitVoidExpression(ast: VoidExpression): ts.Expression {
-    const expression = wrapForDiagnostics(this.translate(ast.expression));
-    const node = ts.factory.createVoidExpression(expression);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+  visitVoidExpression(ast: VoidExpression): TcbNode {
+    const expression = this.translate(ast.expression).wrapForDiagnostics();
+    return new TcbNode(`void ${expression.print()}`).addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitPropertyRead(ast: PropertyRead): ts.Expression {
+  visitPropertyRead(ast: PropertyRead): TcbNode {
     // This is a normal property read - convert the receiver to an expression and emit the correct
     // TypeScript expression to read the property.
-    const receiver = wrapForDiagnostics(this.translate(ast.receiver));
-    const name = ts.factory.createPropertyAccessExpression(receiver, ast.name);
-    addParseSpanInfo(name, ast.nameSpan);
-    const node = wrapForDiagnostics(name);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+    const receiver = this.translate(ast.receiver).wrapForDiagnostics();
+    return new TcbNode(`${receiver.print()}.${ast.name}`)
+      .addParseSpanInfo(ast.nameSpan)
+      .wrapForDiagnostics()
+      .addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitSafePropertyRead(ast: SafePropertyRead): ts.Expression {
-    let node: ts.Expression;
-    const receiver = wrapForDiagnostics(this.translate(ast.receiver));
+  visitSafePropertyRead(ast: SafePropertyRead): TcbNode {
+    let node: TcbNode;
+    const receiver = this.translate(ast.receiver).wrapForDiagnostics();
+    const name = new TcbNode(ast.name).addParseSpanInfo(ast.nameSpan);
+
     // The form of safe property reads depends on whether strictness is in use.
     if (this.config.strictSafeNavigationTypes) {
       // Basically, the return here is either the type of the complete expression with a null-safe
       // property read, or `undefined`. So a ternary is used to create an "or" type:
       // "a?.b" becomes (0 as any ? a!.b : undefined)
       // The type of this expression is (typeof a!.b) | undefined, which is exactly as desired.
-      const expr = ts.factory.createPropertyAccessExpression(
-        ts.factory.createNonNullExpression(receiver),
-        ast.name,
-      );
-      addParseSpanInfo(expr, ast.nameSpan);
-      node = ts.factory.createParenthesizedExpression(
-        ts.factory.createConditionalExpression(
-          getAnyExpression(),
-          undefined,
-          expr,
-          undefined,
-          this.UNDEFINED,
-        ),
-      );
+      node = new TcbNode(`(0 as any ? ${receiver.print()}!.${name.print()} : undefined)`);
     } else if (VeSafeLhsInferenceBugDetector.veWillInferAnyFor(ast)) {
       // Emulate a View Engine bug where 'any' is inferred for the left-hand side of the safe
       // navigation operation. With this bug, the type of the left-hand side is regarded as any.
       // Therefore, the left-hand side only needs repeating in the output (to validate it), and then
       // 'any' is used for the rest of the expression. This is done using a comma operator:
       // "a?.b" becomes (a as any).b, which will of course have type 'any'.
-      node = ts.factory.createPropertyAccessExpression(tsCastToAny(receiver), ast.name);
+      node = new TcbNode(`(${receiver.print()} as any).${name.print()}`);
     } else {
       // The View Engine bug isn't active, so check the entire type of the expression, but the final
       // result is still inferred as `any`.
       // "a?.b" becomes (a!.b as any)
-      const expr = ts.factory.createPropertyAccessExpression(
-        ts.factory.createNonNullExpression(receiver),
-        ast.name,
-      );
-      addParseSpanInfo(expr, ast.nameSpan);
-      node = tsCastToAny(expr);
+      node = new TcbNode(`(${receiver.print()}!.${name.print()} as any)`);
     }
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+    return node.addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitSafeKeyedRead(ast: SafeKeyedRead): ts.Expression {
-    const receiver = wrapForDiagnostics(this.translate(ast.receiver));
+  visitSafeKeyedRead(ast: SafeKeyedRead): TcbNode {
+    const receiver = this.translate(ast.receiver).wrapForDiagnostics();
     const key = this.translate(ast.key);
-    let node: ts.Expression;
+    let node: TcbNode;
 
     // The form of safe property reads depends on whether strictness is in use.
     if (this.config.strictSafeNavigationTypes) {
       // "a?.[...]" becomes (0 as any ? a![...] : undefined)
-      const expr = ts.factory.createElementAccessExpression(
-        ts.factory.createNonNullExpression(receiver),
-        key,
+      const elementAccess = new TcbNode(`${receiver.print()}![${key.print()}]`).addParseSpanInfo(
+        ast.sourceSpan,
       );
-      addParseSpanInfo(expr, ast.sourceSpan);
-      node = ts.factory.createParenthesizedExpression(
-        ts.factory.createConditionalExpression(
-          getAnyExpression(),
-          undefined,
-          expr,
-          undefined,
-          this.UNDEFINED,
-        ),
-      );
+      node = new TcbNode(`(0 as any ? ${elementAccess.print()} : undefined)`);
     } else if (VeSafeLhsInferenceBugDetector.veWillInferAnyFor(ast)) {
       // "a?.[...]" becomes (a as any)[...]
-      node = ts.factory.createElementAccessExpression(tsCastToAny(receiver), key);
+      node = new TcbNode(`(${receiver.print()} as any)[${key.print()}]`);
     } else {
       // "a?.[...]" becomes (a!.[...] as any)
-      const expr = ts.factory.createElementAccessExpression(
-        ts.factory.createNonNullExpression(receiver),
-        key,
+      const elementAccess = new TcbNode(`${receiver.print()}![${key.print()}]`).addParseSpanInfo(
+        ast.sourceSpan,
       );
-      addParseSpanInfo(expr, ast.sourceSpan);
-      node = tsCastToAny(expr);
+      node = new TcbNode(`(${elementAccess.print()} as any)`);
     }
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+    return node.addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitCall(ast: Call): ts.Expression {
+  visitCall(ast: Call): TcbNode {
     const args = ast.args.map((expr) => this.translate(expr));
-
-    let expr: ts.Expression;
     const receiver = ast.receiver;
+    let expr: TcbNode;
 
     // For calls that have a property read as receiver, we have to special-case their emit to avoid
     // inserting superfluous parenthesis as they prevent TypeScript from applying a narrowing effect
@@ -413,101 +304,90 @@ class AstTranslator implements AstVisitor {
       if (resolved !== null) {
         expr = resolved;
       } else {
-        const propertyReceiver = wrapForDiagnostics(this.translate(receiver.receiver));
-        expr = ts.factory.createPropertyAccessExpression(propertyReceiver, receiver.name);
-        addParseSpanInfo(expr, receiver.nameSpan);
+        const propertyReceiver = this.translate(receiver.receiver).wrapForDiagnostics();
+        expr = new TcbNode(`${propertyReceiver.print()}.${receiver.name}`).addParseSpanInfo(
+          receiver.nameSpan,
+        );
       }
     } else {
       expr = this.translate(receiver);
     }
 
-    let node: ts.Expression;
+    let node: TcbNode;
 
     // Safe property/keyed reads will produce a ternary whose value is nullable.
     // We have to generate a similar ternary around the call.
     if (ast.receiver instanceof SafePropertyRead || ast.receiver instanceof SafeKeyedRead) {
       node = this.convertToSafeCall(ast, expr, args);
     } else {
-      node = ts.factory.createCallExpression(expr, undefined, args);
+      node = new TcbNode(`${expr.print()}(${args.map((arg) => arg.print()).join(', ')})`);
     }
 
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+    return node.addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitSafeCall(ast: SafeCall): ts.Expression {
+  visitSafeCall(ast: SafeCall): TcbNode {
     const args = ast.args.map((expr) => this.translate(expr));
-    const expr = wrapForDiagnostics(this.translate(ast.receiver));
-    const node = this.convertToSafeCall(ast, expr, args);
-    addParseSpanInfo(node, ast.sourceSpan);
-    return node;
+    const expr = this.translate(ast.receiver).wrapForDiagnostics();
+    return this.convertToSafeCall(ast, expr, args).addParseSpanInfo(ast.sourceSpan);
   }
 
-  visitTemplateLiteral(ast: TemplateLiteral): ts.TemplateLiteral {
+  visitTemplateLiteral(ast: TemplateLiteral): TcbNode {
     const length = ast.elements.length;
     const head = ast.elements[0];
-    let result: ts.TemplateLiteral;
+    let result: string;
 
     if (length === 1) {
-      result = ts.factory.createNoSubstitutionTemplateLiteral(head.text);
+      result = `\`${head.text}\``;
     } else {
-      const spans: ts.TemplateSpan[] = [];
+      let parts = [`\`${head.text}`];
       const tailIndex = length - 1;
 
       for (let i = 1; i < tailIndex; i++) {
-        const middle = ts.factory.createTemplateMiddle(ast.elements[i].text);
-        spans.push(ts.factory.createTemplateSpan(this.translate(ast.expressions[i - 1]), middle));
+        const expr = this.translate(ast.expressions[i - 1]);
+        parts.push(`\${${expr.print()}}${ast.elements[i].text}`);
       }
       const resolvedExpression = this.translate(ast.expressions[tailIndex - 1]);
-      const templateTail = ts.factory.createTemplateTail(ast.elements[tailIndex].text);
-      spans.push(ts.factory.createTemplateSpan(resolvedExpression, templateTail));
-      result = ts.factory.createTemplateExpression(ts.factory.createTemplateHead(head.text), spans);
+      parts.push(`\${${resolvedExpression.print()}}${ast.elements[tailIndex].text}\``);
+      result = parts.join('');
     }
-
-    return result;
+    return new TcbNode(result);
   }
 
   visitTemplateLiteralElement(ast: TemplateLiteralElement, context: any) {
     throw new Error('Method not implemented');
   }
 
-  visitTaggedTemplateLiteral(ast: TaggedTemplateLiteral): ts.TaggedTemplateExpression {
-    return ts.factory.createTaggedTemplateExpression(
-      this.translate(ast.tag),
-      undefined,
-      this.visitTemplateLiteral(ast.template),
-    );
+  visitTaggedTemplateLiteral(ast: TaggedTemplateLiteral): TcbNode {
+    const tag = this.translate(ast.tag);
+    const template = this.visitTemplateLiteral(ast.template);
+    return new TcbNode(`${tag.print()}${template.print()}`);
   }
 
-  visitParenthesizedExpression(ast: ParenthesizedExpression): ts.ParenthesizedExpression {
-    return ts.factory.createParenthesizedExpression(this.translate(ast.expression));
+  visitParenthesizedExpression(ast: ParenthesizedExpression): TcbNode {
+    const expr = this.translate(ast.expression);
+    return new TcbNode(`(${expr.print()})`);
   }
 
   visitSpreadElement(ast: SpreadElement) {
-    const expression = wrapForDiagnostics(this.translate(ast.expression));
-    const node = ts.factory.createSpreadElement(expression);
-    addParseSpanInfo(node, ast.sourceSpan);
+    const expression = this.translate(ast.expression);
+    expression.wrapForDiagnostics();
+    const node = new TcbNode(`...${expression.print()}`);
+    node.addParseSpanInfo(ast.sourceSpan);
     return node;
   }
 
-  visitEmptyExpr(ast: EmptyExpr, context: any) {
-    const node = ts.factory.createIdentifier('undefined');
-    addParseSpanInfo(node, ast.sourceSpan);
+  visitEmptyExpr(ast: EmptyExpr) {
+    const node = new TcbNode('undefined');
+    node.addParseSpanInfo(ast.sourceSpan);
     return node;
   }
 
-  visitArrowFunction(ast: ArrowFunction): ts.ArrowFunction {
-    const params = ast.parameters.map((param) => {
-      const paramNode = ts.factory.createParameterDeclaration(undefined, undefined, param.name);
-      // Ignore diagnostics on the node to skip diagnostics from `noImplicitAny` since
-      // users aren't able to set types on the parameters. Note that this is preferable
-      // to setting their types to `any`, because it allows us to infer the types when
-      // the arrow function is passed as a callback.
-      markIgnoreDiagnostics(paramNode);
-      return paramNode;
-    });
-
-    const body = astToTypescript(
+  visitArrowFunction(ast: ArrowFunction): TcbNode {
+    const params = ast.parameters
+      .map((param) => new TcbNode(param.name).markIgnoreDiagnostics().print())
+      .join(', ');
+    const body = astToTcbNode(
       ast.body,
       (innerAst) => {
         if (
@@ -521,8 +401,8 @@ class AstTranslator implements AstVisitor {
         const correspondingParam = ast.parameters.find((arg) => arg.name === innerAst.name);
 
         if (correspondingParam) {
-          const node = ts.factory.createIdentifier(innerAst.name);
-          addParseSpanInfo(node, innerAst.sourceSpan);
+          const node = new TcbNode(innerAst.name);
+          node.addParseSpanInfo(innerAst.sourceSpan);
           return node;
         }
 
@@ -531,41 +411,27 @@ class AstTranslator implements AstVisitor {
       this.config,
     );
 
-    return ts.factory.createArrowFunction(undefined, undefined, params, undefined, undefined, body);
+    return new TcbNode(
+      `${ast.parameters.length === 1 ? params : `(${params})`} => ${body.print()}`,
+    );
   }
 
-  private convertToSafeCall(
-    ast: Call | SafeCall,
-    expr: ts.Expression,
-    args: ts.Expression[],
-  ): ts.Expression {
+  private convertToSafeCall(ast: Call | SafeCall, exprNode: TcbNode, argNodes: TcbNode[]): TcbNode {
+    const expr = exprNode.print();
+    const args = argNodes.map((node) => node.print()).join(', ');
+
     if (this.config.strictSafeNavigationTypes) {
-      // "a?.method(...)" becomes (0 as any ? a!.method(...) : undefined)
-      const call = ts.factory.createCallExpression(
-        ts.factory.createNonNullExpression(expr),
-        undefined,
-        args,
-      );
-      return ts.factory.createParenthesizedExpression(
-        ts.factory.createConditionalExpression(
-          getAnyExpression(),
-          undefined,
-          call,
-          undefined,
-          this.UNDEFINED,
-        ),
-      );
+      // (0 as any ? a!.method(...) : undefined)
+      return new TcbNode(`(0 as any ? ${expr}!(${args}) : undefined)`);
     }
 
     if (VeSafeLhsInferenceBugDetector.veWillInferAnyFor(ast)) {
-      // "a?.method(...)" becomes (a as any).method(...)
-      return ts.factory.createCallExpression(tsCastToAny(expr), undefined, args);
+      // (a as any).method(...)
+      return new TcbNode(`(${expr} as any)(${args})`);
     }
 
-    // "a?.method(...)" becomes (a!.method(...) as any)
-    return tsCastToAny(
-      ts.factory.createCallExpression(ts.factory.createNonNullExpression(expr), undefined, args),
-    );
+    // (a!.method(...) as any)
+    return new TcbNode(`(${expr}!(${args}) as any)`);
   }
 }
 

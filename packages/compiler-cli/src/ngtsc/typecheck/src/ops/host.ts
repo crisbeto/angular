@@ -7,8 +7,7 @@
  */
 
 import {TmplAstHostElement} from '@angular/compiler';
-import ts from 'typescript';
-import {TcbOp} from './base';
+import {TcbNode, TcbOp} from './base';
 import type {Context} from './context';
 import type {Scope} from './scope';
 import {tsCreateElement, tsCreateVariable} from '../ts_util';
@@ -30,11 +29,19 @@ export class TcbHostElementOp extends TcbOp {
     super();
   }
 
-  override execute(): ts.Identifier {
+  override execute(): TcbNode {
     const id = this.tcb.allocateId();
-    const initializer = tsCreateElement(...this.element.tagNames);
-    addParseSpanInfo(initializer, this.element.sourceSpan);
-    this.scope.addStatement(tsCreateVariable(id, initializer));
-    return id;
+    let tagNames: string;
+
+    if (this.element.tagNames.length === 1) {
+      tagNames = `"${this.element.tagNames[0]}"`;
+    } else {
+      tagNames = `null! as ${this.element.tagNames.map((t) => `"${t}"`).join(' | ')}`;
+    }
+
+    const initializer = new TcbNode(`document.createElement(${tagNames})`);
+    initializer.addParseSpanInfo(this.element.sourceSpan);
+    this.scope.addStatement(new TcbNode(`var ${id} = ${initializer.print()}`));
+    return new TcbNode(id);
   }
 }

@@ -7,12 +7,9 @@
  */
 
 import {TmplAstLetDeclaration} from '@angular/compiler';
-import ts from 'typescript';
 import {Context} from './context';
 import type {Scope} from './scope';
-import {TcbOp} from './base';
-import {addParseSpanInfo, wrapForTypeChecker} from '../diagnostics';
-import {tsCreateVariable} from '../ts_util';
+import {TcbNode, TcbOp} from './base';
 import {tcbExpression} from './expression';
 
 /**
@@ -35,14 +32,13 @@ export class TcbLetDeclarationOp extends TcbOp {
    */
   override readonly optional = false;
 
-  override execute(): ts.Identifier {
-    const id = this.tcb.allocateId();
-    addParseSpanInfo(id, this.node.nameSpan);
-    const value = tcbExpression(this.node.value, this.tcb, this.scope);
+  override execute(): TcbNode {
+    const id = new TcbNode(this.tcb.allocateId()).addParseSpanInfo(this.node.nameSpan);
+    const value = tcbExpression(this.node.value, this.tcb, this.scope).wrapForTypeChecker();
     // Value needs to be wrapped, because spans for the expressions inside of it can
     // be picked up incorrectly as belonging to the full variable declaration.
-    const varStatement = tsCreateVariable(id, wrapForTypeChecker(value), ts.NodeFlags.Const);
-    addParseSpanInfo(varStatement.declarationList.declarations[0], this.node.sourceSpan);
+    const varStatement = new TcbNode(`const ${id.print()} = ${value.print()}`);
+    varStatement.addParseSpanInfo(this.node.sourceSpan);
     this.scope.addStatement(varStatement);
     return id;
   }

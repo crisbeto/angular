@@ -24,6 +24,7 @@ import {
 } from '../../imports';
 import {ReflectionHost} from '../../reflection';
 import {ImportManager, translateExpression, translateType} from '../../translator';
+import {TcbNode} from './ops/base';
 
 /**
  * An environment for a given source file that can be used to emit references.
@@ -72,6 +73,23 @@ export class ReferenceEmitEnvironment {
       this.refEmitter,
       this.importManager,
     );
+  }
+
+  // TODO: temp name, replace `referenceExternalSymbol` with this.
+  tcbReferenceExternalSymbol(moduleName: string, name: string): TcbNode {
+    const importResult = this.importManager.addImport({
+      exportModuleSpecifier: moduleName,
+      exportSymbolName: name,
+      requestedFile: this.contextFile,
+    });
+
+    if (ts.isIdentifier(importResult)) {
+      return new TcbNode(importResult.text);
+    } else if (ts.isIdentifier(importResult.expression)) {
+      return new TcbNode(`${importResult.expression.text}.${importResult.name.text}`);
+    }
+
+    throw new Error('Unexpected value returned by import manager');
   }
 
   /**

@@ -7,16 +7,12 @@
  */
 
 import {DirectiveOwner, ParseSourceSpan, TmplAstHostElement} from '@angular/compiler';
-import ts from 'typescript';
-import {TcbOp} from './base';
+import {TcbNode, TcbOp} from './base';
 import {Context} from './context';
 import type {Scope} from './scope';
 import {TypeCheckableDirectiveMeta} from '../../api';
-import {addExpressionIdentifier, ExpressionIdentifier, markIgnoreDiagnostics} from '../comments';
-import {addParseSpanInfo, wrapForDiagnostics} from '../diagnostics';
-import {tsCreateVariable} from '../ts_util';
+import {ExpressionIdentifier} from '../comments';
 import {unwrapWritableSignal} from './expression';
-import {getAnyExpression} from '../expression';
 import {CustomFormControlType, expandBoundAttributesForField} from './signal_forms';
 import {getBoundAttributes, TcbBoundAttribute, TcbDirectiveInput, widenBinding} from './bindings';
 import {translateInput} from './inputs';
@@ -50,9 +46,9 @@ export class TcbDirectiveCtorOp extends TcbOp {
     return true;
   }
 
-  override execute(): ts.Identifier {
+  override execute(): TcbNode {
     const genericInputs = new Map<string, TcbDirectiveInput>();
-    const id = this.tcb.allocateId();
+    const id = new TcbNode(this.tcb.allocateId());
     let boundAttrs: TcbBoundAttribute[];
     let span: ParseSourceSpan;
 
@@ -77,8 +73,7 @@ export class TcbDirectiveCtorOp extends TcbOp {
       }
     }
 
-    addExpressionIdentifier(id, ExpressionIdentifier.DIRECTIVE);
-    addParseSpanInfo(id, span);
+    id.addExpressionIdentifier(ExpressionIdentifier.DIRECTIVE).addParseSpanInfo(span);
 
     for (const attr of boundAttrs) {
       // Skip text attributes if configured to do so.
@@ -98,6 +93,7 @@ export class TcbDirectiveCtorOp extends TcbOp {
           type: 'binding',
           field: fieldName,
           expression,
+          originalExpression: attr.value,
           sourceSpan: attr.sourceSpan,
           isTwoWayBinding,
         });
@@ -114,8 +110,8 @@ export class TcbDirectiveCtorOp extends TcbOp {
     // Call the type constructor of the directive to infer a type, and assign the directive
     // instance.
     const typeCtor = tcbCallTypeCtor(this.dir, this.tcb, Array.from(genericInputs.values()));
-    markIgnoreDiagnostics(typeCtor);
-    this.scope.addStatement(tsCreateVariable(id, typeCtor));
+    typeCtor.markIgnoreDiagnostics();
+    this.scope.addStatement(new TcbNode(`var ${id.print()} = ${typeCtor.print()}`));
     return id;
   }
 
@@ -151,16 +147,11 @@ export class TcbDirectiveCtorCircularFallbackOp extends TcbOp {
     return false;
   }
 
-  override execute(): ts.Identifier {
+  override execute(): TcbNode {
     const id = this.tcb.allocateId();
     const typeCtor = this.tcb.env.typeCtorFor(this.dir);
-    const circularPlaceholder = ts.factory.createCallExpression(
-      typeCtor,
-      /* typeArguments */ undefined,
-      [ts.factory.createNonNullExpression(ts.factory.createNull())],
-    );
-    this.scope.addStatement(tsCreateVariable(id, circularPlaceholder));
-    return id;
+    this.scope.addStatement(new TcbNode(`var ${id} = ${typeCtor.print()}(null!)`));
+    return new TcbNode(id);
   }
 }
 
@@ -172,39 +163,40 @@ function tcbCallTypeCtor(
   dir: TypeCheckableDirectiveMeta,
   tcb: Context,
   inputs: TcbDirectiveInput[],
-): ts.Expression {
+): TcbNode {
   const typeCtor = tcb.env.typeCtorFor(dir);
+  let literal = '{ ';
 
   // Construct an array of `ts.PropertyAssignment`s for each of the directive's inputs.
-  const members = inputs.map((input) => {
-    const propertyName = ts.factory.createStringLiteral(input.field);
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i];
+    const propertyName = input.field;
 
     if (input.type === 'binding') {
       // For bound inputs, the property is assigned the binding expression.
-      let expr = widenBinding(input.expression, tcb);
+      let expr = widenBinding(input.expression, tcb, input.originalExpression);
 
       if (input.isTwoWayBinding && tcb.env.config.allowSignalsInTwoWayBindings) {
         expr = unwrapWritableSignal(expr, tcb);
       }
 
-      const assignment = ts.factory.createPropertyAssignment(
-        propertyName,
-        wrapForDiagnostics(expr),
-      );
-      addParseSpanInfo(assignment, input.sourceSpan);
-      return assignment;
+      const assignment = new TcbNode(
+        `"${propertyName}": ${expr.wrapForDiagnostics().print()}`,
+      ).addParseSpanInfo(input.sourceSpan);
+
+      literal += `${assignment.print()}`;
     } else {
       // A type constructor is required to be called with all input properties, so any unset
       // inputs are simply assigned a value of type `any` to ignore them.
-      return ts.factory.createPropertyAssignment(propertyName, getAnyExpression());
+      literal += `"${propertyName}": 0 as any`;
     }
-  });
+
+    literal += `${i === inputs.length - 1 ? '' : ','} `;
+  }
+
+  literal += '}';
 
   // Call the `ngTypeCtor` method on the directive class, with an object literal argument created
   // from the matched inputs.
-  return ts.factory.createCallExpression(
-    /* expression */ typeCtor,
-    /* typeArguments */ undefined,
-    /* argumentsArray */ [ts.factory.createObjectLiteralExpression(members)],
-  );
+  return new TcbNode(`${typeCtor.print()}(${literal})`);
 }

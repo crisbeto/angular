@@ -23,7 +23,7 @@ import {
   TmplAstText,
 } from '@angular/compiler';
 import ts from 'typescript';
-import {TcbOp} from './base';
+import {TcbNode, TcbOp} from './base';
 import {Context} from './context';
 
 /**
@@ -59,7 +59,7 @@ export class TcbControlFlowContentProjectionOp extends TcbOp {
 
   override readonly optional = false;
 
-  override execute(): null {
+  override execute(): TcbNode | null {
     const controlFlowToCheck = this.findPotentialControlFlowNodes();
 
     if (controlFlowToCheck.length > 0) {
