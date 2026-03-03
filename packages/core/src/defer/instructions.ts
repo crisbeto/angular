@@ -74,6 +74,8 @@ import {
 import {formatRuntimeError, RuntimeErrorCode} from '../errors';
 import {Console} from '../console';
 import {Injector} from '../di';
+import {TracingService} from '../application/tracing';
+import {promiseWithResolvers} from '../util/promise_with_resolvers';
 
 /**
  * Indicates whether we've already produced a warning,
@@ -139,7 +141,7 @@ export function ɵɵdefer(
   const adjustedIndex = index + HEADER_OFFSET;
   const tNode = declareNoDirectiveHostTemplate(lView, tView, index, null, 0, 0);
   const injector = lView[INJECTOR];
-
+  const tracingService = injector.get(TracingService, null, {optional: true});
   const incrementalHydrationEnabled = isIncrementalHydrationEnabled(injector);
   if (tView.firstCreatePass) {
     performanceMarkFeature('NgDefer');
@@ -187,6 +189,16 @@ export function ɵɵdefer(
     ssrBlockState = info[SERIALIZED_DEFER_BLOCK_STATE];
   }
 
+  let onCompleteFns: VoidFunction[] | null;
+
+  if (tracingService?.span) {
+    const {promise, resolve} = promiseWithResolvers<void>();
+    tracingService.span('@defer', () => promise);
+    onCompleteFns = [resolve];
+  } else {
+    onCompleteFns = null;
+  }
+
   // Init instance-specific defer details and store it.
   const lDetails: LDeferBlockDetails = [
     null, // NEXT_DEFER_BLOCK_STATE
@@ -197,7 +209,7 @@ export function ɵɵdefer(
     null, // PREFETCH_TRIGGER_CLEANUP_FNS
     ssrUniqueId, // SSR_UNIQUE_ID
     ssrBlockState, // SSR_BLOCK_STATE
-    null, // ON_COMPLETE_FNS
+    onCompleteFns, // ON_COMPLETE_FNS
     null, // HYDRATE_TRIGGER_CLEANUP_FNS
   ];
   setLDeferBlockDetails(lView, adjustedIndex, lDetails);

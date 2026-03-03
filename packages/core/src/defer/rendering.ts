@@ -7,7 +7,6 @@
  */
 
 import {CachedInjectorService} from '../cached_injector_service';
-import {NotificationSource} from '../change_detection/scheduling/zoneless_scheduling';
 import {EnvironmentInjector, InjectionToken, Injector, Provider} from '../di';
 import {
   DehydratedContainerView,

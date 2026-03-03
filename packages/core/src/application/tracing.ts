@@ -64,4 +64,12 @@ export interface TracingService<T extends TracingSnapshot> {
    * @return A new event handler to be bound instead of the original one.
    */
   wrapEventListener?<T extends Function>(element: HTMLElement, eventName: string, handler: T): T;
+
+  /**
+   * Run a block of code in a new span.
+   * @param name Name of the span.
+   * @param fn Function to run.
+   * @return The return value of the function.
+   */
+  span?<T>(name: string, fn: () => T): T;
 }
